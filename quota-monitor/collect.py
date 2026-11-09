@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
-"""Collect Actions billing usage; write all private data to a private report repo."""
-import argparse, json, os, re, sys
+"""Read-only GitHub Actions billing collector. Never prints credentials or usage rows."""
+import argparse
+import json
+import os
+import re
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from urllib.error import HTTPError, URLError
@@ -10,6 +14,8 @@ from urllib.request import Request, urlopen
 API = "https://api.github.com"
 VERSION = "2026-03-10"
 ORG_RE = re.compile(r"^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$")
+UNKNOWN_TOTALS = {k: None for k in
+                  ("gross_minutes", "discounted_minutes", "billable_minutes", "net_amount")}
 
 
 def get(token, path):
@@ -17,13 +23,13 @@ def get(token, path):
         "Accept": "application/vnd.github+json",
         "Authorization": f"Bearer {token}",
         "X-GitHub-Api-Version": VERSION,
-        "User-Agent": "github-oschestration-actions-monitor",
+        "User-Agent": "github-actions-usage-monitor",
     })
     try:
-        with urlopen(req, timeout=30) as r:
-            return json.loads(r.read().decode()), None
-    except HTTPError as e:
-        return None, f"HTTP_{e.code}"
+        with urlopen(req, timeout=30) as response:
+            return json.loads(response.read().decode("utf-8")), None
+    except HTTPError as exc:
+        return None, f"HTTP_{exc.code}"
     except (URLError, TimeoutError):
         return None, "NETWORK_ERROR"
     except (UnicodeDecodeError, json.JSONDecodeError):
@@ -31,173 +37,350 @@ def get(token, path):
 
 
 def pages(token, path):
-    out = []
+    result = []
     for page in range(1, 101):
         sep = "&" if "?" in path else "?"
-        data, err = get(token, f"{path}{sep}per_page=100&page={page}")
-        if err:
-            return out, err
+        data, error = get(token, f"{path}{sep}{urlencode({'per_page': 100, 'page': page})}")
+        if error:
+            return result, error
         if not isinstance(data, list):
-            return out, "INVALID_RESPONSE"
-        out.extend(data)
+            return result, "INVALID_RESPONSE"
+        result.extend(data)
         if len(data) < 100:
-            return out, None
-    return out, "PAGINATION_LIMIT"
+            return result, None
+    return result, "PAGINATION_LIMIT"
 
 
-def path_for(scope, owner, year, month, repo=None):
+def path_for(scope, owner, year, month, repository=None):
     root = f"/users/{owner}" if scope == "user" else f"/organizations/{owner}"
-    params = {"year": year, "month": month, "product": "Actions"}
-    if repo:
-        params["repository"] = repo
-    return f"{root}/settings/billing/usage/summary?{urlencode(params)}"
+    query = {"year": year, "month": month, "product": "Actions"}
+    if repository:
+        query["repository"] = repository
+    return f"{root}/settings/billing/usage/summary?{urlencode(query)}"
+
+
+def as_number(value):
+    try:
+        return None if value is None or value == "" else float(value)
+    except (TypeError, ValueError):
+        return None
 
 
 def items(data):
-    out = []
-    for x in (data or {}).get("usageItems", []):
-        if not isinstance(x, dict) or str(x.get("product", "Actions")).lower() != "actions":
+    output = []
+    for item in (data or {}).get("usageItems", []):
+        if not isinstance(item, dict):
             continue
-        out.append({
-            "sku": x.get("sku", "unknown"), "unit_type": x.get("unitType", "unknown"),
-            "gross_quantity": float(x.get("grossQuantity", x.get("quantity", 0)) or 0),
-            "discount_quantity": float(x.get("discountQuantity", 0) or 0),
-            "net_quantity": float(x.get("netQuantity", x.get("quantity", 0)) or 0),
-            "gross_amount": float(x.get("grossAmount", 0) or 0),
-            "discount_amount": float(x.get("discountAmount", 0) or 0),
-            "net_amount": float(x.get("netAmount", 0) or 0),
+        product = str(item.get("product", "Actions"))
+        if product.lower() != "actions":
+            continue
+        output.append({
+            "product": product, "sku": item.get("sku", "unknown"),
+            "unit_type": item.get("unitType", "unknown"),
+            "gross_quantity": as_number(item.get("grossQuantity", item.get("quantity"))),
+            "discount_quantity": as_number(item.get("discountQuantity")),
+            "net_quantity": as_number(item.get("netQuantity", item.get("quantity"))),
+            "gross_amount": as_number(item.get("grossAmount")),
+            "discount_amount": as_number(item.get("discountAmount")),
+            "net_amount": as_number(item.get("netAmount")),
         })
-    return out
+    return output
+
+
+def total(rows, field, digits=3):
+    values = [row.get(field) for row in rows]
+    return None if any(value is None for value in values) else round(sum(values), digits)
 
 
 def totals(rows):
-    minutes = [x for x in rows if str(x["unit_type"]).lower() in ("minute", "minutes")]
+    minutes = [r for r in rows if str(r.get("unit_type", "")).lower() in ("minute", "minutes")]
     return {
-        "gross_minutes": round(sum(x["gross_quantity"] for x in minutes), 3),
-        "discounted_minutes": round(sum(x["discount_quantity"] for x in minutes), 3),
-        "billable_minutes": round(sum(x["net_quantity"] for x in minutes), 3),
-        "net_amount": round(sum(x["net_amount"] for x in rows), 6),
+        "gross_minutes": total(minutes, "gross_quantity"),
+        "discounted_minutes": total(minutes, "discount_quantity"),
+        "billable_minutes": total(minutes, "net_quantity"),
+        "net_amount": total(rows, "net_amount", 6),
     }
-
-
-def collect(scope, owner, token, year, month):
-    data, err = get(token, path_for(scope, owner, year, month))
-    result = {"scope": scope, "owner": owner, "status": "UNKNOWN" if err else "OK",
-              "summary_error": err, "usage_items": items(data), "private_repositories": [],
-              "repository_list_error": None, "budget": {"status": "NOT_APPLICABLE", "error": None}}
-    if scope == "organization":
-        budgets, be = get(token, f"/organizations/{owner}/settings/billing/budgets?per_page=100")
-        if be:
-            result["budget"] = {"status": "UNKNOWN", "error": be}
-            if not err: result["status"] = "PARTIAL"
-        else:
-            budgets = budgets if isinstance(budgets, list) else budgets.get("budgets", []) if isinstance(budgets, dict) else []
-            action = [b for b in budgets if isinstance(b, dict) and "action" in str(b.get("budget_product_sku", "")).lower()]
-            enforced = [b for b in action if b.get("prevent_further_usage") is True]
-            reached = any(float(b.get("spent_amount", b.get("amount_spent", 0)) or 0) >= float(b.get("budget_amount", 0) or 0) for b in enforced)
-            result["budget"] = {"status": "HARD_CAP_REACHED" if reached else "HARD_CAP_NOT_REACHED" if enforced else "NO_HARD_CAP_CONFIGURED" if action else "NO_ACTIONS_BUDGET", "error": None}
-    if err:
-        return result
-    if scope == "user":
-        repos, re = pages(token, "/user/repos?visibility=private&affiliation=owner&sort=full_name")
-        repos = [r for r in repos if r.get("private") and r.get("owner", {}).get("type") == "User"]
-    else:
-        repos, re = pages(token, f"/orgs/{owner}/repos?type=private&sort=full_name")
-        repos = [r for r in repos if r.get("private")]
-    result["repository_list_error"] = re
-    if re: result["status"] = "PARTIAL"
-    for repo in repos:
-        name = repo.get("full_name")
-        if not isinstance(name, str) or "/" not in name: continue
-        d, e = get(token, path_for(scope, owner, year, month, name))
-        rows = items(d) if not e else []
-        result["private_repositories"].append({"full_name": name, "status": "UNKNOWN" if e else "OK", "error": e, "usage_items": rows, "totals": totals(rows)})
-        if e: result["status"] = "PARTIAL"
-    result["totals"] = totals(result["usage_items"])
-    return result
 
 
 def org_tokens(raw):
     value = json.loads(raw or "{}")
-    if not isinstance(value, dict): raise ValueError("ORG_BILLING_TOKENS_JSON must be a JSON object")
-    out = {}
+    if not isinstance(value, dict):
+        raise ValueError("ORG_BILLING_TOKENS_JSON must be a JSON object")
+    result = {}
     for org, token in value.items():
-        if not isinstance(org, str) or not ORG_RE.fullmatch(org): raise ValueError("Invalid organization login in token map")
-        if isinstance(token, str) and token.strip(): out[org] = token.strip()
-    return out
+        if not isinstance(org, str) or not ORG_RE.fullmatch(org):
+            raise ValueError("Invalid organization login in token map")
+        if isinstance(token, str) and token.strip():
+            result[org] = token.strip()
+    return result
 
 
-def collect_all(user_token, org_map, username):
-    now = datetime.now(timezone.utc); y, m = now.year, now.month
-    report = {"schema_version": 1, "collected_at_utc": now.isoformat(), "billing_period": f"{y:04d}-{m:02d}",
-              "data_source": "GitHub Billing Usage Summary REST API",
-              "remaining_included_minutes": "NOT_EXPOSED_BY_USAGE_SUMMARY_API", "accounts": []}
-    if user_token and username:
-        report["accounts"].append(collect("user", username, user_token, y, m))
-    for org, token in sorted(org_map.items()):
-        report["accounts"].append(collect("organization", org, token, y, m))
-    return report
+def org_targets(path):
+    data = json.loads(Path(path).read_text(encoding="utf-8"))
+    values = data.get("organizations") if isinstance(data, dict) else None
+    if not isinstance(values, list):
+        raise ValueError("targets file must contain an organizations array")
+    result = []
+    for org in values:
+        if not isinstance(org, str) or not ORG_RE.fullmatch(org):
+            raise ValueError("Invalid organization login in targets file")
+        if org not in result:
+            result.append(org)
+    return result
+
+
+def budget_matches(budget):
+    values = budget.get("budget_product_skus")
+    if not isinstance(values, list):
+        values = [budget.get("budget_product_sku")]
+    return any(isinstance(v, str) and
+               (v.lower() == "actions" or v.lower().startswith("actions_"))
+               for v in values)
+
+
+def budget_spend(budget, account_rows, repositories):
+    scope = str(budget.get("budget_scope", "")).lower()
+    if scope in ("organization", "enterprise"):
+        rows = account_rows
+        if rows is None:
+            return None
+    elif scope == "repository":
+        entity = str(budget.get("budget_entity_name", "")).strip().lower()
+        repo = next((r for r in repositories if
+                     r["full_name"].lower() == entity or
+                     r["full_name"].split("/", 1)[-1].lower() == entity), None)
+        if repo is None or repo["status"] != "OK":
+            return None
+        rows = repo["usage_items"]
+    else:
+        return None
+    return totals(rows)["net_amount"]
+
+
+def evaluate_budgets(data, account_rows, repositories, error=None):
+    if error:
+        return {"status": "UNKNOWN", "error": error, "items": []}
+    values = data.get("budgets", []) if isinstance(data, dict) else data
+    values = values if isinstance(values, list) else []
+    budgets = [b for b in values if isinstance(b, dict) and budget_matches(b)]
+    result = []
+    for b in budgets:
+        amount = as_number(b.get("budget_amount"))
+        spend = budget_spend(b, account_rows, repositories)
+        enforced = b.get("prevent_further_usage") is True
+        status = ("BUDGET_WITHOUT_HARD_CAP" if not enforced else
+                  "UNKNOWN_SPEND" if amount is None or spend is None else
+                  "HARD_CAP_REACHED" if spend >= amount else "HARD_CAP_NOT_REACHED")
+        result.append({
+            "id": b.get("id"), "scope": b.get("budget_scope", "unknown"),
+            "entity": b.get("budget_entity_name", ""),
+            "product_skus": b.get("budget_product_skus") or [b.get("budget_product_sku")],
+            "budget_amount": amount, "prevent_further_usage": enforced,
+            "observed_net_amount": spend, "status": status,
+        })
+    states = [b["status"] for b in result]
+    status = ("NO_ACTIONS_BUDGET" if not states else
+              "HARD_CAP_REACHED" if "HARD_CAP_REACHED" in states else
+              "UNKNOWN_SPEND" if "UNKNOWN_SPEND" in states else
+              "HARD_CAP_NOT_REACHED" if "HARD_CAP_NOT_REACHED" in states else
+              "BUDGET_WITHOUT_HARD_CAP")
+    return {"status": status, "error": None, "items": result}
+
+
+def collect(scope, owner, token, year, month):
+    if not token:
+        return {
+            "scope": scope, "owner": owner, "status": "UNKNOWN",
+            "summary_error": "BILLING_TOKEN_NOT_CONFIGURED",
+            "usage_items": [], "totals": UNKNOWN_TOTALS.copy(),
+            "repositories": [], "repository_list_error": "BILLING_TOKEN_NOT_CONFIGURED",
+            "budget": {"status": "UNKNOWN" if scope == "organization" else "NOT_APPLICABLE",
+                       "error": "BILLING_TOKEN_NOT_CONFIGURED" if scope == "organization" else None,
+                       "items": []},
+        }
+    summary, summary_error = get(token, path_for(scope, owner, year, month))
+    rows = items(summary) if not summary_error else []
+    if scope == "user":
+        repos, list_error = pages(token, "/user/repos?visibility=all&affiliation=owner&sort=full_name")
+        repos = [r for r in repos if r.get("owner", {}).get("type") == "User"
+                 and r.get("owner", {}).get("login", "").lower() == owner.lower()]
+    else:
+        repos, list_error = pages(token, f"/orgs/{owner}/repos?type=all&sort=full_name")
+        repos = [r for r in repos if r.get("owner", {}).get("login", "").lower() == owner.lower()]
+    repository_rows = []
+    for repo in repos:
+        name = repo.get("full_name")
+        if not isinstance(name, str) or "/" not in name:
+            continue
+        data, error = get(token, path_for(scope, owner, year, month, name))
+        repo_items = items(data) if not error else []
+        repository_rows.append({
+            "full_name": name, "visibility": "private" if repo.get("private") else "public",
+            "archived": bool(repo.get("archived", False)),
+            "status": "UNKNOWN" if error else "OK", "error": error,
+            "usage_items": repo_items,
+            "totals": totals(repo_items) if not error else UNKNOWN_TOTALS.copy(),
+        })
+    budget = {"status": "NOT_APPLICABLE", "error": None, "items": []}
+    if scope == "organization":
+        data, error = get(token, f"/organizations/{owner}/settings/billing/budgets?per_page=100")
+        budget = evaluate_budgets(data, rows if not summary_error else None,
+                                  repository_rows, error)
+    errors = [summary_error, list_error, budget.get("error")]
+    errors += [r["error"] for r in repository_rows]
+    errors = [e for e in errors if e]
+    status = "UNKNOWN" if summary_error and list_error else "PARTIAL" if errors else "OK"
+    return {
+        "scope": scope, "owner": owner, "status": status,
+        "summary_error": summary_error, "usage_items": rows,
+        "totals": totals(rows) if not summary_error else UNKNOWN_TOTALS.copy(),
+        "repositories": repository_rows, "repository_list_error": list_error,
+        "budget": budget,
+    }
+
+
+def collect_all(user_token, org_map, username, organizations):
+    now = datetime.now(timezone.utc)
+    year, month = now.year, now.month
+    accounts = [collect("user", username, user_token, year, month)]
+    accounts += [collect("organization", org, org_map.get(org), year, month)
+                 for org in organizations]
+    return {
+        "schema_version": 2, "collected_at_utc": now.isoformat(),
+        "billing_period": f"{year:04d}-{month:02d}",
+        "data_source": "GitHub Billing Usage Summary REST API",
+        "remaining_included_minutes": "NOT_EXPOSED_BY_USAGE_SUMMARY_API",
+        "accounts": accounts,
+    }
+
+
+def fmt(value, digits=2):
+    return "UNKNOWN" if value is None else f"{value:,.{digits}f}"
 
 
 def render(report, history):
-    lines = ["# GitHub Actions Usage Dashboard", "", f"**Period:** `{report['billing_period']}`  ",
-             f"**Updated (UTC):** `{report['collected_at_utc']}`", "",
-             "> Usage summary reports consumption and billed amount, not remaining included minutes. No remaining balance or percentage is inferred.", "",
-             "## Account overview", "", "| Scope | Owner | Private repos | Status | Actions hard cap | Total min | Included min | Billable min | Net amount |", "|---|---|---:|---|---|---:|---:|---:|---:|"]
+    lines = [
+        "# GitHub Actions Usage Dashboard", "",
+        f"Billing period: {report['billing_period']}  ",
+        f"Updated (UTC): {report['collected_at_utc']}", "",
+        "> Shows Actions consumption and billed amounts. The API does not expose remaining included-minute allowance; no balance or percentage is inferred.",
+        "", "## Account and organization overview", "",
+        "| Scope | Owner | Repositories | Status | Actions budget | Total min | Included min | Billable min | Net amount |",
+        "|---|---|---:|---|---|---:|---:|---:|---:|",
+    ]
     for a in report["accounts"]:
-        t = a.get("totals", totals(a.get("usage_items", [])))
-        lines.append(f"| {a['scope']} | `{a['owner']}` | {len(a.get('private_repositories', []))} | {a['status']} | {a.get('budget', {}).get('status', 'NOT_CHECKED')} | {t['gross_minutes']:,.2f} | {t['discounted_minutes']:,.2f} | {t['billable_minutes']:,.2f} | {t['net_amount']:,.2f} |")
-    lines += ["", "## Private repository usage", "", "| Repository | Status | Total min | Included min | Billable min | Net amount |", "|---|---|---:|---:|---:|---:|"]
-    repos = [r for a in report["accounts"] for r in a.get("private_repositories", [])]
+        count = str(len(a["repositories"])) if a["repository_list_error"] is None else "UNKNOWN"
+        t = a["totals"]
+        lines.append(
+            f"| {a['scope']} | {a['owner']} | {count} | {a['status']} "
+            f"| {a['budget']['status']} | {fmt(t['gross_minutes'])} "
+            f"| {fmt(t['discounted_minutes'])} | {fmt(t['billable_minutes'])} "
+            f"| {fmt(t['net_amount'], 4)} |"
+        )
+    lines += ["", "## Repository breakdown", "",
+              "| Repository | Visibility | Archived | Status | Total min | Included min | Billable min | Net amount |",
+              "|---|---|---:|---|---:|---:|---:|---:|"]
+    repos = [r for a in report["accounts"] for r in a["repositories"]]
     for r in sorted(repos, key=lambda x: x["full_name"].lower()):
         t = r["totals"]
-        lines.append(f"| `{r['full_name']}` | {r['status']} | {t['gross_minutes']:,.2f} | {t['discounted_minutes']:,.2f} | {t['billable_minutes']:,.2f} | {t['net_amount']:,.2f} |")
-    if not repos: lines.append("| — | No private repositories returned | — | — |")
+        lines.append(
+            f"| {r['full_name']} | {r['visibility']} | {'yes' if r['archived'] else 'no'} "
+            f"| {r['status']} | {fmt(t['gross_minutes'])} | {fmt(t['discounted_minutes'])} "
+            f"| {fmt(t['billable_minutes'])} | {fmt(t['net_amount'], 4)} |"
+        )
+    if not repos:
+        lines.append("| — | — | — | No repository usage rows returned | — | — | — | — |")
+    lines += ["", "## Organization Actions budgets", "",
+              "| Organization | Scope | Entity | Budget | Observed net amount | Hard cap | Status |",
+              "|---|---|---|---:|---:|---|---|"]
+    budget_rows = [(a["owner"], b) for a in report["accounts"] if a["scope"] == "organization"
+                   for b in a["budget"]["items"]]
+    for owner, b in budget_rows:
+        lines.append(
+            f"| {owner} | {b['scope']} | {b['entity']} | {fmt(b['budget_amount'])} "
+            f"| {fmt(b['observed_net_amount'], 4)} | {'yes' if b['prevent_further_usage'] else 'no'} "
+            f"| {b['status']} |"
+        )
+    if not budget_rows:
+        lines.append("| — | — | — | — | — | — | No Actions budget returned or configured |")
     lines += ["", "## Collection issues", ""]
     issues = []
     for a in report["accounts"]:
-        for field, label in (("summary_error", "summary"), ("repository_list_error", "repository list")):
-            if a.get(field): issues.append(f"- `{a['scope']}:{a['owner']}` {label}: `{a[field]}`")
-        if a.get("budget", {}).get("error"): issues.append(f"- `{a['scope']}:{a['owner']}` budget: `{a['budget']['error']}`")
-        for r in a.get("private_repositories", []):
-            if r.get("error"): issues.append(f"- `{r['full_name']}`: `{r['error']}`")
+        for key, label in (("summary_error", "usage summary"),
+                           ("repository_list_error", "repository inventory")):
+            if a.get(key):
+                issues.append(f"- {a['scope']}:{a['owner']} {label}: {a[key]}")
+        if a["budget"].get("error"):
+            issues.append(f"- {a['scope']}:{a['owner']} budget: {a['budget']['error']}")
+        issues += [f"- {r['full_name']}: {r['error']}"
+                   for r in a["repositories"] if r.get("error")]
     lines += issues or ["- None"]
-    lines += ["", "## Recent snapshots", "", "| Collected (UTC) | Period | Owners | Private repos | Total min | Included min | Billable min | Net amount | Status |", "|---|---|---:|---:|---:|---:|---:|---:|---|"]
+    lines += ["", "## Recent snapshots", "",
+              "| Collected (UTC) | Period | Owners | Repositories | Total min | Included min | Billable min | Net amount | Status |",
+              "|---|---|---:|---:|---:|---:|---:|---:|---|"]
     for h in reversed(history[-30:]):
-        lines.append(f"| `{h.get('collected_at_utc', 'unknown')}` | `{h.get('billing_period', 'unknown')}` | {h.get('owner_count', 0)} | {h.get('repository_count', 0)} | {h.get('gross_minutes', 0):,.2f} | {h.get('discounted_minutes', 0):,.2f} | {h.get('billable_minutes', 0):,.2f} | {h.get('net_amount', 0):,.2f} | {h.get('status', 'UNKNOWN')} |")
+        lines.append(
+            f"| {h.get('collected_at_utc', 'unknown')} | {h.get('billing_period', 'unknown')} "
+            f"| {h.get('owner_count', 0)} | {h.get('repository_count', 0)} "
+            f"| {fmt(h.get('gross_minutes'))} | {fmt(h.get('discounted_minutes'))} "
+            f"| {fmt(h.get('billable_minutes'))} | {fmt(h.get('net_amount'), 4)} "
+            f"| {h.get('status', 'UNKNOWN')} |"
+        )
     return "\n".join(lines) + "\n"
 
 
 def write_report(report, directory):
     directory.mkdir(parents=True, exist_ok=True)
-    hp = directory / "usage-history.json"
-    try: history = json.loads(hp.read_text()) if hp.exists() else []
-    except (OSError, json.JSONDecodeError): history = []
-    if not isinstance(history, list): history = []
-    repos = sum(len(a.get("private_repositories", [])) for a in report["accounts"])
-    states = [a.get("status", "UNKNOWN") for a in report["accounts"]]
-    status = "UNKNOWN" if not states or all(s == "UNKNOWN" for s in states) else "PARTIAL" if any(s != "OK" for s in states) else "OK"
-    total = totals([i for a in report["accounts"] for i in a.get("usage_items", [])])
-    history.append({"collected_at_utc": report["collected_at_utc"], "billing_period": report["billing_period"],
-                    "owner_count": len(states), "repository_count": repos, **total, "status": status})
+    history_path = directory / "usage-history.json"
+    try:
+        history = json.loads(history_path.read_text(encoding="utf-8")) if history_path.exists() else []
+    except (OSError, json.JSONDecodeError):
+        history = []
+    if not isinstance(history, list):
+        history = []
+    accounts = report["accounts"]
+    keys = ("gross_minutes", "discounted_minutes", "billable_minutes", "net_amount")
+    aggregate = {}
+    for key in keys:
+        values = [a["totals"][key] for a in accounts]
+        aggregate[key] = None if any(v is None for v in values) else round(sum(values), 6 if key == "net_amount" else 3)
+    statuses = [a["status"] for a in accounts]
+    status = "UNKNOWN" if all(s == "UNKNOWN" for s in statuses) else "PARTIAL" if any(s != "OK" for s in statuses) else "OK"
+    history.append({
+        "collected_at_utc": report["collected_at_utc"],
+        "billing_period": report["billing_period"],
+        "owner_count": len(accounts),
+        "repository_count": sum(len(a["repositories"]) for a in accounts),
+        **aggregate, "status": status,
+    })
     history = history[-365:]
-    (directory / "usage-latest.json").write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
-    hp.write_text(json.dumps(history, indent=2) + "\n")
-    (directory / "README.md").write_text(render(report, history))
+    (directory / "usage-latest.json").write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    history_path.write_text(json.dumps(history, indent=2) + "\n", encoding="utf-8")
+    (directory / "dashboard.md").write_text(render(report, history), encoding="utf-8")
 
 
 def main():
-    p = argparse.ArgumentParser(); p.add_argument("--report-dir", type=Path, required=True); args = p.parse_args()
-    user_token = os.getenv("USER_BILLING_TOKEN", "").strip()
-    org_map = org_tokens(os.getenv("ORG_BILLING_TOKENS_JSON", "{}"))
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--report-dir", type=Path, required=True)
+    parser.add_argument("--org-targets-file", type=Path, required=True)
+    args = parser.parse_args()
     username = os.getenv("GITHUB_USERNAME", "").strip()
-    if not user_token and not org_map:
-        print("NO_BILLING_TOKENS_CONFIGURED", file=sys.stderr); return 2
-    if user_token and not username:
-        print("GITHUB_USERNAME_NOT_CONFIGURED", file=sys.stderr); return 2
-    write_report(collect_all(user_token, org_map, username), args.report_dir)
-    print("COLLECTION_COMPLETE private_report_files_written=true")
+    if not username:
+        print("GITHUB_USERNAME_NOT_CONFIGURED", file=sys.stderr)
+        return 2
+    report = collect_all(
+        os.getenv("USER_BILLING_TOKEN", "").strip(),
+        org_tokens(os.getenv("ORG_BILLING_TOKENS_JSON", "{}")),
+        username, org_targets(args.org_targets_file),
+    )
+    write_report(report, args.report_dir)
+    counts = {s: sum(a["status"] == s for a in report["accounts"])
+              for s in ("OK", "PARTIAL", "UNKNOWN")}
+    print(f"COLLECTION_COMPLETE owners={len(report['accounts'])} "
+          f"repositories={sum(len(a['repositories']) for a in report['accounts'])} "
+          f"ok={counts['OK']} partial={counts['PARTIAL']} unknown={counts['UNKNOWN']}")
     return 0
 
 
-if __name__ == "__main__": raise SystemExit(main())
+if __name__ == "__main__":
+    raise SystemExit(main())

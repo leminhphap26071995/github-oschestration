@@ -1,49 +1,41 @@
-# Actions usage monitor
+# GitHub Actions usage collector
 
-A small scheduled collector for the personal account and explicitly configured Organizations. It uses GitHub's Billing Usage Summary API, enumerates private repositories, and queries usage per repository. The report is written only to a separate **private** report repository; this source repository is public.
+This directory contains the reusable, read-only collector for the GitHub Billing Usage Summary API. The scheduled runner and generated dashboard are hosted in an existing private account repository; there is no need to create another report repository.
 
-## What it reports
+## Coverage and metrics
 
-- Actions usage by account/Organization and private repository.
-- Total consumed minutes (`grossQuantity`), included/discounted minutes (`discountQuantity`), billable minutes (`netQuantity`) and net billed amount, with SKU/unit detail in `usage-latest.json`.
-- Organization Actions hard-cap status when a billing budget is configured and the budget API is available.
-- Daily snapshots in `usage-history.json` and a GitHub-rendered Markdown dashboard in `README.md` of the private report repository.
+- Personal account and configured organization billing owners.
+- All repositories returned by authorized owner-scoped inventory endpoints, including public and private repositories.
+- Total consumed Actions minutes (grossQuantity), included/discounted minutes (discountQuantity), billable minutes (netQuantity), and net billed amount.
+- Organization Actions budgets, including hard-cap enforcement. Budget spend is calculated from observed netAmount in the usage summary; the budgets endpoint returns configuration, not spend.
 
-The usage summary API reports total, discounted/included and billable quantities, but does **not** expose the remaining included-minute allowance. The dashboard therefore never invents a remaining balance or percentage. `UNKNOWN` means the API did not establish the value; it does not mean zero usage or quota available.
+The usage summary is a public-preview API limited to the previous 24 months. It does not expose remaining included-minute allowance. The dashboard never invents a remaining balance or percentage. Missing token, permission, or API access is UNKNOWN, not zero.
 
-## One-time setup
+## Private runner configuration
 
-Create a private repository for the report, for example `github-usage-dashboard`. Do not point this at the public source repository.
+In the existing private operations repository, configure these Actions secrets:
 
-In `github-oschestration` → Settings → Secrets and variables → Actions:
+- USER_BILLING_TOKEN: fine-grained token for the personal account with Plan: read and Metadata: read.
+- ORG_BILLING_TOKENS_JSON: JSON map from each configured organization login to a token created with that organization as resource owner and Administration: read plus Metadata: read for its repositories.
 
-- Repository variable `QUOTA_MONITOR_ENABLED` = `true` (set this only after all secrets below exist).
-- Secret `REPORT_REPOSITORY` = `owner/private-report-repo`.
-- Secret `REPORT_TOKEN` = fine-grained token with `Contents: write` only on the private report repository.
-- Secret `USER_BILLING_TOKEN` = fine-grained token for the personal account with `Plan: read` and `Metadata: read` for the account's private repositories.
-- Secret `ORG_BILLING_TOKENS_JSON` = JSON object mapping each Organization owned by the account to its own token. Each token is created with that Organization as resource owner and has `Administration: read` plus `Metadata: read` for its private repositories. Example shape (use real tokens only in GitHub Secrets, never in this file):
+Example secret value shape (replace with real token values in GitHub Secrets only):
 
-```json
-{"owned-org-a":"TOKEN_A","owned-org-b":"TOKEN_B"}
-```
+    {"organization-a":"TOKEN_A","organization-b":"TOKEN_B"}
 
-Only add Organizations the account owns and is authorized to bill-monitor. This explicit token map is the allowlist; app installations or repository visibility alone do not prove Organization ownership. Add a token when a new owned Organization should be monitored.
+The private runner also stores targets.json, which defines the organization coverage list. A missing token for a configured owner creates an UNKNOWN row; it does not silently remove that owner from the dashboard.
 
-## Workflow
+Authentication documentation discrepancy: the billing endpoint reference lists fine-grained PAT and GitHub App token support, while GitHub's automation tutorial still says billing usage endpoints require a classic PAT. This collector uses documented least-privilege fine-grained permissions and records HTTP_403 as UNKNOWN. Do not broaden permissions merely to suppress an error; verify the live endpoint and use a separately authorized billing-capable token if GitHub rejects the token type.
 
-`.github/workflows/actions-usage-monitor.yml` runs daily and when monitor code/config changes on `main`. It uses only a standard `ubuntu-latest` runner. Standard GitHub-hosted runners are free and unlimited for public repositories. There is no `workflow_dispatch`.
+## Dashboard destination
 
-The workflow is disabled until `QUOTA_MONITOR_ENABLED=true`. It checks out the private report repository, runs the collector, then commits the generated Markdown/JSON there. It does not upload usage data as a public artifact or print private repository metrics in public logs.
+The private workflow writes only to its own private repository:
 
-## API and permissions
+- ops/github-actions-usage/dashboard.md
+- ops/github-actions-usage/usage-latest.json
+- ops/github-actions-usage/usage-history.json
 
-- Personal account summary: `GET /users/{username}/settings/billing/usage/summary?product=Actions` (`Plan: read`).
-- Organization summary: `GET /organizations/{org}/settings/billing/usage/summary?product=Actions` (`Administration: read`; caller must have billing access).
-- Per-private-repository usage: same summary endpoint with `repository=owner/repo`.
-- Organization budget: `GET /organizations/{org}/settings/billing/budgets` (`Administration: read`). A hard cap is reported only when `prevent_further_usage=true` and spend has reached the configured budget.
+No billing data is written to this public source repository or printed in public workflow logs. The private workflow runs daily and on scoped configuration changes. It has no manual dispatch path.
 
-The usage summary endpoint is public preview and limited to the previous 24 months. GitHub's endpoint reference lists fine-grained PAT support, while its automation tutorial currently says billing usage endpoints do not support fine-grained PATs. The collector records authentication/permission errors as `UNKNOWN`; verify token compatibility against the live endpoint before enabling scheduled collection. Never replace least-privilege read access with broad write permissions just to suppress a 403.
+## Local tests
 
-## Plugin update boundary
-
-The plugin workflow validates and packages `plugin/overlay/` as a versioned ZIP artifact. The current Plugin Creator integration is a ChatGPT-side action, not an API that this GitHub Actions workflow can invoke. After reviewing the artifact SHA and contents, use the Plugin Creator update action with the current release ID. A successful package job is not proof that the live plugin was updated or activated.
+    python -m unittest discover -s quota-monitor/tests -v
