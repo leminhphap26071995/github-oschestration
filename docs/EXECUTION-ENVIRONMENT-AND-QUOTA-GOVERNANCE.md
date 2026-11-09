@@ -13,3 +13,9 @@ When exhaustion is confirmed, notify owner with evidence and pause later trigger
 Inspect workflow event fan-out, branch/path filters, matrices, concurrency, schedules and downstream triggers before writes. Avoid duplicate push+pull_request runs, redundant workflows and retry storms. Docs-only changes normally use content/contract checks and remote readback without CI unless required.
 
 See GITHUB-ACTIONS-RUN-LIFECYCLE.md for the polling state machine and evidence ladder.
+
+## Network, DNS and runtime image evidence
+
+Host preflight must test the actual execution route: authentication, network reachability, network/DNS resolution, proxy/TLS behavior and the provider endpoint used by the next invocation. A network/DNS failure is a transport or environment blocker; it is not evidence that billing quota is exhausted.
+
+Record the runner/host image, operating system, architecture and relevant tool versions when they affect reproducibility. An image mismatch or unavailable runtime image is an execution-environment failure, not a provider quota signal.

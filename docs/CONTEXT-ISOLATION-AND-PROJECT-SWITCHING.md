@@ -18,3 +18,5 @@ Game Mod, VS Code Extension, Career/Interview and other workstreams must have se
 Acceptance sequences: Game Mod A -> VS Code B -> Game Mod A; VS Code -> Career Interview Papaya -> VS Code; two tickets within one project; ambiguous continue across projects; stale SHA reconciliation. Each must resume the correct source, roles, criteria and Next Action.
 
 Project routing registry selects persistent repository/branch. Project work board owns mutable ticket state. GitHub owns versioned source and technical receipts. A checkpoint is a pointer, not proof.
+
+A **project checkpoint** and a **ticket checkpoint** are separate recovery records. The project checkpoint indexes its tickets; each ticket checkpoint owns its own requirement version, source lock, acceptance ledger and Next Action. A project-level summary must not replace the ticket checkpoint when resuming implementation.
