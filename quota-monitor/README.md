@@ -14,7 +14,7 @@ The collector retains the billing API's SKU, unit type, quantity and cost. The e
 - Linux runner SKUs: actions_linux*
 - Windows runner SKUs: actions_windows*
 - macOS runner SKUs: actions_macos*
-- Actions artifact/shared storage: actions_storage
+- Actions storage: actions_storage
 - Actions cache storage: actions_cache_storage
 - Custom runner image storage: actions_custom_image_storage
 
