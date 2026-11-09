@@ -73,7 +73,7 @@ class WorkspaceTests(unittest.TestCase):
  def test_validator_rejects_manual_dispatch(self):
   with tempfile.TemporaryDirectory() as d:
    dest=self.copy_workspace(d)
-   (dest/".github/workflows/bad.yml").write_text("on:\\n  workflow_dispatch:\\n")
+   (dest/".github/workflows/bad.yml").write_text("on:" + chr(10) + "  workflow_dispatch:" + chr(10))
    self.assertIn("WORKFLOW_DISPATCH_FORBIDDEN:bad.yml",validator.check(dest))
 
  def test_manual_dispatch_is_forbidden(self):
