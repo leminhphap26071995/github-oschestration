@@ -99,22 +99,23 @@ def append_dashboard(path, report, discovery):
     current = path.read_text(encoding="utf-8")
     if START in current:
         current = current.split(START, 1)[0].rstrip() + "\n"
+    current = current.replace("Total min", "Gross min").replace("Included min", "Discounted min").replace("Billable min", "Net min")
     lines = [START, "", "## Runner minutes by operating system", "",
-             "| Billing owner | Linux minutes | Windows minutes | macOS minutes | Runner cost |",
-             "|---|---:|---:|---:|---:|"]
+             "| Billing owner | OS | Gross min | Discounted min | Net min | Net amount |",
+             "|---|---|---:|---:|---:|---:|"]
     for account in report.get("accounts", []):
         m = account["metrics"]
-        os_rows = m["runner_minutes_by_os"]
-        lines.append(f"| {account['owner']} | {fmt(os_rows['linux']['net_minutes'])} "
-                     f"| {fmt(os_rows['windows']['net_minutes'])} "
-                     f"| {fmt(os_rows['macos']['net_minutes'])} "
-                     f"| USD {fmt(m['runner_net_amount'], 4)} |")
+        for os_name, values in m["runner_minutes_by_os"].items():
+            lines.append(f"| {account['owner']} | {os_name} | {fmt(values['gross_minutes'])} "
+                         f"| {fmt(values['discounted_minutes'])} | {fmt(values['net_minutes'])} "
+                         f"| USD {fmt(values['net_amount'], 4)} |")
     lines += ["", "## Actions storage usage and cost", "",
-              "| Billing owner | Storage SKU | Net quantity | API unit | Net amount |",
-              "|---|---|---:|---|---:|"]
+              "| Billing owner | Storage SKU | Gross quantity | Discounted quantity | Net quantity | API unit | Net amount |",
+              "|---|---|---:|---:|---:|---|---:|"]
     for account in report.get("accounts", []):
         for name, value in account["metrics"]["storage_by_type"].items():
-            lines.append(f"| {account['owner']} | {name} | {fmt(value['net_quantity'])} "
+            lines.append(f"| {account['owner']} | {name} | {fmt(value['gross_quantity'])} "
+                         f"| {fmt(value['discount_quantity'])} | {fmt(value['net_quantity'])} "
                          f"| {value['unit_type']} | USD {fmt(value['net_amount'], 4)} |")
     lines += ["", "## Repository OS and storage breakdown", "",
               "| Repository | Linux min | Windows min | macOS min | Storage cost | Total Actions cost |",
