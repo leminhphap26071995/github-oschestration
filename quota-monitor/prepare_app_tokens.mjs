@@ -97,7 +97,7 @@ export async function prepare({ targetsFile, outputTargetsFile, discoveryFile, g
           { permissions: { administration: 'read' } },
         );
         if (typeof token.token !== 'string' || !token.token) throw new Error('INSTALLATION_TOKEN_MISSING');
-        process.stdout.write('::add-mask::' + token.token + '\\n');
+        process.stdout.write('::add-mask::' + token.token + String.fromCharCode(10));
         tokenMap[org] = token.token;
       } catch (error) {
         installationErrors.push({ organization: org, error: String(error.message || 'TOKEN_MINT_FAILED') });
