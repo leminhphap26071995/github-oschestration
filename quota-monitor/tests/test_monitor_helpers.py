@@ -26,7 +26,7 @@ class EnrichReportTests(unittest.TestCase):
         self.assertEqual(80, result["runner_minutes_by_os"]["linux"]["net_minutes"])
         self.assertEqual(40, result["runner_minutes_by_os"]["windows"]["net_minutes"])
         self.assertEqual(0, result["runner_minutes_by_os"]["macos"]["net_minutes"])
-        self.assertEqual(200, result["storage_by_type"]["artifact_storage"]["net_quantity"])
+        self.assertEqual(200, result["storage_by_type"]["actions_storage"]["net_quantity"])
         self.assertEqual(80, result["storage_by_type"]["cache_storage"]["net_quantity"])
         self.assertEqual(0.03, result["storage_net_amount"])
 
