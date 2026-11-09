@@ -134,7 +134,10 @@ def append_dashboard(path, report, discovery):
               f"- Status: {discovery.get('status', 'UNKNOWN')}",
               f"- Configured organizations: {discovery.get('configured_count', 'UNKNOWN')}",
               f"- Discovered owner organizations: {discovery.get('discovered_count', 'UNKNOWN')}",
-              f"- Discovery error: {discovery.get('error') or 'none'}", END, ""]
+              f"- Discovery error: {discovery.get('error') or 'none'}"]
+    for issue in discovery.get("installation_errors", []):
+        lines.append(f"- {issue.get('organization', 'unknown')}: {issue.get('error', 'UNKNOWN')}")
+    lines += [END, ""]
     path.write_text(current + "\n".join(lines), encoding="utf-8")
 
 
