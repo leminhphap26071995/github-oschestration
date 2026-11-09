@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 
 STORAGE = {
-    "actions_storage": "artifact_storage",
+    "actions_storage": "actions_storage",
     "actions_cache_storage": "cache_storage",
     "actions_custom_image_storage": "custom_image_storage",
 }
