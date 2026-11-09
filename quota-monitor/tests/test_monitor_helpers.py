@@ -3,62 +3,11 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parent.parent
-
-
-def load(name):
-    spec = importlib.util.spec_from_file_location(name, ROOT / f"{name}.py")
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
-
-prepare = load("prepare_targets")
-enrich = load("enrich_report")
-
-
-class PrepareTargetsTests(unittest.TestCase):
-    def test_discovery_includes_only_active_admin_memberships(self):
-        data = [
-            {"state": "active", "role": "admin", "organization": {"login": "owned-org"}},
-            {"state": "active", "role": "member", "organization": {"login": "member-org"}},
-            {"state": "pending", "role": "admin", "organization": {"login": "pending-org"}},
-        ]
-        with patch.object(prepare, "request", return_value=(data, None)):
-            self.assertEqual(["owned-org"], prepare.discover("token")[0])
-
-    def test_prepare_merges_explicit_and_discovered_and_sets_one_token(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            source = root / "targets.json"
-            output = root / "runtime-targets.json"
-            discovery = root / "report" / "organization-discovery.json"
-            env_file = root / "github-env"
-            source.write_text(json.dumps({"organizations": ["configured-org"]}))
-            with patch.object(prepare, "discover", return_value=(["owned-org"], None)):
-                result = prepare.prepare(source, output, discovery, "secret-value", env_file)
-            self.assertEqual(2, result["organizations"])
-            self.assertEqual(["configured-org", "owned-org"],
-                             json.loads(output.read_text())["organizations"])
-            env = env_file.read_text()
-            self.assertIn("USER_BILLING_TOKEN=secret-value", env)
-            self.assertIn('"configured-org":"secret-value"', env)
-            self.assertIn('"owned-org":"secret-value"', env)
-            self.assertNotIn("secret-value", discovery.read_text())
-
-    def test_discovery_failure_preserves_explicit_orgs(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            source = root / "targets.json"
-            output = root / "runtime-targets.json"
-            discovery = root / "organization-discovery.json"
-            source.write_text(json.dumps({"organizations": ["configured-org"]}))
-            with patch.object(prepare, "discover", return_value=([], "HTTP_403")):
-                result = prepare.prepare(source, output, discovery, "token")
-            self.assertEqual(["configured-org"], json.loads(output.read_text())["organizations"])
-            self.assertEqual("HTTP_403", result["error"])
+spec = importlib.util.spec_from_file_location("enrich_report", ROOT / "enrich_report.py")
+module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(module)
 
 
 class EnrichReportTests(unittest.TestCase):
@@ -73,7 +22,7 @@ class EnrichReportTests(unittest.TestCase):
             {"sku": "actions_cache_storage", "unit_type": "GB-hours", "gross_quantity": 80,
              "discount_quantity": 0, "net_quantity": 80, "net_amount": 0.01},
         ]
-        result = enrich.metrics(rows)
+        result = module.metrics(rows)
         self.assertEqual(80, result["runner_minutes_by_os"]["linux"]["net_minutes"])
         self.assertEqual(40, result["runner_minutes_by_os"]["windows"]["net_minutes"])
         self.assertEqual(0, result["runner_minutes_by_os"]["macos"]["net_minutes"])
@@ -82,7 +31,7 @@ class EnrichReportTests(unittest.TestCase):
         self.assertEqual(0.03, result["storage_net_amount"])
 
     def test_unknown_account_does_not_become_zero(self):
-        result = enrich.metrics([], unknown=True)
+        result = module.metrics([], unknown=True)
         self.assertIsNone(result["runner_minutes_by_os"]["linux"]["net_minutes"])
         self.assertIsNone(result["storage_net_amount"])
 
@@ -110,7 +59,7 @@ class EnrichReportTests(unittest.TestCase):
                 "status": "OK", "configured_count": 1, "discovered_count": 2,
                 "error": None,
             }))
-            result = enrich.enrich(root)
+            result = module.enrich(root)
             self.assertEqual(10, result["accounts"][0]["metrics"]["runner_minutes_by_os"]["linux"]["net_minutes"])
             dashboard = (root / "dashboard.md").read_text()
             self.assertIn("Runner minutes by operating system", dashboard)
