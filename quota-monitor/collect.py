@@ -61,16 +61,21 @@ def items(data):
         out.append({
             "sku": x.get("sku", "unknown"), "unit_type": x.get("unitType", "unknown"),
             "gross_quantity": float(x.get("grossQuantity", x.get("quantity", 0)) or 0),
+            "discount_quantity": float(x.get("discountQuantity", 0) or 0),
             "net_quantity": float(x.get("netQuantity", x.get("quantity", 0)) or 0),
             "gross_amount": float(x.get("grossAmount", 0) or 0),
+            "discount_amount": float(x.get("discountAmount", 0) or 0),
             "net_amount": float(x.get("netAmount", 0) or 0),
         })
     return out
 
 
 def totals(rows):
+    minutes = [x for x in rows if str(x["unit_type"]).lower() in ("minute", "minutes")]
     return {
-        "net_minutes": round(sum(x["net_quantity"] for x in rows if str(x["unit_type"]).lower() in ("minute", "minutes")), 3),
+        "gross_minutes": round(sum(x["gross_quantity"] for x in minutes), 3),
+        "discounted_minutes": round(sum(x["discount_quantity"] for x in minutes), 3),
+        "billable_minutes": round(sum(x["net_quantity"] for x in minutes), 3),
         "net_amount": round(sum(x["net_amount"] for x in rows), 6),
     }
 
@@ -138,15 +143,15 @@ def render(report, history):
     lines = ["# GitHub Actions Usage Dashboard", "", f"**Period:** `{report['billing_period']}`  ",
              f"**Updated (UTC):** `{report['collected_at_utc']}`", "",
              "> Usage summary reports consumption and billed amount, not remaining included minutes. No remaining balance or percentage is inferred.", "",
-             "## Account overview", "", "| Scope | Owner | Private repos | Status | Actions hard cap | Net minutes | Net amount |", "|---|---|---:|---|---|---:|---:|"]
+             "## Account overview", "", "| Scope | Owner | Private repos | Status | Actions hard cap | Total min | Included min | Billable min | Net amount |", "|---|---|---:|---|---|---:|---:|---:|---:|"]
     for a in report["accounts"]:
         t = a.get("totals", totals(a.get("usage_items", [])))
-        lines.append(f"| {a['scope']} | `{a['owner']}` | {len(a.get('private_repositories', []))} | {a['status']} | {a.get('budget', {}).get('status', 'NOT_CHECKED')} | {t['net_minutes']:,.2f} | {t['net_amount']:,.2f} |")
-    lines += ["", "## Private repository usage", "", "| Repository | Status | Net minutes | Net amount |", "|---|---|---:|---:|"]
+        lines.append(f"| {a['scope']} | `{a['owner']}` | {len(a.get('private_repositories', []))} | {a['status']} | {a.get('budget', {}).get('status', 'NOT_CHECKED')} | {t['gross_minutes']:,.2f} | {t['discounted_minutes']:,.2f} | {t['billable_minutes']:,.2f} | {t['net_amount']:,.2f} |")
+    lines += ["", "## Private repository usage", "", "| Repository | Status | Total min | Included min | Billable min | Net amount |", "|---|---|---:|---:|---:|---:|"]
     repos = [r for a in report["accounts"] for r in a.get("private_repositories", [])]
     for r in sorted(repos, key=lambda x: x["full_name"].lower()):
         t = r["totals"]
-        lines.append(f"| `{r['full_name']}` | {r['status']} | {t['net_minutes']:,.2f} | {t['net_amount']:,.2f} |")
+        lines.append(f"| `{r['full_name']}` | {r['status']} | {t['gross_minutes']:,.2f} | {t['discounted_minutes']:,.2f} | {t['billable_minutes']:,.2f} | {t['net_amount']:,.2f} |")
     if not repos: lines.append("| — | No private repositories returned | — | — |")
     lines += ["", "## Collection issues", ""]
     issues = []
@@ -157,9 +162,9 @@ def render(report, history):
         for r in a.get("private_repositories", []):
             if r.get("error"): issues.append(f"- `{r['full_name']}`: `{r['error']}`")
     lines += issues or ["- None"]
-    lines += ["", "## Recent snapshots", "", "| Collected (UTC) | Period | Owners | Private repos | Net minutes | Net amount | Status |", "|---|---|---:|---:|---:|---:|---|"]
+    lines += ["", "## Recent snapshots", "", "| Collected (UTC) | Period | Owners | Private repos | Total min | Included min | Billable min | Net amount | Status |", "|---|---|---:|---:|---:|---:|---:|---:|---|"]
     for h in reversed(history[-30:]):
-        lines.append(f"| `{h.get('collected_at_utc', 'unknown')}` | `{h.get('billing_period', 'unknown')}` | {h.get('owner_count', 0)} | {h.get('repository_count', 0)} | {h.get('net_minutes', 0):,.2f} | {h.get('net_amount', 0):,.2f} | {h.get('status', 'UNKNOWN')} |")
+        lines.append(f"| `{h.get('collected_at_utc', 'unknown')}` | `{h.get('billing_period', 'unknown')}` | {h.get('owner_count', 0)} | {h.get('repository_count', 0)} | {h.get('gross_minutes', 0):,.2f} | {h.get('discounted_minutes', 0):,.2f} | {h.get('billable_minutes', 0):,.2f} | {h.get('net_amount', 0):,.2f} | {h.get('status', 'UNKNOWN')} |")
     return "\n".join(lines) + "\n"
 
 

@@ -5,11 +5,11 @@ A small scheduled collector for the personal account and explicitly configured O
 ## What it reports
 
 - Actions usage by account/Organization and private repository.
-- Net minutes and net billed amount, separated by SKU/unit in `usage-latest.json`.
+- Total consumed minutes (`grossQuantity`), included/discounted minutes (`discountQuantity`), billable minutes (`netQuantity`) and net billed amount, with SKU/unit detail in `usage-latest.json`.
 - Organization Actions hard-cap status when a billing budget is configured and the budget API is available.
 - Daily snapshots in `usage-history.json` and a GitHub-rendered Markdown dashboard in `README.md` of the private report repository.
 
-The usage summary API does **not** expose remaining included minutes. The dashboard therefore never invents a remaining balance or percentage. `UNKNOWN` means the API did not establish the value; it does not mean zero usage or quota available.
+The usage summary API reports total, discounted/included and billable quantities, but does **not** expose the remaining included-minute allowance. The dashboard therefore never invents a remaining balance or percentage. `UNKNOWN` means the API did not establish the value; it does not mean zero usage or quota available.
 
 ## One-time setup
 
