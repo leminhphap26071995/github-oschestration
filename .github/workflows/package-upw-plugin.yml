@@ -1,0 +1,63 @@
+name: Validate Architecture and Package UPW Plugin Overlay
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "plugin/**"
+      - ".github/workflows/package-upw-plugin.yml"
+      - "scripts/**"
+      - "tests/test_validate_workspace.py"
+      - "schemas/**"
+      - "domain-packs/**"
+      - "docs/PROFESSIONAL-CAPABILITY-ARCHITECTURE.md"
+      - "docs/EXECUTION-ENVIRONMENT-AND-QUOTA-GOVERNANCE.md"
+      - "docs/GITHUB-ACTIONS-RUN-LIFECYCLE.md"
+      - "docs/CONTEXT-ISOLATION-AND-PROJECT-SWITCHING.md"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: package-upw-plugin-main
+  cancel-in-progress: false
+
+jobs:
+  validate-and-package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout exact source
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Validate architecture workspace
+        run: python scripts/validate_workspace.py --root .
+
+      - name: Run architecture regression suite
+        run: python -m unittest discover -s tests -p 'test_*.py' -v
+
+      - name: Validate plugin overlay
+        run: python plugin/validate_overlay.py --root plugin/overlay
+
+      - name: Package overlay
+        run: |
+          VERSION="$(python -c 'import json; print(json.load(open("plugin/overlay/plugin.json"))["version"])')"
+          python plugin/package_overlay.py --root plugin/overlay --output "dist/UPW-$VERSION-overlay.zip"
+          sha256sum "dist/UPW-$VERSION-overlay.zip" | tee dist/SHA256SUMS
+
+      - name: Upload versioned plugin overlay
+        uses: actions/upload-artifact@v7
+        with:
+          name: UPW-plugin-overlay-${{ github.sha }}
+          path: |
+            dist/*.zip
+            dist/SHA256SUMS
+          if-no-files-found: error
+          retention-days: 14

@@ -1,0 +1,7 @@
+{
+  "schema_version": 2,
+  "kind": "context-index",
+  "routing_rule": "EXPLICIT_PROJECT_AND_TICKET; NEVER_LATEST_TIMESTAMP",
+  "active_context": null,
+  "projects": []
+}

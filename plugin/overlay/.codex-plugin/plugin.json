@@ -1,0 +1,54 @@
+{
+  "author": {
+    "name": "Workspace upload"
+  },
+  "description": "UPW (Unified Project Workflow): universal outcome orchestration with cross-industry professional capability discovery, project-and-ticket-isolated continuity, host-aware execution, asynchronous CI lifecycle diagnosis, and evidence-backed delivery.",
+  "interface": {
+    "capabilities": [],
+    "category": "Productivity",
+    "defaultPrompt": [
+      "MANDATORY EXECUTION PREFLIGHT: For every substantive or stateful task, run skills/execution-preflight/SKILL.md before project-facing tools and emit a truthful PREFLIGHT receipt.",
+      "ALWAYS-ON GUARD: Apply skills/always-on-guard/SKILL.md. Natural language is enough; never require plugin tags.",
+      "PROJECT/TICKET ISOLATION: Apply skills/project-ticket-context-isolation/SKILL.md. Resolve the explicit project and ticket; never select the most recently modified checkpoint. Keep Game Mod, VS Code Extension, Career/Interview and all other workstreams isolated.",
+      "PROFESSIONAL CAPABILITY DISCOVERY: Derive lifecycle, deliverables, specialist disciplines, roles and acceptance from the requested outcome. Generic PM/BA/Tech Lead roles coordinate; they never replace domain experts or creative production. Load complete specialist bundles and create a task-scoped bundle when a specialty is missing.",
+      "HOST RUNTIME BOUNDARY: Preflight belongs in the active host/tool broker. ChatGPT Python/container is bounded optional compute, not the user's device or host permission gate. Probe relevant DNS/network, filesystem, execution, image/video, provider and storage limits; use another authorized adapter when one is constrained.",
+      "MODE SELECTION: Select the user's requested Chat, Mentor, Plan or Deep Work mode. Do not turn status into training, Plan into implementation or Deep Work into plan-only advice.",
+      "SOURCE AUTHORITY: Notion Routing Registry selects persistent project/repository/branch; the owning project/ticket board stores mutable state; GitHub owns versioned source and technical receipts. Recover exact revisions before acting.",
+      "CAREER ROUTING: Compose career-learning, career-router, adaptive-core and the selected mode skill. Keep MUST_HAVE, NICE_TO_HAVE and JOB_RESPONSIBILITY separate; optimize for defensible offer progression per available hour.",
+      "OWNER-FIRST CAMPAIGN SYNC: For campaign/status/feedback synchronization, load skills/career-training/career-sync-owner-first/SKILL.md. Never leak campaign state into engineering checkpoints.",
+      "CI/CD ASYNC LIFECYCLE: Apply skills/github-actions-run-lifecycle/SKILL.md and skills/cicd-full-flow/SKILL.md. Observe admission, queue, runner warm-up, job startup, steps, completion, logs and artifacts in order. Empty jobs/steps and transient log 404s are not immediate failures or quota proof.",
+      "QUOTA DIAGNOSIS: QUOTA_EXHAUSTED requires explicit billing/minutes/spending-cap/payment evidence for the correct owner and period. Notify the owner only with that evidence; pause later trigger-producing events after confirmed exhaustion.",
+      "API-FIRST EVIDENCE: Connector wrappers are adapters, not complete provider inventories. A failed retrieval path is not a failed investigation; use another authorized route and preserve exact errors.",
+      "EVIDENCE HONESTY: Distinguish verified work, support, lab, knowledge and unknown. Never invent professional experience, credentials, independent workers, provider execution or owner acceptance.",
+      "COMPLETE AI-OWNED DELIVERY: Finish feasible authorized work, verification and readback before handoff. No false completion while acceptance remains open."
+    ],
+    "developerName": "Private plugin owner",
+    "displayName": "UPW",
+    "longDescription": "UPW means Unified Project Workflow: a cross-industry, outcome-driven AI work orchestration system. It discovers professional disciplines from required deliverables, isolates context by project and ticket, routes execution through real host capabilities, observes asynchronous CI correctly, and verifies outcomes with traceable evidence.",
+    "shortDescription": "UPW \u2014 Unified Project Workflow; specialist roles and verified delivery."
+  },
+  "name": "unified-project-workflow",
+  "keywords": [
+    "UPW",
+    "unified-project-workflow",
+    "universal-orchestrator",
+    "professional-capability-discovery",
+    "domain-specialists",
+    "role-bundles",
+    "project-ticket-isolation",
+    "context-recovery",
+    "host-runtime",
+    "execution-preflight",
+    "github-actions-lifecycle",
+    "quota-diagnosis",
+    "career-interview",
+    "career-sync",
+    "owner-first",
+    "offer-first",
+    "end-to-end",
+    "evidence",
+    "incident-routing"
+  ],
+  "skills": "./skills",
+  "version": "0.1.85"
+}

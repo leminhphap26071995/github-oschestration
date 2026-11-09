@@ -1,0 +1,24 @@
+{
+  "schema_version": 2,
+  "template_id": "am-ai-manager-core-v1",
+  "template_source": {
+    "repository": "USER_DEFINED_AT_INSTALL",
+    "mode": "embedded",
+    "commit": "local"
+  },
+  "project": {
+    "name": "UNCONFIGURED",
+    "goal_id": "UNCONFIGURED",
+    "default_domain": "discovery"
+  },
+  "domain_pack_registry": "domain-packs/registry.json",
+  "require_evidence": true,
+  "identity_policy": "derive-from-live-git-origin-and-exact-head; never trust hardcoded repository names",
+  "context_index_path": ".ai-workflow/CURRENT.json",
+  "project_checkpoint_pattern": ".ai-workflow/projects/<project-id>/CURRENT.json",
+  "ticket_checkpoint_pattern": ".ai-workflow/projects/<project-id>/tickets/<ticket-id>/CURRENT.json",
+  "checkpoint_path": ".ai-workflow/projects/<project-id>/tickets/<ticket-id>/CURRENT.json",
+  "context_resolution": "explicit-project-ticket; never-latest-modified-checkpoint",
+  "privacy_policy": "no secrets or protected user/domain data in reusable core",
+  "terminal_state": "COMPLETED_VERIFIED"
+}

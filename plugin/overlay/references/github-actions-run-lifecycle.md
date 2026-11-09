@@ -1,0 +1,2 @@
+# GitHub Actions Lifecycle Contract
+Poll run admission, runner warm-up, job startup, execution, completion and log/artifact publication. Empty jobs/steps before execution are transient. Retry transient post-completion log publication errors with bounded backoff; respect Retry-After. Observation-window expiry is not failure. QUOTA_EXHAUSTED requires explicit billing/minutes/spending-cap/payment evidence. runner_id=0, empty steps, missing logs and generic API errors are not quota proof.

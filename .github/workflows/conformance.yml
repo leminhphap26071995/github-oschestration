@@ -1,0 +1,22 @@
+name: Portable AI Workflow Conformance
+on:
+  push:
+    paths-ignore:
+      - '.ai-workflow/**'
+  pull_request:
+    paths-ignore:
+      - '.ai-workflow/**'
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - run: python scripts/validate_workspace.py --root .
+      - run: python -m unittest discover -s tests -p 'test_*.py' -v
+      - run: python -m unittest discover -s quota-monitor/tests -p 'test_*.py' -v

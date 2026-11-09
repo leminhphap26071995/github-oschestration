@@ -1,0 +1,104 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AM AI Manager Goal Contract",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "goal_id",
+    "statement",
+    "confirmed",
+    "acceptance",
+    "status"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "goal_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "statement": {
+      "type": "string",
+      "minLength": 1
+    },
+    "why": {
+      "type": "string"
+    },
+    "confirmed": {
+      "type": "boolean"
+    },
+    "domain": {
+      "type": "string"
+    },
+    "constraints": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "preferences": {
+      "type": "object"
+    },
+    "approval_gates": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "acceptance": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "condition",
+          "status"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "condition": {
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "PLANNED",
+              "IN_PROGRESS",
+              "VERIFIED",
+              "UNKNOWN",
+              "BLOCKED",
+              "FAILED"
+            ]
+          },
+          "evidence": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "status": {
+      "enum": [
+        "NOT_STARTED",
+        "IN_PROGRESS",
+        "BLOCKED_REQUIRES_USER",
+        "COMPLETED_VERIFIED"
+      ]
+    },
+    "source_refs": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "next_action": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": false
+}

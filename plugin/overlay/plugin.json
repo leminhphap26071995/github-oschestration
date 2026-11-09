@@ -1,0 +1,28 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "unified-project-workflow",
+  "description": "UPW (Unified Project Workflow): universal outcome orchestration with cross-industry professional capability discovery, project-and-ticket-isolated continuity, host-aware execution, asynchronous CI lifecycle diagnosis, and evidence-backed delivery.",
+  "keywords": [
+    "UPW",
+    "unified-project-workflow",
+    "universal-orchestrator",
+    "professional-capability-discovery",
+    "domain-specialists",
+    "role-bundles",
+    "project-ticket-isolation",
+    "context-recovery",
+    "host-runtime",
+    "execution-preflight",
+    "github-actions-lifecycle",
+    "quota-diagnosis",
+    "career-interview",
+    "career-sync",
+    "owner-first",
+    "offer-first",
+    "end-to-end",
+    "evidence",
+    "incident-routing"
+  ],
+  "skills": "./skills",
+  "version": "0.1.85"
+}

@@ -1,0 +1,2 @@
+# Context Isolation Contract
+Root CURRENT is an index only. Project and ticket checkpoints are namespaced. Resolve explicit project/ticket; never choose by modification time. Persist outgoing cursor before switching, load destination state and source authority, preserve previous workstream, and reject cross-project checkpoint identity/domain mismatches. Game Mod, VS Code Extension and Career/Interview are independent contexts.

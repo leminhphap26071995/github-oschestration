@@ -1,0 +1,128 @@
+{
+  "schema_version": 1,
+  "packs": [
+    {
+      "id": "software-engineering",
+      "path": "domain-packs/software-engineering.md",
+      "aliases": [
+        "software",
+        "coding",
+        "app",
+        "api",
+        "website",
+        "bug",
+        "devops",
+        "cicd"
+      ],
+      "evidence_gates": [
+        "STATIC",
+        "UNIT_TEST",
+        "INTEGRATION",
+        "REAL_ENVIRONMENT",
+        "USER_ACCEPTED"
+      ]
+    },
+    {
+      "id": "research-writing",
+      "path": "domain-packs/research-writing.md",
+      "aliases": [
+        "research",
+        "investigate",
+        "compare",
+        "write",
+        "report",
+        "policy"
+      ],
+      "evidence_gates": [
+        "PRIMARY_SOURCE",
+        "CROSS_CHECK",
+        "CLAIM_TO_SOURCE_MAP",
+        "USER_ACCEPTED"
+      ]
+    },
+    {
+      "id": "career-interview",
+      "path": "domain-packs/career-interview.md",
+      "aliases": [
+        "career",
+        "job",
+        "resume",
+        "cv",
+        "interview",
+        "exam"
+      ],
+      "evidence_gates": [
+        "AUTHORIZED_JD",
+        "VERIFIED_CV_EVIDENCE",
+        "OBSERVED_ATTEMPT",
+        "RETEST"
+      ]
+    },
+    {
+      "id": "learning-training",
+      "path": "domain-packs/learning-training.md",
+      "aliases": [
+        "learn",
+        "course",
+        "training",
+        "study",
+        "mentor",
+        "quiz"
+      ],
+      "evidence_gates": [
+        "BASELINE",
+        "LEARNER_ATTEMPT",
+        "FEEDBACK",
+        "RETEST",
+        "TRANSFER"
+      ]
+    },
+    {
+      "id": "professional-domains",
+      "path": "domain-packs/professional-domains.md",
+      "aliases": [
+        "game",
+        "creative",
+        "design",
+        "media",
+        "business",
+        "operations",
+        "finance",
+        "accounting",
+        "legal",
+        "compliance",
+        "healthcare",
+        "clinical",
+        "science",
+        "manufacturing",
+        "architecture",
+        "construction",
+        "marketing",
+        "sales",
+        "education",
+        "cybersecurity",
+        "data ai",
+        "public sector",
+        "energy",
+        "climate",
+        "supply chain",
+        "logistics"
+      ],
+      "evidence_gates": [
+        "DOMAIN_METHOD",
+        "SPECIALIST_BUNDLE",
+        "DELIVERABLE_COVERAGE",
+        "DOMAIN_ACCEPTANCE",
+        "QUALIFIED_REVIEW_WHEN_REQUIRED"
+      ]
+    }
+  ],
+  "unknown_domain_policy": "run intake and research; add a pack only when scope and evidence gates are defined",
+  "capability_discovery": {
+    "contract": "docs/PROFESSIONAL-CAPABILITY-ARCHITECTURE.md",
+    "catalog": "domain-packs/professional-domains.md",
+    "method": "outcome -> lifecycle -> deliverables -> dependencies -> disciplines -> specialist roles -> acceptance oracles",
+    "missing_specialist_policy": "create a task-specific complete four-artifact role bundle from authoritative professional sources before implementation; promote reusable profiles only after review",
+    "generic_role_fallback": "PROHIBITED"
+  }
+}

@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Project or Ticket Context Checkpoint",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "kind",
+    "context_id",
+    "project_id",
+    "workstream_type",
+    "goal",
+    "source_lock",
+    "status",
+    "acceptance",
+    "next_action"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 2
+    },
+    "kind": {
+      "enum": [
+        "project-checkpoint",
+        "ticket-checkpoint"
+      ]
+    },
+    "context_id": {
+      "type": "string"
+    },
+    "project_id": {
+      "type": "string"
+    },
+    "workstream_type": {
+      "type": "string"
+    },
+    "ticket_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "domain": {
+      "type": "string"
+    },
+    "goal": {
+      "type": "object"
+    },
+    "source_lock": {
+      "type": "object",
+      "required": [
+        "authority",
+        "repository",
+        "ref",
+        "sha"
+      ]
+    },
+    "status": {
+      "enum": [
+        "NOT_STARTED",
+        "IN_PROGRESS",
+        "BLOCKED_REQUIRES_USER",
+        "BLOCKED_EXTERNAL",
+        "FAILED",
+        "COMPLETED_VERIFIED"
+      ]
+    },
+    "acceptance": {
+      "type": "array"
+    },
+    "next_action": {
+      "type": "string"
+    },
+    "updated_at": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": true
+}
