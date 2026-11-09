@@ -94,7 +94,7 @@ export async function prepare({ targetsFile, outputTargetsFile, discoveryFile, g
       try {
         const token = await apiRequest(
           '/app/installations/' + installation.id + '/access_tokens', jwt, 'POST',
-          { permissions: { administration: 'read', metadata: 'read' } },
+          { permissions: { administration: 'read' } },
         );
         if (typeof token.token !== 'string' || !token.token) throw new Error('INSTALLATION_TOKEN_MISSING');
         tokenMap[org] = token.token;
@@ -108,7 +108,7 @@ export async function prepare({ targetsFile, outputTargetsFile, discoveryFile, g
   await mkdir(dirname(discoveryFile), { recursive: true });
   const discovery = {
     method: 'GitHub App GET /app/installations + POST /app/installations/{id}/access_tokens',
-    permission_set: { administration: 'read', metadata: 'read' },
+    permission_set: { administration: 'read', metadata: 'read (implicit)' },
     status: discoveryError || installationErrors.length ? 'PARTIAL' : 'OK',
     error: discoveryError,
     configured_count: configured.length,
