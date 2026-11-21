@@ -1,0 +1,79 @@
+name: Workflow Cleanup
+on:
+  push:
+    branches: [main]
+    paths: [".github/workflow-cleanup-request.json"]
+permissions:
+  actions: write
+  contents: write
+concurrency:
+  group: workflow-cleanup-v3-${{ github.repository }}-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Validate explicit destructive request
+        env:
+          REQUEST_REF: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          request=".github/workflow-cleanup-request.json"
+          jq -e '.approved == true and .scope == "all-workflows-except-cleanup" and .requested_by == "repository-owner" and (.target_ref | type == "string" and length > 0) and (.target_refs | type == "array" and length > 0 and all(.[]; type == "string" and length > 0) and (.target_ref as $ref | any(.[]; . == $ref)))' "$request" >/dev/null
+          target_ref="$(jq -r '.target_ref' "$request")"
+          test "$target_ref" = "$REQUEST_REF"
+          echo "TARGET_REF=$target_ref" >> "$GITHUB_ENV"
+      - name: Validate cleanup script syntax
+        shell: bash
+        run: bash -n .github/scripts/workflow-cleanup.sh
+      - name: Cancel, drain, delete, verify and reconcile
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CURRENT_RUN_ID: ${{ github.run_id }}
+        run: bash .github/scripts/workflow-cleanup.sh
+      - name: Upload final cleanup report
+        uses: actions/upload-artifact@v4
+        with:
+          name: workflow-cleanup-report-${{ github.run_id }}
+          path: workflow-cleanup-report/
+          if-no-files-found: error
+          retention-days: 90
+      - name: Verify report artifact and single-run retention
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          repo="$GITHUB_REPOSITORY"
+          inventory_ok=false
+          for attempt in $(seq 1 12); do
+            gh api --paginate --slurp "repos/$repo/actions/runs?per_page=100" > "$RUNNER_TEMP/post-upload-runs.json"
+            if jq -e --argjson current "$GITHUB_RUN_ID" --arg cleanup ".github/workflows/workflow-cleanup.yml" \
+              '[.[].workflow_runs[]] | length == 1 and .[0].id == $current and .[0].path == $cleanup' \
+              "$RUNNER_TEMP/post-upload-runs.json" >/dev/null; then
+              inventory_ok=true
+              break
+            fi
+            sleep 5
+          done
+          test "$inventory_ok" = true
+          artifact_name="workflow-cleanup-report-$GITHUB_RUN_ID"
+          artifact_ok=false
+          for attempt in $(seq 1 6); do
+            gh api "repos/$repo/actions/runs/$GITHUB_RUN_ID/artifacts?per_page=100" > "$RUNNER_TEMP/report-artifacts.json"
+            if jq -e --arg name "$artifact_name" \
+              'any(.artifacts[]; .name == $name and .expired == false and (.size_in_bytes // 0) > 0)' \
+              "$RUNNER_TEMP/report-artifacts.json" >/dev/null; then
+              artifact_ok=true
+              break
+            fi
+            sleep 5
+          done
+          test "$artifact_ok" = true
+          echo "PASS: one cleanup run remains and its final report artifact is present."
