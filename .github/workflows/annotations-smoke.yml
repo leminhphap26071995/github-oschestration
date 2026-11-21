@@ -1,0 +1,63 @@
+name: GitHub Actions Annotation Extension Smoke Test
+
+on:
+  push:
+    branches:
+      - tests/exhausted-github-quota
+    paths:
+      - ".github/workflows/annotations-smoke.yml"
+      - "tests/github-actions-annotations/**"
+
+permissions:
+  actions: read
+  checks: read
+  contents: read
+
+concurrency:
+  group: annotations-smoke-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  emit-annotation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Emit a uniquely identifiable GitHub annotation
+        shell: bash
+        run: |
+          echo "::warning title=GH Annotations smoke test::GH_ANNOTATIONS_SMOKE_${GITHUB_RUN_ID}"
+
+  collect-annotations:
+    needs: emit-annotation
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_PROMPT_DISABLED: "1"
+      EXPECTED_MARKER: GH_ANNOTATIONS_SMOKE_${{ github.run_id }}
+    steps:
+      - name: Set up Go required by the gh extension
+        uses: actions/setup-go@v7
+        with:
+          go-version: "1.27.0"
+
+      - name: Install swfz/gh-annotations
+        run: gh extension install swfz/gh-annotations
+
+      - name: Collect annotations from the latest run of each workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh annotations -repo "$GITHUB_REPOSITORY" -json | tee annotations.json
+          jq -e --arg marker "$EXPECTED_MARKER" \
+            'any(.[]; ((.message // "") | contains($marker)))' \
+            annotations.json
+
+      - name: Upload collected annotation JSON
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: gh-annotations-smoke-${{ github.run_id }}
+          path: annotations.json
+          if-no-files-found: warn
+          retention-days: 7
