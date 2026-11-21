@@ -272,10 +272,15 @@ jq -n --slurpfile definitions "$work/workflows-pages.json" --slurpfile workflows
    | unique_by(.workflow_id)
    | map(. as $w | {
        workflow_id:$w.workflow_id,workflow_name:$w.workflow_name,workflow_path:$w.workflow_path,
-       discovered_run_count:([$initial[0][] | select(.workflow_id==$w.workflow_id)]|length),
-       deleted_run_count:([$deleted[0][] as $d | select(any($initial[0][]; .run_id==$d.run_id and .workflow_id==$w.workflow_id)) | select($d.result=="DELETED")]|length),
-       already_absent_verified_count:([$deleted[0][] as $d | select(any($initial[0][]; .run_id==$d.run_id and .workflow_id==$w.workflow_id)) | select($d.result=="ALREADY_ABSENT")]|length),
-       failed_or_skipped_count:([$deleted[0][] as $d | select(any($initial[0][]; .run_id==$d.run_id and .workflow_id==$w.workflow_id)) | select($d.result!="DELETED" and $d.result!="ALREADY_ABSENT")]|length),
+       discovered_run_count:null,
+       deleted_run_count:null,
+       already_absent_verified_count:null,
+       failed_or_skipped_count:null,
+       inventory_complete:false,
+       recoverable_discovered_run_count:([$initial[0][] | select(.workflow_id==$w.workflow_id)]|length),
+       recoverable_deleted_run_count:([$deleted[0][] as $d | select(any($initial[0][]; .run_id==$d.run_id and .workflow_id==$w.workflow_id)) | select($d.result=="DELETED")]|length),
+       recoverable_already_absent_verified_count:([$deleted[0][] as $d | select(any($initial[0][]; .run_id==$d.run_id and .workflow_id==$w.workflow_id)) | select($d.result=="ALREADY_ABSENT")]|length),
+       recoverable_failed_or_skipped_count:([$deleted[0][] as $d | select(any($initial[0][]; .run_id==$d.run_id and .workflow_id==$w.workflow_id)) | select($d.result!="DELETED" and $d.result!="ALREADY_ABSENT")]|length),
        remaining_run_count:([$final[0][].workflow_runs[] | select(.workflow_id==$w.workflow_id)]|length)
    })' > "$work/workflow-breakdown.json"
 
@@ -334,7 +339,7 @@ jq -n --arg repo "$repo" --arg ref "$target_ref" --arg source_sha "$GITHUB_SHA" 
   --slurpfile branch_deletions "$work/branch-workflow-deletions.json" --slurpfile main_deletions "$work/main-workflow-deletions.json" --slurpfile previous "$work/previous-receipt.json" --slurpfile definitions "$work/workflows-pages.json" --slurpfile workflows "$work/cumulative-workflows.json" \
   --slurpfile runs "$work/cumulative-run-ledger.json" --slurpfile results "$work/cumulative-deletion-results.json" \
   --slurpfile final_runs "$work/final-runs.json" --slurpfile breakdown "$work/workflow-breakdown.json" \
-  '{schema_version:3,task_id:"WORKFLOW-CLEANUP-2026-11-21",status:"CLEANUP_VERIFIED_REPORT_GENERATED",repository:$repo,target_ref:$ref,target_refs:$target_refs,branch_workflow_file_deletions:((($previous[0].branch_workflow_file_deletions // []) + $branch_deletions[0])|unique_by([.ref,.path])),source_sha:$source_sha,cleanup_run:{run_id:($run_id|tonumber),attempt:($run_attempt|tonumber),url:$run_url,head_sha:$source_sha},request_sha256:$request_hash,generated_at:$finished,total_workflow_definitions_discovered:(([$definitions[0][].workflows[].path] + [$workflows[0][].workflow_path])|unique|length),workflow_definitions_deleted:([$workflows[0][]|select(.yaml_present==true and .workflow_path != ".github/workflows/update-upw-plugin.yml")]|length),workflow_yaml_files_deleted:(($previous[0].workflow_yaml_files_deleted // 0)+($main_deletions[0]|length)+($branch_deletions[0]|length)),workflow_definitions_retained:2,total_workflow_runs_discovered:($runs[0]|length),workflow_runs_deleted:([$results[0][]|select(.result=="DELETED")]|length),workflow_runs_already_absent_verified:([$results[0][]|select(.result=="ALREADY_ABSENT")]|length),workflow_runs_failed_or_skipped:([$results[0][]|select(.result!="DELETED" and .result!="ALREADY_ABSENT")]|length),workflow_runs_remaining:([$final_runs[0][].workflow_runs[]]|length),cleanup_workflow_id:$cleanup_workflow_id,cleanup_workflow_runs_discovered:([$runs[0][]|select(.workflow_id==$cleanup_workflow_id)]|length),cleanup_workflow_runs_deleted:([$results[0][] as $d | select(any($runs[0][]; .run_id==$d.run_id and .workflow_id==$cleanup_workflow_id)) | select($d.result=="DELETED")]|length),cleanup_workflow_runs_already_absent_verified:([$results[0][] as $d | select(any($runs[0][]; .run_id==$d.run_id and .workflow_id==$cleanup_workflow_id)) | select($d.result=="ALREADY_ABSENT")]|length),cleanup_workflow_runs_retained:1,workflow_breakdown:$breakdown[0],deleted_workflows:[$workflows[0][]|select(.workflow_path != ".github/workflows/update-upw-plugin.yml")],initial_run_inventory:$runs[0],deletion_results:$results[0],final_run_inventory:[$final_runs[0][].workflow_runs[]],verified_remaining_non_cleanup_runs:0,verified_workflows_directory:[".github/workflows/update-upw-plugin.yml",".github/workflows/workflow-cleanup.yml"],verified_workflow_refs:$target_refs}' \
+  '{schema_version:3,task_id:"WORKFLOW-CLEANUP-2026-11-21",status:"CLEANUP_VERIFIED_REPORT_GENERATED",repository:$repo,target_ref:$ref,target_refs:$target_refs,branch_workflow_file_deletions:((($previous[0].branch_workflow_file_deletions // []) + $branch_deletions[0])|unique_by([.ref,.path])),source_sha:$source_sha,cleanup_run:{run_id:($run_id|tonumber),attempt:($run_attempt|tonumber),url:$run_url,head_sha:$source_sha},request_sha256:$request_hash,generated_at:$finished,total_workflow_definitions_discovered:(([$definitions[0][].workflows[].path] + [$workflows[0][].workflow_path])|unique|length),workflow_definitions_deleted:([$workflows[0][]|select(.yaml_present==true and .workflow_path != ".github/workflows/update-upw-plugin.yml")]|length),workflow_yaml_files_deleted:(($previous[0].workflow_yaml_files_deleted // 0)+($main_deletions[0]|length)+($branch_deletions[0]|length)),workflow_definitions_retained:2,historical_run_inventory_complete:false,historical_run_inventory_initial_count:42,historical_run_inventory_note:"The initial 42-run inventory and subsequent non-cleanup runs were deleted by an earlier cleanup execution before that execution reached its durable receipt commit. The per-run details for those 42 runs are unrecoverable. The current recoverable ledger is incomplete and must not be represented as the total historical inventory; final provider readback verifies exactly one cleanup run remains.",total_workflow_runs_discovered:null,workflow_runs_deleted:null,workflow_runs_already_absent_verified:null,workflow_runs_failed_or_skipped:null,recoverable_workflow_run_ledger:{complete:false,discovered:($runs[0]|length),deleted:([$results[0][]|select(.result=="DELETED")]|length),already_absent_verified:([$results[0][]|select(.result=="ALREADY_ABSENT")]|length),failed_or_skipped:([$results[0][]|select(.result!="DELETED" and .result!="ALREADY_ABSENT")]|length)},workflow_runs_remaining:([$final_runs[0][].workflow_runs[]]|length),cleanup_workflow_id:$cleanup_workflow_id,cleanup_workflow_runs_discovered:null,cleanup_workflow_runs_deleted:null,cleanup_workflow_runs_already_absent_verified:null,recoverable_cleanup_workflow_run_ledger:{discovered:([$runs[0][]|select(.workflow_id==$cleanup_workflow_id)]|length),deleted:([$results[0][] as $d | select(any($runs[0][]; .run_id==$d.run_id and .workflow_id==$cleanup_workflow_id)) | select($d.result=="DELETED")]|length),already_absent_verified:([$results[0][] as $d | select(any($runs[0][]; .run_id==$d.run_id and .workflow_id==$cleanup_workflow_id)) | select($d.result=="ALREADY_ABSENT")]|length)},cleanup_workflow_runs_retained:1,workflow_breakdown:$breakdown[0],deleted_workflows:[$workflows[0][]|select(.workflow_path != ".github/workflows/update-upw-plugin.yml")],initial_run_inventory:$runs[0],deletion_results:$results[0],final_run_inventory:[$final_runs[0][].workflow_runs[]],verified_remaining_non_cleanup_runs:0,verified_workflows_directory:[".github/workflows/update-upw-plugin.yml",".github/workflows/workflow-cleanup.yml"],verified_workflow_refs:$target_refs}' \
   > "$work/receipt.json"
 receipt_hash="$(sha256sum "$work/receipt.json" | awk '{print $1}')"
 
@@ -410,19 +415,19 @@ jq -n --slurpfile receipt "$work/receipt.json" --slurpfile final "$work/readback
   echo
   echo "## Workflow runs"
   echo
-  echo "| Discovered | Deleted | Remaining |"
-  echo "|---:|---:|---:|"
-  jq -r '"| \(.total_workflow_runs_discovered) | \(.workflow_runs_deleted) | \(.workflow_runs_remaining) |"' "$work/receipt.json"
+  jq -r '"- Full historical inventory: INCOMPLETE; earlier initial snapshot: \\(.historical_run_inventory_initial_count) runs; per-run detail was lost before a durable receipt was committed."' "$work/receipt.json"
+  jq -r '"- Recoverable ledger only: \\(.recoverable_workflow_run_ledger.discovered) observed; \\(.recoverable_workflow_run_ledger.deleted) deleted; \\(.recoverable_workflow_run_ledger.failed_or_skipped) failed/skipped."' "$work/receipt.json"
+  jq -r '"- Verified final inventory: exactly \\(.workflow_runs_remaining) run remains."' "$work/receipt.json"
   echo
   echo "## Cleanup workflow historical runs"
   echo
-  jq -r '"Discovered: \(.cleanup_workflow_runs_discovered); deleted: \(.cleanup_workflow_runs_deleted); already absent: \(.cleanup_workflow_runs_already_absent_verified); retained final report run: \(.cleanup_workflow_runs_retained)." ' "$work/receipt.json"
+  jq -r '"Full historical counts: UNKNOWN. Recoverable ledger: \\(.recoverable_cleanup_workflow_run_ledger.discovered) observed; \\(.recoverable_cleanup_workflow_run_ledger.deleted) deleted. Final cleanup run retained: \\(.cleanup_workflow_runs_retained)."' "$work/receipt.json"
   echo
   echo "## Per-workflow run counts"
   echo
-  echo "| Workflow ID | Name | Path | Discovered | Deleted | Already absent | Failed/skipped | Remaining |"
-  echo "|---:|---|---|---:|---:|---:|---:|---:|"
-  jq -r '.workflow_breakdown[] | "| \(.workflow_id) | \(.workflow_name) | \(.workflow_path) | \(.discovered_run_count) | \(.deleted_run_count) | \(.already_absent_verified_count) | \(.failed_or_skipped_count) | \(.remaining_run_count) |"' "$work/receipt.json"
+  echo "| Workflow ID | Name | Path | Full inventory | Recoverable discovered | Recoverable deleted | Remaining |"
+  echo "|---:|---|---|---|---:|---:|---:|"
+  jq -r '.workflow_breakdown[] | "| \\(.workflow_id) | \\(.workflow_name) | \\(.workflow_path) | INCOMPLETE | \\(.recoverable_discovered_run_count) | \\(.recoverable_deleted_run_count) | \\(.remaining_run_count) |"' "$work/receipt.json"
   echo
   echo "## Verification"
   echo
