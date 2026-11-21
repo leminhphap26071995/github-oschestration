@@ -47,7 +47,7 @@
   "total_workflow_definitions_discovered": 3,
   "workflow_definitions_deleted": 1,
   "workflow_yaml_files_deleted": 10,
-  "workflow_definitions_retained": 2,
+  "workflow_definitions_retained": 3,
   "historical_run_inventory_complete": false,
   "historical_run_inventory_initial_count": 42,
   "historical_run_inventory_note": "The initial 42-run inventory and subsequent non-cleanup runs were deleted by an earlier cleanup execution before that execution reached its durable receipt commit. The per-run details for those 42 runs are unrecoverable. The current recoverable ledger is incomplete and must not be represented as the total historical inventory; final provider readback verifies exactly one cleanup run remains.",
@@ -892,6 +892,7 @@
   ],
   "verified_remaining_non_cleanup_runs": 0,
   "verified_workflows_directory": [
+    ".github/workflows/conformance.yml",
     ".github/workflows/update-upw-plugin.yml",
     ".github/workflows/workflow-cleanup.yml"
   ],
@@ -899,5 +900,63 @@
     "main",
     "tests/exhausted-github-quota",
     "feat/actions-os-storage-cost-breakdown"
+  ],
+  "recovery_status": "WORKFLOW_DEFINITIONS_RESTORED_AND_CLEANUP_POLICY_FIXED",
+  "workflow_definition_policy": "PRESERVE_ALL_WORKFLOW_YAML; cleanup run history only; never disable workflow definitions as part of cleanup",
+  "workflow_yaml_files_restored": 5,
+  "workflow_yaml_restorations": [
+    {
+      "ref": "main",
+      "path": ".github/workflows/conformance.yml",
+      "restored_from_commit": "0ebb8a586a655d708b884ba5158086e358a49c08",
+      "restore_commit": "c1c0eab2b1bfb67a6eedb7cc7db3a0525e7140c9",
+      "current_blob_sha": "86d8f635c3d80cf8a7291e9830c8e795bddafff9"
+    },
+    {
+      "ref": "feat/actions-os-storage-cost-breakdown",
+      "path": ".github/workflows/conformance.yml",
+      "restored_from_commit": "8169ea48f2fce9d1fd005bc8accc5f2230c5f963",
+      "restore_commit": "a4f74bdd565d2fbd6e5893297dd391acfc37664a",
+      "current_blob_sha": "894fbecb34f3888788b14cac67bd8292b0475295"
+    },
+    {
+      "ref": "feat/actions-os-storage-cost-breakdown",
+      "path": ".github/workflows/package-upw-plugin.yml",
+      "restored_from_commit": "2e5fb01821266f4ee46536df52f9fb847ff0c68d",
+      "restore_commit": "df1501b13290c165e063a7d91507e52ceb2ab2e1",
+      "current_blob_sha": "64164a414e0f92b80f078ea6153beb9622af7c4b"
+    },
+    {
+      "ref": "tests/exhausted-github-quota",
+      "path": ".github/workflows/conformance.yml",
+      "restored_from_commit": "35a3d5fd915b6e682229bfe8d4477b12e53d8b98",
+      "restore_commit": "4424f7a40aa78b282cb269937fa352bb56e867f1",
+      "current_blob_sha": "894fbecb34f3888788b14cac67bd8292b0475295"
+    },
+    {
+      "ref": "tests/exhausted-github-quota",
+      "path": ".github/workflows/package-upw-plugin.yml",
+      "restored_from_commit": "1abef4776b54490667cccca5921331b196c69831",
+      "restore_commit": "1af2480c053884e562c0405d1b00c506d6c65fe8",
+      "current_blob_sha": "64164a414e0f92b80f078ea6153beb9622af7c4b"
+    }
+  ],
+  "run_history_recovery": {
+    "status": "NOT_RECOVERABLE_FROM_GIT_COMMITS",
+    "detail": "Git commits restore workflow YAML definitions, not GitHub Actions run records. Deleted run IDs/logs/artifacts are provider-side objects and cannot be recreated from source commits. The original cleanup artifact and its recoverable run metadata remain the audit evidence."
+  },
+  "repair_commits": [
+    {
+      "sha": "bed6cf729ae77d0d0435f1522e04e3dd8976cf2a",
+      "purpose": "Preserve workflow definitions and enabled states; clean run history only; verify per-ref workflow file snapshots"
+    },
+    {
+      "sha": "d81536e00e8e68316d9541f367a7edb4816b016a",
+      "purpose": "Make workflow cleanup final verification allow required workflow paths without requiring exactly two files"
+    },
+    {
+      "sha": "ae04462f783ff62720a5899cfcbdf66a4b91576b",
+      "purpose": "Add bash -n cleanup script syntax check to conformance"
+    }
   ]
 }
