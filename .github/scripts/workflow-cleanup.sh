@@ -314,8 +314,7 @@ parent_sha="$(printf '%s' "$ref_json" | jq -r '.object.sha')"
 parent_commit="$(api_retry gh api "repos/$repo/git/commits/$parent_sha")"
 base_tree="$(printf '%s' "$parent_commit" | jq -r '.tree.sha')"
 jq -n --arg base "$base_tree" --arg receipt "$receipt_blob" \
-  --slurpfile main_deletions "$work/main-workflow-deletions.json" \
-  '{base_tree:$base,tree:(($main_deletions[0]|map({path:.workflow_path,mode:"100644",type:"blob",sha:null})) + [{path:".ai-workflow/workflow-cleanup-receipt.json",mode:"100644",type:"blob",sha:$receipt}])}' \
+  '{base_tree:$base,tree:[{path:".ai-workflow/workflow-cleanup-receipt.json",mode:"100644",type:"blob",sha:$receipt}]}' \
   > "$work/tree-payload.json"
 new_tree="$(api_retry gh api --method POST "repos/$repo/git/trees" --input "$work/tree-payload.json" | jq -r '.sha')"
 commit_payload="$(jq -n --arg message "chore(actions): clean workflow definitions and historical runs" --arg tree "$new_tree" --arg parent "$parent_sha" '{message:$message,tree:$tree,parents:[$parent]}')"
@@ -396,6 +395,7 @@ jq -n --slurpfile receipt "$work/receipt.json" --slurpfile final "$work/readback
   echo "- Current provider run inventory pagination: complete"
   echo "- Historical per-run inventory: INCOMPLETE; see historical_run_inventory_note."
   echo "- Remaining cleanup workflow runs: exactly one"
-  echo "- Retained workflow definitions: .github/workflows/workflow-cleanup.yml and .github/workflows/update-upw-plugin.yml"
+  echo "- Retained workflow definitions:"
+  jq -r '.verified_workflows_directory[] | "- " + .' "$work/receipt.json"
 } > "$report_dir/workflow-cleanup-summary.md"
-echo "PASS: non-cleanup runs=0; historical cleanup runs=0; exactly one report run remains; report files ready for artifact upload; commit=$new_commit."
+echo "PASS: non-protected runs=0; historical cleanup runs=0; one cleanup report run plus protected UPW runs remain; all workflow definitions preserved; report files ready for artifact upload; commit=$new_commit."
