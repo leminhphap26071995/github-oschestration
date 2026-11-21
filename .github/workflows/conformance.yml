@@ -37,8 +37,8 @@ jobs:
       GH_PROMPT_DISABLED: "1"
       GH_NO_UPDATE_NOTIFIER: "1"
     steps:
-      - name: Install pinned gh-annotations extension
-        run: gh extension install swfz/gh-annotations --pin d1164398536b74f1f95789522fccb9de6b4adb9a
+      - name: Install gh-annotations extension from its upstream repository
+        run: gh extension install swfz/gh-annotations
 
       - name: Collect latest workflow annotations as JSON
         shell: bash
