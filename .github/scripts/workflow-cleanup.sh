@@ -45,7 +45,7 @@ inventory_runs() {
 # One complete workflow inventory, excluding this protected executor.
 api_retry gh api --paginate --slurp "repos/$repo/actions/workflows?per_page=100" > "$work/workflows-pages.json"
 jq -e 'length > 0 and all(.[]; has("workflows"))' "$work/workflows-pages.json" >/dev/null
-jq -r --arg self "$cleanup_path" '[.[].workflows[] | select(.path != $self) | [.id,.name,.path] | @tsv] | .[]' \
+jq -r --arg self "$cleanup_path" --arg update "$update_path" '[.[].workflows[] | select(.path != $self and .path != $update) | [.id,.name,.path] | @tsv] | .[]' \
   "$work/workflows-pages.json" > "$work/workflows.tsv"
 : > "$work/targets.tsv"
 
@@ -73,15 +73,15 @@ target_ids="$(jq -Rn '[inputs | split("\t")[0] | tonumber]' < "$work/targets.tsv
 inventory_runs "$work/run-id-discovery.json"
 cleanup_workflow_id="$(jq -r --arg cleanup "$cleanup_path" '[.[].workflows[] | select(.path == $cleanup) | .id][0] // empty' "$work/workflows-pages.json")"
 if [ -n "$cleanup_workflow_id" ]; then
-  run_workflow_ids="$(jq -c --argjson cleanup_id "$cleanup_workflow_id" '[.[].workflow_runs[] | select(.workflow_id != $cleanup_id) | .workflow_id] | unique' "$work/run-id-discovery.json")"
+  run_workflow_ids="$(jq -c --arg cleanup "$cleanup_path" --arg update "$update_path" '[.[].workflow_runs[] | select(.path != $cleanup and .path != $update) | .workflow_id] | unique' "$work/run-id-discovery.json")"
 else
-  run_workflow_ids="$(jq -c --arg cleanup "$cleanup_path" '[.[].workflow_runs[] | select(.path != $cleanup) | .workflow_id] | unique' "$work/run-id-discovery.json")"
+  run_workflow_ids="$(jq -c --arg cleanup "$cleanup_path" --arg update "$update_path" '[.[].workflow_runs[] | select(.path != $cleanup and .path != $update) | .workflow_id] | unique' "$work/run-id-discovery.json")"
 fi
 target_ids="$(jq -n --argjson ids "$target_ids" --argjson from_runs "$run_workflow_ids" '$ids + $from_runs | unique')"
 jq -Rn '[inputs | split("\t") | {workflow_id:(.[0]|tonumber),workflow_name:.[1],workflow_path:.[2],yaml_present:(.[3]=="true")}]' \
   < "$work/targets.tsv" > "$work/target-workflows-current.json"
 jq -n --arg cleanup "$cleanup_path" --slurpfile current "$work/target-workflows-current.json" --slurpfile runs "$work/run-id-discovery.json" \
-  '($current[0] + ([$runs[0][].workflow_runs[] | select(.path != $cleanup) | {workflow_id:.workflow_id,workflow_name:(.name // "stale workflow"),workflow_path:(.path // "unknown"),yaml_present:false}] | unique_by(.workflow_id))) | unique_by(.workflow_id)' \
+  '($current[0] + ([$runs[0][].workflow_runs[] | select(.path != $cleanup and .path != ".github/workflows/update-upw-plugin.yml") | {workflow_id:.workflow_id,workflow_name:(.name // "stale workflow"),workflow_path:(.path // "unknown"),yaml_present:false}] | unique_by(.workflow_id))) | unique_by(.workflow_id)' \
   > "$work/target-workflows.json"
 
 # Workflow definitions and enabled states are durable configuration, not run history.
@@ -212,8 +212,8 @@ for verify_poll in $(seq 1 12); do
   self_remaining="$(jq --argjson cleanup "$cleanup_workflow_id" --argjson current "$current_run_id" \
     '[.[].workflow_runs[] | select(.workflow_id == $cleanup and .id != $current)] | length' \
     "$work/final-runs.json")"
-  if [ "$self_remaining" -eq 0 ] && jq -e --argjson current "$current_run_id" --arg cleanup "$cleanup_path" \
-    '[.[].workflow_runs[]] | length == 1 and .[0].id == $current and .[0].path == $cleanup' \
+  if [ "$self_remaining" -eq 0 ] && jq -e --argjson current "$current_run_id" --arg cleanup "$cleanup_path" --arg update "$update_path" \
+    'any(.[].workflow_runs[]; .id == $current and .path == $cleanup) and all(.[].workflow_runs[]; .id == $current or .path == $update)' \
     "$work/final-runs.json" >/dev/null; then
     self_clean=true
     break
@@ -302,7 +302,7 @@ jq -n --arg repo "$repo" --arg ref "$target_ref" --arg source_sha "$GITHUB_SHA" 
   --slurpfile branch_deletions "$work/branch-workflow-deletions.json" --slurpfile main_deletions "$work/main-workflow-deletions.json" --slurpfile previous "$work/previous-receipt.json" --slurpfile definitions "$work/workflows-pages.json" --slurpfile workflows "$work/cumulative-workflows.json" \
   --slurpfile runs "$work/cumulative-run-ledger.json" --slurpfile results "$work/cumulative-deletion-results.json" \
   --slurpfile final_runs "$work/final-runs.json" --slurpfile breakdown "$work/workflow-breakdown.json" \
-  '{schema_version:3,task_id:"WORKFLOW-CLEANUP-2026-11-21",status:"CLEANUP_VERIFIED_REPORT_GENERATED",repository:$repo,target_ref:$ref,target_refs:$target_refs,branch_workflow_file_deletions:((($previous[0].branch_workflow_file_deletions // []) + $branch_deletions[0])|unique_by([.ref,.path])),source_sha:$source_sha,cleanup_run:{run_id:($run_id|tonumber),attempt:($run_attempt|tonumber),url:$run_url,head_sha:$source_sha},request_sha256:$request_hash,generated_at:$finished,total_workflow_definitions_discovered:(([$definitions[0][].workflows[].path] + [$workflows[0][].workflow_path])|unique|length),workflow_definitions_deleted:0,workflow_yaml_files_deleted:(($previous[0].workflow_yaml_files_deleted // 0)+($main_deletions[0]|length)+($branch_deletions[0]|length)),workflow_definitions_retained:($main_workflow_paths|length),historical_run_inventory_complete:false,historical_run_inventory_initial_count:42,historical_run_inventory_note:"The initial 42-run inventory and subsequent non-cleanup runs were deleted by an earlier cleanup execution before that execution reached its durable receipt commit. The per-run details for those 42 runs are unrecoverable. The current recoverable ledger is incomplete and must not be represented as the total historical inventory; final provider readback verifies exactly one cleanup run remains.",total_workflow_runs_discovered:null,workflow_runs_deleted:null,workflow_runs_already_absent_verified:null,workflow_runs_failed_or_skipped:null,recoverable_workflow_run_ledger:{complete:false,discovered:($runs[0]|length),deleted:([$results[0][]|select(.result=="DELETED")]|length),already_absent_verified:([$results[0][]|select(.result=="ALREADY_ABSENT")]|length),failed_or_skipped:([$results[0][]|select(.result!="DELETED" and .result!="ALREADY_ABSENT")]|length)},workflow_runs_remaining:([$final_runs[0][].workflow_runs[]]|length),cleanup_workflow_id:$cleanup_workflow_id,cleanup_workflow_runs_discovered:null,cleanup_workflow_runs_deleted:null,cleanup_workflow_runs_already_absent_verified:null,recoverable_cleanup_workflow_run_ledger:{discovered:([$runs[0][]|select(.workflow_id==$cleanup_workflow_id)]|length),deleted:([$results[0][] as $d | select(any($runs[0][]; .run_id==$d.run_id and .workflow_id==$cleanup_workflow_id)) | select($d.result=="DELETED")]|length),already_absent_verified:([$results[0][] as $d | select(any($runs[0][]; .run_id==$d.run_id and .workflow_id==$cleanup_workflow_id)) | select($d.result=="ALREADY_ABSENT")]|length)},cleanup_workflow_runs_retained:1,workflow_breakdown:$breakdown[0],deleted_workflows:[],run_cleanup_targets:$workflows[0],initial_run_inventory:$runs[0],deletion_results:$results[0],final_run_inventory:[$final_runs[0][].workflow_runs[]],verified_remaining_non_cleanup_runs:0,verified_workflows_directory:$main_workflow_paths,verified_workflow_refs:$target_refs}' \
+  '{schema_version:3,task_id:"WORKFLOW-CLEANUP-2026-11-21",status:"CLEANUP_VERIFIED_REPORT_GENERATED",repository:$repo,target_ref:$ref,target_refs:$target_refs,branch_workflow_file_deletions:((($previous[0].branch_workflow_file_deletions // []) + $branch_deletions[0])|unique_by([.ref,.path])),source_sha:$source_sha,cleanup_run:{run_id:($run_id|tonumber),attempt:($run_attempt|tonumber),url:$run_url,head_sha:$source_sha},request_sha256:$request_hash,generated_at:$finished,total_workflow_definitions_discovered:(([$definitions[0][].workflows[].path] + [$workflows[0][].workflow_path])|unique|length),workflow_definitions_deleted:0,workflow_yaml_files_deleted:(($previous[0].workflow_yaml_files_deleted // 0)+($main_deletions[0]|length)+($branch_deletions[0]|length)),workflow_definitions_retained:($main_workflow_paths|length),historical_run_inventory_complete:false,historical_run_inventory_initial_count:42,historical_run_inventory_note:"The initial 42-run inventory and subsequent non-cleanup runs were deleted by an earlier cleanup execution before that execution reached its durable receipt commit. The per-run details for those 42 runs are unrecoverable. The current recoverable ledger is incomplete and must not be represented as the total historical inventory; final provider readback verifies exactly one cleanup run remains.",total_workflow_runs_discovered:null,workflow_runs_deleted:null,workflow_runs_already_absent_verified:null,workflow_runs_failed_or_skipped:null,recoverable_workflow_run_ledger:{complete:false,discovered:($runs[0]|length),deleted:([$results[0][]|select(.result=="DELETED")]|length),already_absent_verified:([$results[0][]|select(.result=="ALREADY_ABSENT")]|length),failed_or_skipped:([$results[0][]|select(.result!="DELETED" and .result!="ALREADY_ABSENT")]|length)},workflow_runs_remaining:([$final_runs[0][].workflow_runs[]]|length),cleanup_workflow_id:$cleanup_workflow_id,cleanup_workflow_runs_discovered:null,cleanup_workflow_runs_deleted:null,cleanup_workflow_runs_already_absent_verified:null,recoverable_cleanup_workflow_run_ledger:{discovered:([$runs[0][]|select(.workflow_id==$cleanup_workflow_id)]|length),deleted:([$results[0][] as $d | select(any($runs[0][]; .run_id==$d.run_id and .workflow_id==$cleanup_workflow_id)) | select($d.result=="DELETED")]|length),already_absent_verified:([$results[0][] as $d | select(any($runs[0][]; .run_id==$d.run_id and .workflow_id==$cleanup_workflow_id)) | select($d.result=="ALREADY_ABSENT")]|length)},cleanup_workflow_runs_retained:1,workflow_breakdown:$breakdown[0],deleted_workflows:[],run_cleanup_targets:$workflows[0],initial_run_inventory:$runs[0],deletion_results:$results[0],final_run_inventory:[$final_runs[0][].workflow_runs[]],verified_remaining_non_cleanup_runs:([$final_runs[0][].workflow_runs[]|select(.path==".github/workflows/update-upw-plugin.yml")]|length),protected_run_workflow_paths:[".github/workflows/update-upw-plugin.yml"],verified_workflows_directory:$main_workflow_paths,verified_workflow_refs:$target_refs}' \
   > "$work/receipt.json"
 receipt_hash="$(sha256sum "$work/receipt.json" | awk '{print $1}')"
 
@@ -350,8 +350,8 @@ jq -e --slurpfile expected "$work/main-workflow-files.json" \
 inventory_runs "$work/readback-runs.json"
 remaining="$(jq --argjson ids "$target_ids" --argjson protected "$current_run_id" '[.[].workflow_runs[]|select(.workflow_id as $id|($ids|index($id))!=null)|select(.id!=$protected)]|length' "$work/readback-runs.json")"
 [ "$remaining" -eq 0 ]
-jq -e --argjson current "$current_run_id" --arg cleanup "$cleanup_path" \
-  '[.[].workflow_runs[]] | length == 1 and .[0].id == $current and .[0].path == $cleanup' \
+jq -e --argjson current "$current_run_id" --arg cleanup "$cleanup_path" --arg update "$update_path" \
+  'any(.[].workflow_runs[]; .id == $current and .path == $cleanup) and all(.[].workflow_runs[]; .id == $current or .path == $update)' \
   "$work/readback-runs.json" >/dev/null
 
 # Emit the final machine-readable report and human-readable summary for upload by the workflow.
@@ -380,7 +380,7 @@ jq -n --slurpfile receipt "$work/receipt.json" --slurpfile final "$work/readback
   echo
   jq -r '"- Full historical inventory: INCOMPLETE; earlier initial snapshot: " + (.historical_run_inventory_initial_count|tostring) + " runs; per-run detail was lost before a durable receipt was committed."' "$work/receipt.json"
   jq -r '"- Recoverable ledger only: " + (.recoverable_workflow_run_ledger.discovered|tostring) + " observed; " + (.recoverable_workflow_run_ledger.deleted|tostring) + " deleted; " + (.recoverable_workflow_run_ledger.failed_or_skipped|tostring) + " failed/skipped."' "$work/receipt.json"
-  jq -r '"- Verified final inventory: exactly " + (.workflow_runs_remaining|tostring) + " run remains."' "$work/receipt.json"
+  jq -r '"- Verified final inventory: one cleanup report run plus " + (.verified_remaining_non_cleanup_runs|tostring) + " protected UPW Plugin Manual Release run(s) remain."' "$work/receipt.json"
   echo
   echo "## Cleanup workflow historical runs"
   echo
