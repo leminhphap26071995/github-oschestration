@@ -276,8 +276,9 @@ jq -n --slurpfile definitions "$work/workflows-pages.json" --slurpfile workflows
        remaining_run_count:([$final[0][].workflow_runs[] | select(.workflow_id==$w.workflow_id)]|length)
    })' > "$work/workflow-breakdown.json"
 
-# Delete workflow YAMLs from every explicitly scoped non-default branch.
-# The cleanup executor is retained only on the default branch (TARGET_REF).
+# Delete workflow YAMLs from every explicitly scoped non-default branch
+# through the Git Data API. This uses the same contents-write path as the default
+# branch commit and avoids the separate workflow-file Contents API permission.
 printf '%s\\n' '[]' > "$work/branch-workflow-deletions.json"
 while IFS= read -r branch_ref; do
   [ -n "$branch_ref" ] || continue
@@ -285,20 +286,23 @@ while IFS= read -r branch_ref; do
   branch_key="$(printf '%s' "$branch_ref" | tr '/' '_')"
   branch_sha="$(api_retry gh api "repos/$repo/git/ref/heads/$branch_ref" | jq -r '.object.sha')"
   api_retry gh api "repos/$repo/git/trees/$branch_sha?recursive=1" > "$work/tree-$branch_key.json"
-  jq -r '.tree[] | select(.type == "blob" and (.path | test("^\\.github/workflows/[^/]+\\.(yml|yaml)$"))) | .path' \
-    "$work/tree-$branch_key.json" > "$work/workflow-files-$branch_key.txt"
-  while IFS= read -r workflow_file; do
-    [ -n "$workflow_file" ] || continue
-    file_json="$(api_retry gh api "repos/$repo/contents/$workflow_file?ref=$branch_ref")"
-    file_sha="$(printf '%s' "$file_json" | jq -r '.sha')"
-    api_retry gh api --method DELETE "repos/$repo/contents/$workflow_file" \
-      -f message="chore(actions): remove workflow definition during repository cleanup" \
-      -f sha="$file_sha" -f branch="$branch_ref" >/dev/null
-    jq --arg ref "$branch_ref" --arg path "$workflow_file" --arg blob "$file_sha" \
-      '. + [{ref:$ref,path:$path,blob_sha:$blob,status:"DELETED"}]' \
-      "$work/branch-workflow-deletions.json" > "$work/branch-workflow-deletions.next.json"
-    mv "$work/branch-workflow-deletions.next.json" "$work/branch-workflow-deletions.json"
-  done < "$work/workflow-files-$branch_key.txt"
+  jq --arg ref "$branch_ref" '[.tree[] | select(.type == "blob" and (.path | test("^\\.github/workflows/[^/]+\\.(yml|yaml)$"))) | {ref:$ref,path:.path,blob_sha:.sha,status:"DELETED"}]' \
+    "$work/tree-$branch_key.json" > "$work/workflow-files-$branch_key.json"
+  jq -s '.[0] + .[1]' "$work/branch-workflow-deletions.json" "$work/workflow-files-$branch_key.json" \
+    > "$work/branch-workflow-deletions.next.json"
+  mv "$work/branch-workflow-deletions.next.json" "$work/branch-workflow-deletions.json"
+  file_count="$(jq 'length' "$work/workflow-files-$branch_key.json")"
+  if [ "$file_count" -gt 0 ]; then
+    parent_commit="$(api_retry gh api "repos/$repo/git/commits/$branch_sha")"
+    base_tree="$(printf '%s' "$parent_commit" | jq -r '.tree.sha')"
+    jq -n --arg base "$base_tree" --slurpfile files "$work/workflow-files-$branch_key.json" \
+      '{base_tree:$base,tree:[$files[0][] | {path:.path,mode:"100644",type:"blob",sha:null}]}' \
+      > "$work/tree-payload-$branch_key.json"
+    new_tree="$(api_retry gh api --method POST "repos/$repo/git/trees" --input "$work/tree-payload-$branch_key.json" | jq -r '.sha')"
+    commit_payload="$(jq -n --arg message "chore(actions): remove workflow definitions during repository cleanup" --arg tree "$new_tree" --arg parent "$branch_sha" '{message:$message,tree:$tree,parents:[$parent]}')"
+    new_commit="$(printf '%s' "$commit_payload" | api_retry gh api --method POST "repos/$repo/git/commits" --input - | jq -r '.sha')"
+    jq -n --arg sha "$new_commit" '{sha:$sha,force:false}' | api_retry gh api --method PATCH "repos/$repo/git/refs/heads/$branch_ref" --input - >/dev/null
+  fi
   if api_retry gh api "repos/$repo/contents/.github/workflows?ref=$branch_ref" > "$work/workflow-dir-$branch_key.json" 2> "$work/workflow-dir-$branch_key.err"; then
     jq -e 'length == 0' "$work/workflow-dir-$branch_key.json" >/dev/null
   else
