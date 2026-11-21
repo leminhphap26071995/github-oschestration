@@ -965,10 +965,39 @@
     {
       "sha": "8a232b7827f1960ba9f0d47207b6d13594e6f389",
       "purpose": "Verify UPW run-history preservation and one final cleanup report run"
+    },
+    {
+      "sha": "f897cb55633a03c049f0940a1a89261594d81f16",
+      "purpose": "Fail closed for historical runs with unknown workflow path or missing workflow identity; preserve the explicit UPW run allowlist"
     }
   ],
   "protected_run_workflow_paths": [
     ".github/workflows/update-upw-plugin.yml"
   ],
-  "cleanup_run_policy": "Delete historical runs only for non-protected workflow paths; preserve all UPW Plugin Manual Release runs; retain exactly the current cleanup report run for the cleanup workflow"
+  "cleanup_run_policy": "Delete historical runs only for non-protected workflow paths; preserve all UPW Plugin Manual Release runs; retain exactly the current cleanup report run for the cleanup workflow",
+  "repair_verification": {
+    "conformance_run_id": 44929054244,
+    "conformance_run_url": "https://github.com/leminhphap26071995/github-oschestration/actions/runs/44929054244",
+    "head_sha": "f897cb55633a03c049f0940a1a89261594d81f16",
+    "conclusion": "success",
+    "verified_steps": [
+      "python scripts/validate_workspace.py --root .",
+      "bash -n .github/scripts/workflow-cleanup.sh",
+      "python -m unittest discover -s tests -p 'test_*.py' -v",
+      "python -m unittest discover -s quota-monitor/tests -p 'test_*.py' -v",
+      "node --test quota-monitor/tests/test_app_tokens.mjs"
+    ],
+    "restored_branch_conformance_runs": [
+      {
+        "branch": "feat/actions-os-storage-cost-breakdown",
+        "run_id": 44928230007,
+        "conclusion": "success"
+      },
+      {
+        "branch": "tests/exhausted-github-quota",
+        "run_id": 44928235993,
+        "conclusion": "success"
+      }
+    ]
+  }
 }
