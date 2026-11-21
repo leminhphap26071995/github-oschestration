@@ -1,5 +1,5 @@
-name: Prepare UPW Plugin Creator Update
-on:
+name: UPW Plugin Manual Release
+"on":
   push:
     branches: [main]
     paths:
