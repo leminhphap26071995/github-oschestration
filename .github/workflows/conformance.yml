@@ -33,7 +33,7 @@ jobs:
       checks: read
       contents: read
     env:
-      GH_TOKEN: ${{ github.token }}
+      GH_TOKEN: ${{ github.token }
       GH_PROMPT_DISABLED: "1"
       GH_NO_UPDATE_NOTIFIER: "1"
     steps:
@@ -47,20 +47,20 @@ jobs:
           gh annotations --repo "$GITHUB_REPOSITORY" --json | tee annotations.json
           jq -e 'type == "array"' annotations.json
           {
-            echo "## GitHub Actions annotations"
+            echo "## GitHub Actions annotations (latest per workflow)"
             echo
             echo "- Repository: $GITHUB_REPOSITORY"
-            echo "- Source workflow run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+            echo "- Collector workflow run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
             echo "- Annotation records: $(jq 'length' annotations.json)"
             echo
-            jq -r '.[] | "- [" + (.annotation_level // "unknown") + "] " + (.workflow_name // "unknown workflow") + " / " + (.job_name // "unknown job") + ": " + (.message // "")' annotations.json
+            jq -r '.[] | "- [\(.annotation_level // "unknown")] \(.workflow_name // "unknown workflow") / \(.job_name // "unknown job"): \(.message // "")"' annotations.json
           } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Upload annotation JSON
+      - name: Upload latest-workflow annotation JSON
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: gh-annotations-${{ github.run_id }}
+          name: gh-annotations-latest-${{ github.run_id }
           path: annotations.json
           if-no-files-found: warn
           retention-days: 7

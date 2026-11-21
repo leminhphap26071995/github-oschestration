@@ -1,34 +1,30 @@
 # GitHub Actions annotation API smoke test
 
-This branch validates exact-run annotation retrieval using the workflow-scoped GitHub CLI token and GitHub REST API.
+## Exact identifiers
 
-## Flow
+The reusable collector accepts:
 
-1. The automatic `push` event creates a workflow run and GitHub assigns its run ID.
-2. `emit-annotation` emits a unique warning marker containing that run ID.
-3. `collect-annotations` checks out the exact triggering revision (`github.sha`) with full history.
-4. It retrieves jobs for the exact run:
+- \`repository\`: exact \`owner/repo\`; it is checked against the repository identity returned by the run API.
+- \`run_id\`: exact Actions workflow run ID; jobs are retrieved for that run's exact attempt.
+- \`check_run_id\`: optional exact check-run ID. If supplied, it must belong to a job in the requested repository/run. If omitted, the collector resolves every job's \`check_run_url\` and collects all corresponding annotations.
 
-   ```sh
-   gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID/jobs?per_page=100"
-   ```
+The check-run ID is parsed from GitHub's \`check_run_url\`; it is never guessed from a job name or confused with the workflow run ID.
 
-5. It resolves the producer's check-run ID from that job's `check_run_url`, verifies the ID matches the job ID returned by GitHub, then retrieves annotations for that exact check run:
+## Reusable command
 
-   ```sh
-   gh api "repos/$GITHUB_REPOSITORY/check-runs/$CHECK_RUN_ID/annotations?per_page=100"
-   ```
+\`\`\`sh
+GH_TOKEN="$TOKEN_WITH_TARGET_REPOSITORY_READ_ACCESS" \\
+python scripts/collect_github_annotations.py \\
+  --repository OWNER/REPO --run-id RUN_ID \\
+  [--check-run-id CHECK_RUN_ID] --output annotations.json
+\`\`\`
 
-6. The workflow asserts that the returned annotation contains the unique marker and uploads the raw jobs and annotations JSON as evidence.
+The token needs Actions: read and Checks: read on the target. The workflow-scoped \`github.token\` can read only the repository that owns that workflow run. Cross-repository private inspection requires a token explicitly authorized for the target repository; ChatGPT connector access does not transfer to an Actions token.
 
-## ChatGPT run correlation
+## Automated validation
 
-ChatGPT does not invent or manually dispatch a run ID. The workflow is triggered by the normal source commit push. After the push, ChatGPT discovers the run using the exact repository, branch and pushed commit SHA, verifies the workflow path and event, imports the returned `run_id`, then observes that run's jobs, check runs, annotations and logs.
+The push-only smoke workflow emits a unique annotation, invokes the collector with its own repository and run ID, and asserts that the exact run's annotation contains the run-specific marker. The conformance workflow runs unit tests for repo/run/attempt/check-run validation and retains \`gh-annotations\` as a separate latest-per-workflow overview.
 
-## Permissions and scope
+These are distinct paths: the reusable collector targets one exact historical run; \`gh-annotations\` is a repository-wide latest-per-workflow view and does not select an arbitrary historical run.
 
-The job uses only the workflow-scoped `github.token` with read-only `actions`, `checks` and `contents` permissions. No PAT or repository write permission is used inside the runner.
-
-This test proves exact-run retrieval inside this repository and workflow. It does not grant the token access to another repository. Cross-repository inspection still requires a credential that is authorized for the target repository.
-
-The workflow is push-only on `tests/exhausted-github-quota`; it deliberately has no `workflow_dispatch`.
+No \`workflow_dispatch\` or manual rerun path is used.
