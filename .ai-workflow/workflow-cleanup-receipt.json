@@ -969,6 +969,18 @@
     {
       "sha": "f897cb55633a03c049f0940a1a89261594d81f16",
       "purpose": "Fail closed for historical runs with unknown workflow path or missing workflow identity; preserve the explicit UPW run allowlist"
+    },
+    {
+      "sha": "b973a2123d6f66fe3dd0fb30be1b94f06c917bad",
+      "purpose": "Carry forward restoration audit, protected UPW run-path policy and recovery metadata into future cleanup receipts"
+    },
+    {
+      "sha": "bb207c2794f681f4ec07ffff4cf38f5d5bad85a2",
+      "purpose": "Remove the last workflow-YAML deletion tree operation; receipt commits now modify only the audit receipt"
+    },
+    {
+      "sha": "51b99e9195f60addacac3cfbbdbb5783887995ad",
+      "purpose": "Include restored workflow-definition count in the cleanup audit summary"
     }
   ],
   "protected_run_workflow_paths": [
@@ -976,9 +988,9 @@
   ],
   "cleanup_run_policy": "Delete historical runs only for non-protected workflow paths; preserve all UPW Plugin Manual Release runs; retain exactly the current cleanup report run for the cleanup workflow",
   "repair_verification": {
-    "conformance_run_id": 44929054244,
-    "conformance_run_url": "https://github.com/leminhphap26071995/github-oschestration/actions/runs/44929054244",
-    "head_sha": "f897cb55633a03c049f0940a1a89261594d81f16",
+    "conformance_run_id": 44929336634,
+    "conformance_run_url": "https://github.com/leminhphap26071995/github-oschestration/actions/runs/44929336634",
+    "head_sha": "51b99e9195f60addacac3cfbbdbb5783887995ad",
     "conclusion": "success",
     "verified_steps": [
       "python scripts/validate_workspace.py --root .",
@@ -999,5 +1011,29 @@
         "conclusion": "success"
       }
     ]
+  },
+  "latest_recovery_source_sha": "51b99e9195f60addacac3cfbbdbb5783887995ad",
+  "lost_upw_run_history": {
+    "workflow_path": ".github/workflows/update-upw-plugin.yml",
+    "count": 15,
+    "run_ids": [
+      44903789264,
+      44903841460,
+      44903971586,
+      44903987001,
+      44904457211,
+      44904471099,
+      44904622897,
+      44904633786,
+      44904818129,
+      44904829394,
+      44905030626,
+      44905041017,
+      44905314433,
+      44905514889,
+      44924563713
+    ],
+    "status": "DELETED_NOT_RECOVERABLE_FROM_GIT_COMMITS",
+    "note": "These provider-side run records were deleted by the prior cleanup. Their YAML workflow definition is restored, but the original run objects cannot be reconstructed from Git commits."
   }
 }
