@@ -377,8 +377,8 @@ while IFS= read -r branch_ref; do
   fi
   rm -f "$work/final-workflow-dir-$branch_key.err"
 done < <(printf '%s' "$target_refs_json" | jq -r '.[]')
-api_retry gh api --paginate --slurp "repos/$repo/actions/workflows?per_page=100" > "$work/readback-workflows.json"
-jq -e --arg cleanup "$cleanup_path" --arg update "$update_path" '([.[].workflows[].path] | sort) == ([$cleanup,$update] | sort)' "$work/readback-workflows.json" >/dev/null
+api_retry gh api "repos/$repo/contents/.github/workflows?ref=$target_ref" > "$work/readback-workflows.json"
+jq -e --arg cleanup "$cleanup_path" --arg update "$update_path" 'length==2 and ([.[].path] | sort) == ([$cleanup,$update] | sort)' "$work/readback-workflows.json" >/dev/null
 inventory_runs "$work/readback-runs.json"
 remaining="$(jq --argjson ids "$target_ids" --argjson protected "$current_run_id" '[.[].workflow_runs[]|select(.workflow_id as $id|($ids|index($id))!=null)|select(.id!=$protected)]|length' "$work/readback-runs.json")"
 [ "$remaining" -eq 0 ]
