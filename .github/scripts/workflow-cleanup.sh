@@ -431,7 +431,8 @@ jq -n --slurpfile receipt "$work/receipt.json" --slurpfile final "$work/readback
   echo
   echo "## Verification"
   echo
-  echo "- Paginated repository-wide run inventory: complete"
+  echo "- Current provider run inventory pagination: complete"
+  echo "- Historical per-run inventory: INCOMPLETE; see historical_run_inventory_note."
   echo "- Remaining cleanup workflow runs: exactly one"
   echo "- Retained workflow definitions: .github/workflows/workflow-cleanup.yml and .github/workflows/update-upw-plugin.yml"
 } > "$report_dir/workflow-cleanup-summary.md"
