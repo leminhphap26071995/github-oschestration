@@ -16,7 +16,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: annotations-smoke-${{ github.ref }
+  group: annotations-smoke-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -26,20 +26,20 @@ jobs:
     steps:
       - name: Emit a uniquely identifiable GitHub annotation
         shell: bash
-        run: echo "::warning title=GH Annotations smoke test::GH_ANNOTATIONS_SMOKE_${{ github.run_id }"
+        run: echo "::warning title=GH Annotations smoke test::GH_ANNOTATIONS_SMOKE_${{ github.run_id }}"
 
   collect-annotations:
     needs: emit-annotation
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
-      GH_TOKEN: ${{ github.token }
-      EXPECTED_MARKER: GH_ANNOTATIONS_SMOKE_${{ github.run_id }
+      GH_TOKEN: ${{ github.token }}
+      EXPECTED_MARKER: GH_ANNOTATIONS_SMOKE_${{ github.run_id }}
     steps:
       - name: Checkout exact trigger revision
         uses: actions/checkout@v7
         with:
-          ref: ${{ github.sha }
+          ref: ${{ github.sha }}
           fetch-depth: 1
 
       - name: Collect annotations for the exact repository and run
@@ -67,7 +67,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: gh-annotations-api-${{ github.run_id }
+          name: gh-annotations-api-${{ github.run_id }}
           path: annotations.json
           if-no-files-found: warn
           retention-days: 7

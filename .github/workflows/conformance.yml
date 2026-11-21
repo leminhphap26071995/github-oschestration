@@ -33,7 +33,7 @@ jobs:
       checks: read
       contents: read
     env:
-      GH_TOKEN: ${{ github.token }
+      GH_TOKEN: ${{ github.token }}
       GH_PROMPT_DISABLED: "1"
       GH_NO_UPDATE_NOTIFIER: "1"
     steps:
@@ -60,7 +60,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: gh-annotations-latest-${{ github.run_id }
+          name: gh-annotations-latest-${{ github.run_id }}
           path: annotations.json
           if-no-files-found: warn
           retention-days: 7
