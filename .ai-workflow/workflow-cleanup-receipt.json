@@ -10,77 +10,52 @@
     "feat/actions-os-storage-cost-breakdown"
   ],
   "branch_workflow_file_deletions": [],
-  "source_sha": "3d064dfad97d74e6424e2712104f2cf5b50cf3e6",
+  "source_sha": "5aa5569cbd7bd0373af53826b4c5d8f82a89bdcd",
   "cleanup_run": {
-    "run_id": 44901840256,
+    "run_id": 44901869126,
     "attempt": 1,
-    "url": "https://github.com/leminhphap26071995/github-oschestration/actions/runs/44901840256",
-    "head_sha": "3d064dfad97d74e6424e2712104f2cf5b50cf3e6"
+    "url": "https://github.com/leminhphap26071995/github-oschestration/actions/runs/44901869126",
+    "head_sha": "5aa5569cbd7bd0373af53826b4c5d8f82a89bdcd"
   },
-  "request_sha256": "7bc52061e3231ab139c4350698eb46a4c7a691507d3f7f41d247abcdaa9b78c1",
-  "generated_at": "2026-11-21T12:01:36Z",
-  "total_workflow_definitions_discovered": 3,
-  "workflow_definitions_deleted": 2,
-  "workflow_yaml_files_deleted": 2,
+  "request_sha256": "945e9481961b3f04b3002814fc329b78a4dae8503a270ef5e1bc2dff6cbae35c",
+  "generated_at": "2026-11-21T12:01:56Z",
+  "total_workflow_definitions_discovered": 1,
+  "workflow_definitions_deleted": 0,
+  "workflow_yaml_files_deleted": 0,
   "workflow_definitions_retained": 1,
-  "total_workflow_runs_discovered": 3,
-  "workflow_runs_deleted": 2,
+  "total_workflow_runs_discovered": 4,
+  "workflow_runs_deleted": 3,
   "workflow_runs_already_absent_verified": 0,
   "workflow_runs_failed_or_skipped": 0,
   "workflow_runs_remaining": 1,
   "cleanup_workflow_id": 425926900,
-  "cleanup_workflow_runs_discovered": 3,
-  "cleanup_workflow_runs_deleted": 2,
+  "cleanup_workflow_runs_discovered": 4,
+  "cleanup_workflow_runs_deleted": 3,
   "cleanup_workflow_runs_already_absent_verified": 0,
   "cleanup_workflow_runs_retained": 1,
   "workflow_breakdown": [
     {
+      "workflow_id": null,
+      "workflow_name": "conformance",
+      "workflow_path": ".github/workflows/conformance.yml",
+      "discovered_run_count": 0,
+      "deleted_run_count": 0,
+      "already_absent_verified_count": 0,
+      "failed_or_skipped_count": 0,
+      "remaining_run_count": 0
+    },
+    {
       "workflow_id": 425926900,
       "workflow_name": "Workflow Cleanup",
       "workflow_path": ".github/workflows/workflow-cleanup.yml",
-      "discovered_run_count": 3,
-      "deleted_run_count": 2,
+      "discovered_run_count": 4,
+      "deleted_run_count": 3,
       "already_absent_verified_count": 0,
       "failed_or_skipped_count": 0,
       "remaining_run_count": 1
-    },
-    {
-      "workflow_id": null,
-      "workflow_name": "conformance",
-      "workflow_path": ".github/workflows/conformance.yml",
-      "discovered_run_count": 0,
-      "deleted_run_count": 0,
-      "already_absent_verified_count": 0,
-      "failed_or_skipped_count": 0,
-      "remaining_run_count": 0
-    },
-    {
-      "workflow_id": null,
-      "workflow_name": "package-upw-plugin",
-      "workflow_path": ".github/workflows/package-upw-plugin.yml",
-      "discovered_run_count": 0,
-      "deleted_run_count": 0,
-      "already_absent_verified_count": 0,
-      "failed_or_skipped_count": 0,
-      "remaining_run_count": 0
     }
   ],
-  "deleted_workflows": [
-    {
-      "workflow_id": null,
-      "workflow_name": "conformance",
-      "workflow_path": ".github/workflows/conformance.yml",
-      "blob_sha": "894fbecb34f3888788b14cac67bd8292b0475295",
-      "yaml_present": true
-    },
-    {
-      "workflow_id": null,
-      "workflow_name": "package-upw-plugin",
-      "workflow_path": ".github/workflows/package-upw-plugin.yml",
-      "blob_sha": "64164a414e0f92b80f078ea6153beb9622af7c4b",
-      "yaml_present": true
-    }
-  ],
+  "deleted_workflows": [],
   "initial_run_inventory": [
     {
       "run_id": 44901421583,
@@ -123,6 +98,20 @@
       "conclusion": null,
       "created_at": "2026-11-21T12:01:25Z",
       "updated_at": "2026-11-21T12:01:28Z"
+    },
+    {
+      "run_id": 44901869126,
+      "workflow_id": 425926900,
+      "workflow_name": "Workflow Cleanup",
+      "workflow_path": ".github/workflows/workflow-cleanup.yml",
+      "attempt": 1,
+      "head_sha": "5aa5569cbd7bd0373af53826b4c5d8f82a89bdcd",
+      "branch": "main",
+      "event": "push",
+      "status": "in_progress",
+      "conclusion": null,
+      "created_at": "2026-11-21T12:01:46Z",
+      "updated_at": "2026-11-21T12:01:49Z"
     }
   ],
   "deletion_results": [
@@ -133,29 +122,33 @@
     {
       "result": "DELETED",
       "run_id": 44901478589
+    },
+    {
+      "result": "DELETED",
+      "run_id": 44901840256
     }
   ],
   "final_run_inventory": [
     {
-      "id": 44901840256,
+      "id": 44901869126,
       "name": "Workflow Cleanup",
-      "node_id": "WFR_kwLOVnmX1c8AAAAKdFu1gA",
+      "node_id": "WFR_kwLOVnmX1c8AAAAKdFwmRg",
       "head_branch": "main",
-      "head_sha": "3d064dfad97d74e6424e2712104f2cf5b50cf3e6",
+      "head_sha": "5aa5569cbd7bd0373af53826b4c5d8f82a89bdcd",
       "path": ".github/workflows/workflow-cleanup.yml",
-      "display_title": "chore(actions): reissue cleanup with Git-tree workflow discovery",
-      "run_number": 5,
+      "display_title": "chore(actions): reissue final workflow cleanup",
+      "run_number": 6,
       "event": "push",
       "status": "in_progress",
       "conclusion": null,
       "workflow_id": 425926900,
-      "check_suite_id": 121528139358,
-      "check_suite_node_id": "CS_kwDOVnmX1c8AAAAcS6Q-Xg",
-      "url": "https://api.github.com/repos/leminhphap26071995/github-oschestration/actions/runs/44901840256",
-      "html_url": "https://github.com/leminhphap26071995/github-oschestration/actions/runs/44901840256",
+      "check_suite_id": 121528215511,
+      "check_suite_node_id": "CS_kwDOVnmX1c8AAAAcS6Vn1w",
+      "url": "https://api.github.com/repos/leminhphap26071995/github-oschestration/actions/runs/44901869126",
+      "html_url": "https://github.com/leminhphap26071995/github-oschestration/actions/runs/44901869126",
       "pull_requests": [],
-      "created_at": "2026-11-21T12:01:25Z",
-      "updated_at": "2026-11-21T12:01:28Z",
+      "created_at": "2026-11-21T12:01:46Z",
+      "updated_at": "2026-11-21T12:01:49Z",
       "actor": {
         "login": "leminhphap26071995",
         "id": 224416665,
@@ -179,7 +172,7 @@
       },
       "run_attempt": 1,
       "referenced_workflows": [],
-      "run_started_at": "2026-11-21T12:01:25Z",
+      "run_started_at": "2026-11-21T12:01:46Z",
       "triggering_actor": {
         "login": "leminhphap26071995",
         "id": 224416665,
@@ -201,19 +194,19 @@
         "user_view_type": "public",
         "site_admin": false
       },
-      "jobs_url": "https://api.github.com/repos/leminhphap26071995/github-oschestration/actions/runs/44901840256/jobs",
-      "logs_url": "https://api.github.com/repos/leminhphap26071995/github-oschestration/actions/runs/44901840256/logs",
-      "check_suite_url": "https://api.github.com/repos/leminhphap26071995/github-oschestration/check-suites/121528139358",
-      "artifacts_url": "https://api.github.com/repos/leminhphap26071995/github-oschestration/actions/runs/44901840256/artifacts",
-      "cancel_url": "https://api.github.com/repos/leminhphap26071995/github-oschestration/actions/runs/44901840256/cancel",
-      "rerun_url": "https://api.github.com/repos/leminhphap26071995/github-oschestration/actions/runs/44901840256/rerun",
+      "jobs_url": "https://api.github.com/repos/leminhphap26071995/github-oschestration/actions/runs/44901869126/jobs",
+      "logs_url": "https://api.github.com/repos/leminhphap26071995/github-oschestration/actions/runs/44901869126/logs",
+      "check_suite_url": "https://api.github.com/repos/leminhphap26071995/github-oschestration/check-suites/121528215511",
+      "artifacts_url": "https://api.github.com/repos/leminhphap26071995/github-oschestration/actions/runs/44901869126/artifacts",
+      "cancel_url": "https://api.github.com/repos/leminhphap26071995/github-oschestration/actions/runs/44901869126/cancel",
+      "rerun_url": "https://api.github.com/repos/leminhphap26071995/github-oschestration/actions/runs/44901869126/rerun",
       "previous_attempt_url": null,
       "workflow_url": "https://api.github.com/repos/leminhphap26071995/github-oschestration/actions/workflows/425926900",
       "head_commit": {
-        "id": "3d064dfad97d74e6424e2712104f2cf5b50cf3e6",
-        "tree_id": "d5b578114e3cdba9ef14da1d0012ef7d36237373",
-        "message": "chore(actions): reissue cleanup with Git-tree workflow discovery",
-        "timestamp": "2026-11-21T12:01:24Z",
+        "id": "5aa5569cbd7bd0373af53826b4c5d8f82a89bdcd",
+        "tree_id": "9872bcb2d7d38794045adf6731444d9c50ded66b",
+        "message": "chore(actions): reissue final workflow cleanup",
+        "timestamp": "2026-11-21T12:01:45Z",
         "author": {
           "name": "leminhphap26071995",
           "email": "leminhphap2607@gmail.com"
