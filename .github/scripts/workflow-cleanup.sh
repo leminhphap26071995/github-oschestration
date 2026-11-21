@@ -93,7 +93,7 @@ while IFS=$'\t' read -r workflow_id workflow_name workflow_path file_present; do
       :
     else
       rc=$?
-      if ! grep -Eqi 'HTTP 404|Not Found' "$work/disable-$workflow_id.err"; then
+      if ! grep -Eqi 'HTTP 404|Not Found|Unable to disable a workflow that is not active' "$work/disable-$workflow_id.err"; then
         cat "$work/disable-$workflow_id.err" >&2
         exit "$rc"
       fi
