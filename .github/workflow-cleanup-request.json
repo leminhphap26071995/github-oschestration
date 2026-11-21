@@ -11,6 +11,6 @@
   "scope": "all-workflows-except-cleanup",
   "rationale": "Remove every workflow definition and historical Actions run in all current repository branches. Retain only this cleanup workflow on the default branch and retain only its current execution as the final report carrier.",
   "issued_at": "2026-11-21",
-  "execution_attempt": 4,
+  "execution_attempt": 5,
   "reissued_at": "2026-11-21"
 }
