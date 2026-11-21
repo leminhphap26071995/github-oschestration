@@ -54,8 +54,8 @@ jobs:
           inventory_ok=false
           for attempt in $(seq 1 12); do
             gh api --paginate --slurp "repos/$repo/actions/runs?per_page=100" > "$RUNNER_TEMP/post-upload-runs.json"
-            if jq -e --argjson current "$GITHUB_RUN_ID" --arg cleanup ".github/workflows/workflow-cleanup.yml" \
-              '[.[].workflow_runs[]] | length == 1 and .[0].id == $current and .[0].path == $cleanup' \
+            if jq -e --argjson current "$GITHUB_RUN_ID" --arg cleanup ".github/workflows/workflow-cleanup.yml" --arg update ".github/workflows/update-upw-plugin.yml" \
+              'any(.[].workflow_runs[]; .id == $current and .path == $cleanup) and all(.[].workflow_runs[]; .id == $current or .path == $update)' \
               "$RUNNER_TEMP/post-upload-runs.json" >/dev/null; then
               inventory_ok=true
               break
@@ -78,4 +78,4 @@ jobs:
           test "$artifact_ok" = true
           gh api "repos/$repo/contents/.github/workflows?ref=$GITHUB_REF_NAME" > "$RUNNER_TEMP/workflow-directory.json"
           jq -e '([.[].path] as $paths | ([".github/workflows/update-upw-plugin.yml", ".github/workflows/workflow-cleanup.yml"] - $paths | length) == 0)' "$RUNNER_TEMP/workflow-directory.json" >/dev/null
-          echo "PASS: required workflows remain, all workflow definitions are preserved, and the final cleanup run owns its report artifact."
+          echo "PASS: all workflow definitions are preserved; UPW Plugin Manual Release run history is protected; one final cleanup report run remains."
