@@ -282,7 +282,7 @@ printf '%s\\n' '[]' > "$work/branch-workflow-deletions.json"
 while IFS= read -r branch_ref; do
   [ -n "$branch_ref" ] || continue
   [ "$branch_ref" != "$target_ref" ] || continue
-  branch_key="${branch_ref//\\//_}"
+  branch_key="$(printf '%s' "$branch_ref" | tr '/' '_')"
   branch_sha="$(api_retry gh api "repos/$repo/git/ref/heads/$branch_ref" | jq -r '.object.sha')"
   api_retry gh api "repos/$repo/git/trees/$branch_sha?recursive=1" > "$work/tree-$branch_key.json"
   jq -r '.tree[] | select(.type == "blob" and (.path | test("^\\.github/workflows/[^/]+\\.(yml|yaml)$"))) | .path' \
@@ -315,8 +315,8 @@ finished_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 jq -n --arg repo "$repo" --arg ref "$target_ref" --arg source_sha "$GITHUB_SHA" \
   --arg request_hash "$request_hash" --arg run_id "$current_run_id" --arg run_attempt "$GITHUB_RUN_ATTEMPT" \
   --arg run_url "https://github.com/$repo/actions/runs/$current_run_id" --arg finished "$finished_at" \
-  --argjson cleanup_workflow_id "$cleanup_workflow_id" \
-  --slurpfile definitions "$work/workflows-pages.json" --slurpfile workflows "$work/cumulative-workflows.json" \
+  --argjson cleanup_workflow_id "$cleanup_workflow_id" --argjson target_refs "$target_refs_json" \
+  --slurpfile branch_deletions "$work/branch-workflow-deletions.json" --slurpfile definitions "$work/workflows-pages.json" --slurpfile workflows "$work/cumulative-workflows.json" \
   --slurpfile runs "$work/cumulative-run-ledger.json" --slurpfile results "$work/cumulative-deletion-results.json" \
   --slurpfile final_runs "$work/final-runs.json" --slurpfile breakdown "$work/workflow-breakdown.json" \
   '{schema_version:3,task_id:"WORKFLOW-CLEANUP-2026-11-21",status:"CLEANUP_VERIFIED_REPORT_GENERATED",repository:$repo,target_ref:$ref,target_refs:$target_refs,branch_workflow_file_deletions:$branch_deletions[0],source_sha:$source_sha,cleanup_run:{run_id:($run_id|tonumber),attempt:($run_attempt|tonumber),url:$run_url,head_sha:$source_sha},request_sha256:$request_hash,generated_at:$finished,total_workflow_definitions_discovered:(([$definitions[0][].workflows[].id] + [$workflows[0][].workflow_id])|unique|length),workflow_definitions_deleted:([$workflows[0][]|select(.yaml_present==true)]|length),workflow_definitions_retained:1,total_workflow_runs_discovered:($runs[0]|length),workflow_runs_deleted:([$results[0][]|select(.result=="DELETED")]|length),workflow_runs_already_absent_verified:([$results[0][]|select(.result=="ALREADY_ABSENT")]|length),workflow_runs_failed_or_skipped:([$results[0][]|select(.result!="DELETED" and .result!="ALREADY_ABSENT")]|length),workflow_runs_remaining:([$final_runs[0][].workflow_runs[]]|length),cleanup_workflow_id:$cleanup_workflow_id,cleanup_workflow_runs_discovered:([$runs[0][]|select(.workflow_id==$cleanup_workflow_id)]|length),cleanup_workflow_runs_deleted:([$results[0][] as $d | select(any($runs[0][]; .run_id==$d.run_id and .workflow_id==$cleanup_workflow_id)) | select($d.result=="DELETED")]|length),cleanup_workflow_runs_already_absent_verified:([$results[0][] as $d | select(any($runs[0][]; .run_id==$d.run_id and .workflow_id==$cleanup_workflow_id)) | select($d.result=="ALREADY_ABSENT")]|length),cleanup_workflow_runs_retained:1,workflow_breakdown:$breakdown[0],deleted_workflows:$workflows[0],initial_run_inventory:$runs[0],deletion_results:$results[0],final_run_inventory:[$final_runs[0][].workflow_runs[]],verified_remaining_non_cleanup_runs:0,verified_workflows_directory:[".github/workflows/workflow-cleanup.yml"],verified_workflow_refs:$target_refs}' \
@@ -351,7 +351,7 @@ remote_receipt_hash="$(printf '%s' "$remote_receipt" | jq -r '.content' | base64
 while IFS= read -r branch_ref; do
   [ -n "$branch_ref" ] || continue
   [ "$branch_ref" != "$target_ref" ] || continue
-  branch_key="${branch_ref//\\//_}"
+  branch_key="$(printf '%s' "$branch_ref" | tr '/' '_')"
   if api_retry gh api "repos/$repo/contents/.github/workflows?ref=$branch_ref" > "$work/final-workflow-dir-$branch_key.json" 2> "$work/final-workflow-dir-$branch_key.err"; then
     jq -e 'length == 0' "$work/final-workflow-dir-$branch_key.json" >/dev/null
   else
