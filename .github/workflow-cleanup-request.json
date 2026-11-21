@@ -9,9 +9,9 @@
     "feat/actions-os-storage-cost-breakdown"
   ],
   "scope": "retain-cleanup-and-upw-update",
-  "rationale": "Remove every workflow definition and historical Actions run outside the two retained workflow definitions on main. Retain Workflow Cleanup and the UPW Plugin Creator update handoff workflow. The cleanup execution must delete all historical runs except its exact current final report run; historical runs of the retained UPW update workflow are also deleted. Non-default scoped branches must contain no workflow YAML files. Reissue after correcting the final workflow-definition readback to use the authoritative repository Contents endpoint rather than the Actions workflow registry.",
+  "rationale": "Retain exactly Workflow Cleanup and the UPW Plugin Creator update handoff workflow on main. Delete every other workflow definition and all historical runs except the exact current cleanup report run. The report must preserve the known incomplete historical run inventory: the original 42-run per-run ledger was lost before a durable receipt, so current recoverable counts must not be presented as total historical counts.",
   "issued_at": "2026-11-21",
-  "execution_attempt": 11,
+  "execution_attempt": 12,
   "reissued_at": "2026-11-21",
   "retained_workflow_paths": [
     ".github/workflows/workflow-cleanup.yml",
