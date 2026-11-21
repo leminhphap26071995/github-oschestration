@@ -73,7 +73,7 @@ target_ids="$(jq -Rn '[inputs | split("\t")[0] | tonumber]' < "$work/targets.tsv
 inventory_runs "$work/run-id-discovery.json"
 cleanup_workflow_id="$(jq -r --arg cleanup "$cleanup_path" '[.[].workflows[] | select(.path == $cleanup) | .id][0] // empty' "$work/workflows-pages.json")"
 if [ -n "$cleanup_workflow_id" ]; then
-  run_workflow_ids="$(jq -c --arg cleanup "$cleanup_path" --arg update "$update_path" '[.[].workflow_runs[] | select(.path != $cleanup and .path != $update) | .workflow_id] | unique' "$work/run-id-discovery.json")"
+  run_workflow_ids="$(jq -c --arg cleanup "$cleanup_path" --arg update "$update_path" '[.[].workflow_runs[] | select(.workflow_id != null and .path != null and .path != $cleanup and .path != $update) | .workflow_id] | unique' "$work/run-id-discovery.json")"
 else
   run_workflow_ids="$(jq -c --arg cleanup "$cleanup_path" --arg update "$update_path" '[.[].workflow_runs[] | select(.path != $cleanup and .path != $update) | .workflow_id] | unique' "$work/run-id-discovery.json")"
 fi
@@ -81,7 +81,7 @@ target_ids="$(jq -n --argjson ids "$target_ids" --argjson from_runs "$run_workfl
 jq -Rn '[inputs | split("\t") | {workflow_id:(.[0]|tonumber),workflow_name:.[1],workflow_path:.[2],yaml_present:(.[3]=="true")}]' \
   < "$work/targets.tsv" > "$work/target-workflows-current.json"
 jq -n --arg cleanup "$cleanup_path" --slurpfile current "$work/target-workflows-current.json" --slurpfile runs "$work/run-id-discovery.json" \
-  '($current[0] + ([$runs[0][].workflow_runs[] | select(.path != $cleanup and .path != ".github/workflows/update-upw-plugin.yml") | {workflow_id:.workflow_id,workflow_name:(.name // "stale workflow"),workflow_path:(.path // "unknown"),yaml_present:false}] | unique_by(.workflow_id))) | unique_by(.workflow_id)' \
+  '($current[0] + ([$runs[0][].workflow_runs[] | select(.workflow_id != null and .path != null and .path != $cleanup and .path != ".github/workflows/update-upw-plugin.yml") | {workflow_id:.workflow_id,workflow_name:(.name // "stale workflow"),workflow_path:.path,yaml_present:false}] | unique_by(.workflow_id))) | unique_by(.workflow_id)' \
   > "$work/target-workflows.json"
 
 # Workflow definitions and enabled states are durable configuration, not run history.
