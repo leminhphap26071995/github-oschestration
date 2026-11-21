@@ -1,4 +1,4 @@
-name: GitHub Actions Annotation Extension Smoke Test
+name: GitHub Actions Annotation API Smoke Test
 
 on:
   push:
@@ -34,30 +34,58 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
       GH_PROMPT_DISABLED: "1"
+      RUN_ID: ${{ github.run_id }}
       EXPECTED_MARKER: GH_ANNOTATIONS_SMOKE_${{ github.run_id }}
     steps:
-      - name: Set up Go required by the gh extension
-        uses: actions/setup-go@v7
+      - name: Checkout exact trigger revision
+        uses: actions/checkout@v4
         with:
-          go-version: "1.27.0"
+          ref: ${{ github.sha }}
+          fetch-depth: 0
 
-      - name: Install swfz/gh-annotations
-        run: gh extension install swfz/gh-annotations
-
-      - name: Collect annotations from the latest run of each workflow
+      - name: Fetch jobs and resolve producer check-run ID
         shell: bash
         run: |
           set -euo pipefail
-          gh annotations -repo "$GITHUB_REPOSITORY" -json | tee annotations.json
+
+          gh api \
+            "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID/jobs?per_page=100" \
+            | tee jobs.json
+
+          CHECK_RUN_ID="$(jq -er '
+            .jobs[]
+            | select(.name == "emit-annotation")
+            | . as $job
+            | ($job.check_run_url | split("/")[-1]) as $check_run_id
+            | if $check_run_id == ($job.id | tostring)
+              then $check_run_id
+              else error("job ID and check-run URL do not match")
+              end
+          ' jobs.json)"
+
+          echo "CHECK_RUN_ID=$CHECK_RUN_ID" >> "$GITHUB_ENV"
+          echo "Resolved producer job $CHECK_RUN_ID from run $RUN_ID"
+
+      - name: Fetch annotations for the exact producer check run
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          gh api \
+            "repos/$GITHUB_REPOSITORY/check-runs/$CHECK_RUN_ID/annotations?per_page=100" \
+            | tee annotations.json
+
           jq -e --arg marker "$EXPECTED_MARKER" \
             'any(.[]; ((.message // "") | contains($marker)))' \
             annotations.json
 
-      - name: Upload collected annotation JSON
+      - name: Upload exact-run evidence
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: gh-annotations-smoke-${{ github.run_id }}
-          path: annotations.json
+          name: gh-annotations-api-${{ github.run_id }}
+          path: |
+            jobs.json
+            annotations.json
           if-no-files-found: warn
           retention-days: 7
