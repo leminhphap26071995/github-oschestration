@@ -9,9 +9,9 @@
     "feat/actions-os-storage-cost-breakdown"
   ],
   "scope": "retain-cleanup-and-upw-update",
-  "rationale": "Retain exactly Workflow Cleanup and the UPW Plugin Creator update handoff workflow on main. Delete every other workflow definition and all historical runs except the exact current cleanup report run. The final artifact must accurately render the incomplete original 42-run historical inventory and distinguish it from the later recoverable ledger. Reissue after pinning the UPW update workflow to verified action major versions.",
+  "rationale": "Retain exactly Workflow Cleanup and the UPW Plugin Creator update handoff workflow on main. Delete every other workflow definition and all historical runs except the exact current cleanup report run. The report must preserve the incomplete original 42-run inventory. Reissue after adding an explicit [upw-plugin-update] commit-message gate so the updater job runs only for an approved update request.",
   "issued_at": "2026-11-21",
-  "execution_attempt": 15,
+  "execution_attempt": 16,
   "reissued_at": "2026-11-21",
   "retained_workflow_paths": [
     ".github/workflows/workflow-cleanup.yml",
