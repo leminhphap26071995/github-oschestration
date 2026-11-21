@@ -11,7 +11,6 @@ concurrency:
   cancel-in-progress: false
 jobs:
   prepare:
-    if: ${{ contains(github.event.head_commit.modified, '.github/upw-plugin-update-request.json') || contains(github.event.head_commit.added, '.github/upw-plugin-update-request.json') }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -20,11 +19,22 @@ jobs:
         with:
           ref: ${{ github.sha }}
           persist-credentials: false
+      - name: Detect update request
+        id: request
+        shell: bash
+        run: |
+          if [[ -f .github/upw-plugin-update-request.json ]]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+          fi
       - name: Set up Python
+        if: steps.request.outputs.present == 'true'
         uses: actions/setup-python@v7
         with:
           python-version: "3.12"
       - name: Validate owner-approved Plugin Creator update request
+        if: steps.request.outputs.present == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -61,8 +71,10 @@ jobs:
           print(f"REQUEST_VALID plugin={request['plugin_id']} current={current} target={target}")
           PY
       - name: Validate UPW plugin overlay
+        if: steps.request.outputs.present == 'true'
         run: python plugin/validate_overlay.py --root plugin/overlay
       - name: Package Plugin Creator overlay and bind provenance
+        if: steps.request.outputs.present == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -92,6 +104,7 @@ jobs:
           Path("dist/plugin-creator-handoff.json").write_text(json.dumps(handoff, indent=2) + "\n")
           PY
       - name: Upload update handoff artifact
+        if: steps.request.outputs.present == 'true'
         uses: actions/upload-artifact@v7
         with:
           name: UPW-plugin-creator-update-${{ github.sha }}
@@ -102,4 +115,5 @@ jobs:
           if-no-files-found: error
           retention-days: 14
       - name: Confirm native Plugin Creator handoff boundary
+        if: steps.request.outputs.present == 'true'
         run: echo "PACKAGE_READY: ChatGPT must use the native Plugin Creator update action with the recorded plugin_id and expected_release_id; this Actions workflow does not mutate the live plugin."

@@ -415,19 +415,19 @@ jq -n --slurpfile receipt "$work/receipt.json" --slurpfile final "$work/readback
   echo
   echo "## Workflow runs"
   echo
-  jq -r '"- Full historical inventory: INCOMPLETE; earlier initial snapshot: \\(.historical_run_inventory_initial_count) runs; per-run detail was lost before a durable receipt was committed."' "$work/receipt.json"
-  jq -r '"- Recoverable ledger only: \\(.recoverable_workflow_run_ledger.discovered) observed; \\(.recoverable_workflow_run_ledger.deleted) deleted; \\(.recoverable_workflow_run_ledger.failed_or_skipped) failed/skipped."' "$work/receipt.json"
-  jq -r '"- Verified final inventory: exactly \\(.workflow_runs_remaining) run remains."' "$work/receipt.json"
+  jq -r '"- Full historical inventory: INCOMPLETE; earlier initial snapshot: " + (.historical_run_inventory_initial_count|tostring) + " runs; per-run detail was lost before a durable receipt was committed."' "$work/receipt.json"
+  jq -r '"- Recoverable ledger only: " + (.recoverable_workflow_run_ledger.discovered|tostring) + " observed; " + (.recoverable_workflow_run_ledger.deleted|tostring) + " deleted; " + (.recoverable_workflow_run_ledger.failed_or_skipped|tostring) + " failed/skipped."' "$work/receipt.json"
+  jq -r '"- Verified final inventory: exactly " + (.workflow_runs_remaining|tostring) + " run remains."' "$work/receipt.json"
   echo
   echo "## Cleanup workflow historical runs"
   echo
-  jq -r '"Full historical counts: UNKNOWN. Recoverable ledger: \\(.recoverable_cleanup_workflow_run_ledger.discovered) observed; \\(.recoverable_cleanup_workflow_run_ledger.deleted) deleted. Final cleanup run retained: \\(.cleanup_workflow_runs_retained)."' "$work/receipt.json"
+  jq -r '"Full historical counts: UNKNOWN. Recoverable ledger: " + (.recoverable_cleanup_workflow_run_ledger.discovered|tostring) + " observed; " + (.recoverable_cleanup_workflow_run_ledger.deleted|tostring) + " deleted. Final cleanup run retained: " + (.cleanup_workflow_runs_retained|tostring) + "."' "$work/receipt.json"
   echo
   echo "## Per-workflow run counts"
   echo
   echo "| Workflow ID | Name | Path | Full inventory | Recoverable discovered | Recoverable deleted | Remaining |"
   echo "|---:|---|---|---|---:|---:|---:|"
-  jq -r '.workflow_breakdown[] | "| \\(.workflow_id) | \\(.workflow_name) | \\(.workflow_path) | INCOMPLETE | \\(.recoverable_discovered_run_count) | \\(.recoverable_deleted_run_count) | \\(.remaining_run_count) |"' "$work/receipt.json"
+  jq -r '.workflow_breakdown[] | "| " + (.workflow_id|tostring) + " | " + .workflow_name + " | " + .workflow_path + " | INCOMPLETE | " + (.recoverable_discovered_run_count|tostring) + " | " + (.recoverable_deleted_run_count|tostring) + " | " + (.remaining_run_count|tostring) + " |"' "$work/receipt.json"
   echo
   echo "## Verification"
   echo
