@@ -84,23 +84,9 @@ jq -n --arg cleanup "$cleanup_path" --slurpfile current "$work/target-workflows-
   '($current[0] + ([$runs[0][].workflow_runs[] | select(.path != $cleanup) | {workflow_id:.workflow_id,workflow_name:(.name // "stale workflow"),workflow_path:(.path // "unknown"),yaml_present:false}] | unique_by(.workflow_id))) | unique_by(.workflow_id)' \
   > "$work/target-workflows.json"
 
-# Disable every target workflow first. This prevents workflow_run listeners from
-# creating replacement runs while the batch is draining and deleting history.
-while IFS=$'\t' read -r workflow_id workflow_name workflow_path file_present; do
-  [ -n "$workflow_id" ] || continue
-  if [ "$file_present" = "true" ] && [ "$workflow_path" != "$update_path" ]; then
-    if api_retry gh api --method PUT "repos/$repo/actions/workflows/$workflow_id/disable" >/dev/null 2> "$work/disable-$workflow_id.err"; then
-      :
-    else
-      rc=$?
-      if ! grep -Eqi 'HTTP 404|Not Found|Unable to disable a workflow that is not active' "$work/disable-$workflow_id.err"; then
-        cat "$work/disable-$workflow_id.err" >&2
-        exit "$rc"
-      fi
-    fi
-    rm -f "$work/disable-$workflow_id.err"
-  fi
-done < "$work/targets.tsv"
+# Workflow definitions and enabled states are durable configuration, not run history.
+# Do not disable or delete workflow producers during history cleanup. Active runs are
+# drained below by exact run ID; definitions remain present and enabled.
 
 cancel_batch() {
   local input="$1"
@@ -284,9 +270,8 @@ jq -n --slurpfile definitions "$work/workflows-pages.json" --slurpfile workflows
        remaining_run_count:([$final[0][].workflow_runs[] | select(.workflow_id==$w.workflow_id)]|length)
    })' > "$work/workflow-breakdown.json"
 
-# Delete workflow YAMLs from every explicitly scoped non-default branch
-# through the Git Data API. This uses the same contents-write path as the default
-# branch commit and avoids the separate workflow-file Contents API permission.
+# Snapshot workflow definitions on every explicitly scoped non-default branch.
+# Cleanup operates on run history only; no workflow YAML is deleted or disabled.
 echo '[]' > "$work/branch-workflow-deletions.json"
 while IFS= read -r branch_ref; do
   [ -n "$branch_ref" ] || continue
@@ -294,52 +279,30 @@ while IFS= read -r branch_ref; do
   branch_key="$(printf '%s' "$branch_ref" | tr '/' '_')"
   branch_sha="$(api_retry gh api "repos/$repo/git/ref/heads/$branch_ref" | jq -r '.object.sha')"
   api_retry gh api "repos/$repo/git/trees/$branch_sha?recursive=1" > "$work/tree-$branch_key.json"
-  jq --arg ref "$branch_ref" '[.tree[] | select(.type == "blob" and (.path | test("^\\.github/workflows/[^/]+\\.(yml|yaml)$"))) | {ref:$ref,path:.path,blob_sha:.sha,status:"DELETED"}]' \
+  jq '[.tree[] | select(.type == "blob" and (.path | test("^\\.github/workflows/[^/]+\\.(yml|yaml)$"))) | {path:.path,blob_sha:.sha}] | sort_by(.path)' \
     "$work/tree-$branch_key.json" > "$work/workflow-files-$branch_key.json"
-  jq -s '.[0] + .[1]' "$work/branch-workflow-deletions.json" "$work/workflow-files-$branch_key.json" \
-    > "$work/branch-workflow-deletions.next.json"
-  mv "$work/branch-workflow-deletions.next.json" "$work/branch-workflow-deletions.json"
-  file_count="$(jq 'length' "$work/workflow-files-$branch_key.json")"
-  if [ "$file_count" -gt 0 ]; then
-    parent_commit="$(api_retry gh api "repos/$repo/git/commits/$branch_sha")"
-    base_tree="$(printf '%s' "$parent_commit" | jq -r '.tree.sha')"
-    jq -n --arg base "$base_tree" --slurpfile files "$work/workflow-files-$branch_key.json" \
-      '{base_tree:$base,tree:[$files[0][] | {path:.path,mode:"100644",type:"blob",sha:null}]}' \
-      > "$work/tree-payload-$branch_key.json"
-    new_tree="$(api_retry gh api --method POST "repos/$repo/git/trees" --input "$work/tree-payload-$branch_key.json" | jq -r '.sha')"
-    commit_payload="$(jq -n --arg message "chore(actions): remove workflow definitions during repository cleanup" --arg tree "$new_tree" --arg parent "$branch_sha" '{message:$message,tree:$tree,parents:[$parent]}')"
-    new_commit="$(printf '%s' "$commit_payload" | api_retry gh api --method POST "repos/$repo/git/commits" --input - | jq -r '.sha')"
-    jq -n --arg sha "$new_commit" '{sha:$sha,force:false}' | api_retry gh api --method PATCH "repos/$repo/git/refs/heads/$branch_ref" --input - >/dev/null
-  fi
-  if api_retry gh api "repos/$repo/contents/.github/workflows?ref=$branch_ref" > "$work/workflow-dir-$branch_key.json" 2> "$work/workflow-dir-$branch_key.err"; then
-    jq -e 'length == 0' "$work/workflow-dir-$branch_key.json" >/dev/null
-  else
-    if ! grep -Eqi 'HTTP 404|Not Found' "$work/workflow-dir-$branch_key.err"; then
-      cat "$work/workflow-dir-$branch_key.err" >&2
-      exit 1
-    fi
-  fi
-  rm -f "$work/workflow-dir-$branch_key.err"
 done < <(printf '%s' "$target_refs_json" | jq -r '.[]')
 
-# Inventory the default branch directly from its Git tree. The Actions workflow
-# registry can omit disabled definitions, so it is not the authority for YAML deletion.
+# Snapshot default-branch workflow definitions. The cleanup commit below only
+# persists the audit receipt; its Git tree must preserve every workflow blob.
 main_ref_json="$(api_retry gh api "repos/$repo/git/ref/heads/$target_ref")"
 main_head_sha="$(printf '%s' "$main_ref_json" | jq -r '.object.sha')"
 api_retry gh api "repos/$repo/git/trees/$main_head_sha?recursive=1" > "$work/main-tree.json"
-jq --arg cleanup "$cleanup_path" --arg update "$update_path" '[.tree[] | select(.type == "blob" and (.path | test("^\\.github/workflows/[^/]+\\.(yml|yaml)$")) and .path != $cleanup and .path != $update) | {workflow_id:null,workflow_name:(.path|split("/")[-1]|sub("\\.ya?ml$";"")),workflow_path:.path,blob_sha:.sha,yaml_present:true}]' \
-  "$work/main-tree.json" > "$work/main-workflow-deletions.json"
+jq '[.tree[] | select(.type == "blob" and (.path | test("^\\.github/workflows/[^/]+\\.(yml|yaml)$"))) | {path:.path,blob_sha:.sha}] | sort_by(.path)' \
+  "$work/main-tree.json" > "$work/main-workflow-files.json"
+main_workflow_paths="$(jq -c '[.[].path]' "$work/main-workflow-files.json")"
+echo '[]' > "$work/main-workflow-deletions.json"
 
 request_hash="$(sha256sum "$request_path" | awk '{print $1}')"
 finished_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-jq -n --arg repo "$repo" --arg ref "$target_ref" --arg source_sha "$GITHUB_SHA" \
+jq -n --arg repo "$repo" --arg ref "$target_ref" --arg source_sha "$GITHUB_SHA" --argjson main_workflow_paths "$main_workflow_paths" \
   --arg request_hash "$request_hash" --arg run_id "$current_run_id" --arg run_attempt "$GITHUB_RUN_ATTEMPT" \
   --arg run_url "https://github.com/$repo/actions/runs/$current_run_id" --arg finished "$finished_at" \
   --argjson cleanup_workflow_id "$cleanup_workflow_id" --argjson target_refs "$target_refs_json" \
   --slurpfile branch_deletions "$work/branch-workflow-deletions.json" --slurpfile main_deletions "$work/main-workflow-deletions.json" --slurpfile previous "$work/previous-receipt.json" --slurpfile definitions "$work/workflows-pages.json" --slurpfile workflows "$work/cumulative-workflows.json" \
   --slurpfile runs "$work/cumulative-run-ledger.json" --slurpfile results "$work/cumulative-deletion-results.json" \
   --slurpfile final_runs "$work/final-runs.json" --slurpfile breakdown "$work/workflow-breakdown.json" \
-  '{schema_version:3,task_id:"WORKFLOW-CLEANUP-2026-11-21",status:"CLEANUP_VERIFIED_REPORT_GENERATED",repository:$repo,target_ref:$ref,target_refs:$target_refs,branch_workflow_file_deletions:((($previous[0].branch_workflow_file_deletions // []) + $branch_deletions[0])|unique_by([.ref,.path])),source_sha:$source_sha,cleanup_run:{run_id:($run_id|tonumber),attempt:($run_attempt|tonumber),url:$run_url,head_sha:$source_sha},request_sha256:$request_hash,generated_at:$finished,total_workflow_definitions_discovered:(([$definitions[0][].workflows[].path] + [$workflows[0][].workflow_path])|unique|length),workflow_definitions_deleted:([$workflows[0][]|select(.yaml_present==true and .workflow_path != ".github/workflows/update-upw-plugin.yml")]|length),workflow_yaml_files_deleted:(($previous[0].workflow_yaml_files_deleted // 0)+($main_deletions[0]|length)+($branch_deletions[0]|length)),workflow_definitions_retained:2,historical_run_inventory_complete:false,historical_run_inventory_initial_count:42,historical_run_inventory_note:"The initial 42-run inventory and subsequent non-cleanup runs were deleted by an earlier cleanup execution before that execution reached its durable receipt commit. The per-run details for those 42 runs are unrecoverable. The current recoverable ledger is incomplete and must not be represented as the total historical inventory; final provider readback verifies exactly one cleanup run remains.",total_workflow_runs_discovered:null,workflow_runs_deleted:null,workflow_runs_already_absent_verified:null,workflow_runs_failed_or_skipped:null,recoverable_workflow_run_ledger:{complete:false,discovered:($runs[0]|length),deleted:([$results[0][]|select(.result=="DELETED")]|length),already_absent_verified:([$results[0][]|select(.result=="ALREADY_ABSENT")]|length),failed_or_skipped:([$results[0][]|select(.result!="DELETED" and .result!="ALREADY_ABSENT")]|length)},workflow_runs_remaining:([$final_runs[0][].workflow_runs[]]|length),cleanup_workflow_id:$cleanup_workflow_id,cleanup_workflow_runs_discovered:null,cleanup_workflow_runs_deleted:null,cleanup_workflow_runs_already_absent_verified:null,recoverable_cleanup_workflow_run_ledger:{discovered:([$runs[0][]|select(.workflow_id==$cleanup_workflow_id)]|length),deleted:([$results[0][] as $d | select(any($runs[0][]; .run_id==$d.run_id and .workflow_id==$cleanup_workflow_id)) | select($d.result=="DELETED")]|length),already_absent_verified:([$results[0][] as $d | select(any($runs[0][]; .run_id==$d.run_id and .workflow_id==$cleanup_workflow_id)) | select($d.result=="ALREADY_ABSENT")]|length)},cleanup_workflow_runs_retained:1,workflow_breakdown:$breakdown[0],deleted_workflows:[$workflows[0][]|select(.workflow_path != ".github/workflows/update-upw-plugin.yml")],initial_run_inventory:$runs[0],deletion_results:$results[0],final_run_inventory:[$final_runs[0][].workflow_runs[]],verified_remaining_non_cleanup_runs:0,verified_workflows_directory:[".github/workflows/update-upw-plugin.yml",".github/workflows/workflow-cleanup.yml"],verified_workflow_refs:$target_refs}' \
+  '{schema_version:3,task_id:"WORKFLOW-CLEANUP-2026-11-21",status:"CLEANUP_VERIFIED_REPORT_GENERATED",repository:$repo,target_ref:$ref,target_refs:$target_refs,branch_workflow_file_deletions:((($previous[0].branch_workflow_file_deletions // []) + $branch_deletions[0])|unique_by([.ref,.path])),source_sha:$source_sha,cleanup_run:{run_id:($run_id|tonumber),attempt:($run_attempt|tonumber),url:$run_url,head_sha:$source_sha},request_sha256:$request_hash,generated_at:$finished,total_workflow_definitions_discovered:(([$definitions[0][].workflows[].path] + [$workflows[0][].workflow_path])|unique|length),workflow_definitions_deleted:0,workflow_yaml_files_deleted:(($previous[0].workflow_yaml_files_deleted // 0)+($main_deletions[0]|length)+($branch_deletions[0]|length)),workflow_definitions_retained:($main_workflow_paths|length),historical_run_inventory_complete:false,historical_run_inventory_initial_count:42,historical_run_inventory_note:"The initial 42-run inventory and subsequent non-cleanup runs were deleted by an earlier cleanup execution before that execution reached its durable receipt commit. The per-run details for those 42 runs are unrecoverable. The current recoverable ledger is incomplete and must not be represented as the total historical inventory; final provider readback verifies exactly one cleanup run remains.",total_workflow_runs_discovered:null,workflow_runs_deleted:null,workflow_runs_already_absent_verified:null,workflow_runs_failed_or_skipped:null,recoverable_workflow_run_ledger:{complete:false,discovered:($runs[0]|length),deleted:([$results[0][]|select(.result=="DELETED")]|length),already_absent_verified:([$results[0][]|select(.result=="ALREADY_ABSENT")]|length),failed_or_skipped:([$results[0][]|select(.result!="DELETED" and .result!="ALREADY_ABSENT")]|length)},workflow_runs_remaining:([$final_runs[0][].workflow_runs[]]|length),cleanup_workflow_id:$cleanup_workflow_id,cleanup_workflow_runs_discovered:null,cleanup_workflow_runs_deleted:null,cleanup_workflow_runs_already_absent_verified:null,recoverable_cleanup_workflow_run_ledger:{discovered:([$runs[0][]|select(.workflow_id==$cleanup_workflow_id)]|length),deleted:([$results[0][] as $d | select(any($runs[0][]; .run_id==$d.run_id and .workflow_id==$cleanup_workflow_id)) | select($d.result=="DELETED")]|length),already_absent_verified:([$results[0][] as $d | select(any($runs[0][]; .run_id==$d.run_id and .workflow_id==$cleanup_workflow_id)) | select($d.result=="ALREADY_ABSENT")]|length)},cleanup_workflow_runs_retained:1,workflow_breakdown:$breakdown[0],deleted_workflows:[],run_cleanup_targets:$workflows[0],initial_run_inventory:$runs[0],deletion_results:$results[0],final_run_inventory:[$final_runs[0][].workflow_runs[]],verified_remaining_non_cleanup_runs:0,verified_workflows_directory:$main_workflow_paths,verified_workflow_refs:$target_refs}' \
   > "$work/receipt.json"
 receipt_hash="$(sha256sum "$work/receipt.json" | awk '{print $1}')"
 
@@ -363,8 +326,9 @@ jq -n --arg sha "$new_commit" '{sha:$sha,force:false}' | api_retry gh api --meth
 # Exact remote readback across every scoped branch.
 actual_ref="$(api_retry gh api "repos/$repo/git/ref/heads/$target_ref" | jq -r '.object.sha')"
 [ "$actual_ref" = "$new_commit" ]
-workflow_directory="$(api_retry gh api "repos/$repo/contents/.github/workflows?ref=$target_ref")"
-printf '%s' "$workflow_directory" | jq -e --arg cleanup "$cleanup_path" --arg update "$update_path" 'length==2 and ([.[].path] | sort) == ([$cleanup,$update] | sort)' >/dev/null
+actual_workflow_tree="$(api_retry gh api "repos/$repo/git/trees/$actual_ref?recursive=1")"
+printf '%s' "$actual_workflow_tree" | jq -e --slurpfile expected "$work/main-workflow-files.json" \
+  '[.tree[] | select(.type == "blob" and (.path | test("^\\.github/workflows/[^/]+\\.(yml|yaml)$"))) | {path:.path,blob_sha:.sha}] | sort_by(.path) == ($expected[0] | sort_by(.path))' >/dev/null
 remote_receipt="$(api_retry gh api "repos/$repo/contents/$receipt_path?ref=$target_ref")"
 remote_receipt_hash="$(printf '%s' "$remote_receipt" | jq -r '.content' | base64 -d | sha256sum | awk '{print $1}')"
 [ "$remote_receipt_hash" = "$receipt_hash" ]
@@ -372,18 +336,17 @@ while IFS= read -r branch_ref; do
   [ -n "$branch_ref" ] || continue
   [ "$branch_ref" != "$target_ref" ] || continue
   branch_key="$(printf '%s' "$branch_ref" | tr '/' '_')"
-  if api_retry gh api "repos/$repo/contents/.github/workflows?ref=$branch_ref" > "$work/final-workflow-dir-$branch_key.json" 2> "$work/final-workflow-dir-$branch_key.err"; then
-    jq -e 'length == 0' "$work/final-workflow-dir-$branch_key.json" >/dev/null
-  else
-    if ! grep -Eqi 'HTTP 404|Not Found' "$work/final-workflow-dir-$branch_key.err"; then
-      cat "$work/final-workflow-dir-$branch_key.err" >&2
-      exit 1
-    fi
-  fi
+  final_branch_sha="$(api_retry gh api "repos/$repo/git/ref/heads/$branch_ref" | jq -r '.object.sha')"
+  api_retry gh api "repos/$repo/git/trees/$final_branch_sha?recursive=1" > "$work/final-tree-$branch_key.json"
+  jq -e --slurpfile expected "$work/workflow-files-$branch_key.json" \
+    '[.tree[] | select(.type == "blob" and (.path | test("^\\.github/workflows/[^/]+\\.(yml|yaml)$"))) | {path:.path,blob_sha:.sha}] | sort_by(.path) == ($expected[0] | sort_by(.path))' \
+    "$work/final-tree-$branch_key.json" >/dev/null
   rm -f "$work/final-workflow-dir-$branch_key.err"
 done < <(printf '%s' "$target_refs_json" | jq -r '.[]')
-api_retry gh api "repos/$repo/contents/.github/workflows?ref=$target_ref" > "$work/readback-workflows.json"
-jq -e --arg cleanup "$cleanup_path" --arg update "$update_path" 'length==2 and ([.[].path] | sort) == ([$cleanup,$update] | sort)' "$work/readback-workflows.json" >/dev/null
+api_retry gh api "repos/$repo/git/trees/$actual_ref?recursive=1" > "$work/readback-tree.json"
+jq -e --slurpfile expected "$work/main-workflow-files.json" \
+  '[.tree[] | select(.type == "blob" and (.path | test("^\\.github/workflows/[^/]+\\.(yml|yaml)$"))) | {path:.path,blob_sha:.sha}] | sort_by(.path) == ($expected[0] | sort_by(.path))' \
+  "$work/readback-tree.json" >/dev/null
 inventory_runs "$work/readback-runs.json"
 remaining="$(jq --argjson ids "$target_ids" --argjson protected "$current_run_id" '[.[].workflow_runs[]|select(.workflow_id as $id|($ids|index($id))!=null)|select(.id!=$protected)]|length' "$work/readback-runs.json")"
 [ "$remaining" -eq 0 ]
