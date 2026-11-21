@@ -9,7 +9,32 @@
     "tests/exhausted-github-quota",
     "feat/actions-os-storage-cost-breakdown"
   ],
-  "branch_workflow_file_deletions": [],
+  "branch_workflow_file_deletions": [
+    {
+      "ref": "tests/exhausted-github-quota",
+      "path": ".github/workflows/conformance.yml",
+      "blob_sha": "894fbecb34f3888788b14cac67bd8292b0475295",
+      "status": "DELETED"
+    },
+    {
+      "ref": "tests/exhausted-github-quota",
+      "path": ".github/workflows/package-upw-plugin.yml",
+      "blob_sha": "64164a414e0f92b80f078ea6153beb9622af7c4b",
+      "status": "DELETED"
+    },
+    {
+      "ref": "feat/actions-os-storage-cost-breakdown",
+      "path": ".github/workflows/conformance.yml",
+      "blob_sha": "894fbecb34f3888788b14cac67bd8292b0475295",
+      "status": "DELETED"
+    },
+    {
+      "ref": "feat/actions-os-storage-cost-breakdown",
+      "path": ".github/workflows/package-upw-plugin.yml",
+      "blob_sha": "64164a414e0f92b80f078ea6153beb9622af7c4b",
+      "status": "DELETED"
+    }
+  ],
   "source_sha": "5aa5569cbd7bd0373af53826b4c5d8f82a89bdcd",
   "cleanup_run": {
     "run_id": 44901869126,
@@ -19,9 +44,9 @@
   },
   "request_sha256": "945e9481961b3f04b3002814fc329b78a4dae8503a270ef5e1bc2dff6cbae35c",
   "generated_at": "2026-11-21T12:01:56Z",
-  "total_workflow_definitions_discovered": 1,
-  "workflow_definitions_deleted": 0,
-  "workflow_yaml_files_deleted": 0,
+  "total_workflow_definitions_discovered": 3,
+  "workflow_definitions_deleted": 2,
+  "workflow_yaml_files_deleted": 6,
   "workflow_definitions_retained": 1,
   "total_workflow_runs_discovered": 4,
   "workflow_runs_deleted": 3,
@@ -38,11 +63,23 @@
       "workflow_id": null,
       "workflow_name": "conformance",
       "workflow_path": ".github/workflows/conformance.yml",
-      "discovered_run_count": 0,
-      "deleted_run_count": 0,
-      "already_absent_verified_count": 0,
-      "failed_or_skipped_count": 0,
-      "remaining_run_count": 0
+      "discovered_run_count": null,
+      "deleted_run_count": null,
+      "already_absent_verified_count": null,
+      "failed_or_skipped_count": null,
+      "remaining_run_count": 0,
+      "run_inventory_note": "Original run inventory was removed before a durable receipt was committed; counts are not recoverable from the current Actions API."
+    },
+    {
+      "workflow_id": null,
+      "workflow_name": "package-upw-plugin",
+      "workflow_path": ".github/workflows/package-upw-plugin.yml",
+      "discovered_run_count": null,
+      "deleted_run_count": null,
+      "already_absent_verified_count": null,
+      "failed_or_skipped_count": null,
+      "remaining_run_count": 0,
+      "run_inventory_note": "Original run inventory was removed before a durable receipt was committed; counts are not recoverable from the current Actions API."
     },
     {
       "workflow_id": 425926900,
@@ -55,7 +92,22 @@
       "remaining_run_count": 1
     }
   ],
-  "deleted_workflows": [],
+  "deleted_workflows": [
+    {
+      "workflow_id": null,
+      "workflow_name": "conformance",
+      "workflow_path": ".github/workflows/conformance.yml",
+      "blob_sha": "894fbecb34f3888788b14cac67bd8292b0475295",
+      "yaml_present": true
+    },
+    {
+      "workflow_id": null,
+      "workflow_name": "package-upw-plugin",
+      "workflow_path": ".github/workflows/package-upw-plugin.yml",
+      "blob_sha": "64164a414e0f92b80f078ea6153beb9622af7c4b",
+      "yaml_present": true
+    }
+  ],
   "initial_run_inventory": [
     {
       "run_id": 44901421583,
@@ -362,5 +414,52 @@
     "main",
     "tests/exhausted-github-quota",
     "feat/actions-os-storage-cost-breakdown"
+  ],
+  "historical_run_inventory_complete": false,
+  "historical_run_inventory_note": "The initial 42-run inventory and subsequent non-cleanup runs were deleted by an earlier cleanup execution before that execution reached its durable receipt commit. Final provider readback verified that only the current cleanup run remains; this receipt preserves the later cleanup-run ledger and records the missing historical run detail as unknown.",
+  "prior_cleanup_attempts": [
+    {
+      "run_id": 44901160697,
+      "conclusion": "failure",
+      "failure_stage": "explicit destructive request validation"
+    },
+    {
+      "run_id": 44901254118,
+      "conclusion": "failure",
+      "failure_stage": "branch workflow-file deletion via Contents API returned HTTP 403"
+    },
+    {
+      "run_id": 44901421583,
+      "conclusion": "failure",
+      "failure_stage": "workflow directory readback before default-branch YAML discovery was corrected"
+    },
+    {
+      "run_id": 44901478589,
+      "conclusion": "failure",
+      "failure_stage": "workflow directory readback before default-branch YAML discovery was corrected"
+    }
+  ],
+  "workflow_yaml_files_deleted_by_ref": [
+    {
+      "ref": "main",
+      "files": [
+        ".github/workflows/conformance.yml",
+        ".github/workflows/package-upw-plugin.yml"
+      ]
+    },
+    {
+      "ref": "tests/exhausted-github-quota",
+      "files": [
+        ".github/workflows/conformance.yml",
+        ".github/workflows/package-upw-plugin.yml"
+      ]
+    },
+    {
+      "ref": "feat/actions-os-storage-cost-breakdown",
+      "files": [
+        ".github/workflows/conformance.yml",
+        ".github/workflows/package-upw-plugin.yml"
+      ]
+    }
   ]
 }
