@@ -289,7 +289,7 @@ while IFS= read -r branch_ref; do
   branch_key="$(printf '%s' "$branch_ref" | tr '/' '_')"
   branch_sha="$(api_retry gh api "repos/$repo/git/ref/heads/$branch_ref" | jq -r '.object.sha')"
   api_retry gh api "repos/$repo/git/trees/$branch_sha?recursive=1" > "$work/tree-$branch_key.json"
-  jq --arg ref "$branch_ref" --arg cleanup "$cleanup_path" --arg update "$update_path" '[.tree[] | select(.type == "blob" and (.path | test("^\\.github/workflows/[^/]+\\.(yml|yaml)$")) and .path != $cleanup and .path != $update) | {ref:$ref,path:.path,blob_sha:.sha,status:"DELETED"}]' \
+  jq --arg ref "$branch_ref" '[.tree[] | select(.type == "blob" and (.path | test("^\\.github/workflows/[^/]+\\.(yml|yaml)$"))) | {ref:$ref,path:.path,blob_sha:.sha,status:"DELETED"}]' \
     "$work/tree-$branch_key.json" > "$work/workflow-files-$branch_key.json"
   jq -s '.[0] + .[1]' "$work/branch-workflow-deletions.json" "$work/workflow-files-$branch_key.json" \
     > "$work/branch-workflow-deletions.next.json"
