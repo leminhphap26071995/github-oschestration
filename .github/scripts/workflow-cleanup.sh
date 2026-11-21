@@ -130,7 +130,7 @@ delete_batch() {
     ' _ > "$output"
 }
 
-# Drain and delete all non-cleanup runs in bounded concurrent batches.
+# Drain and delete only non-protected, non-cleanup runs in bounded concurrent batches.
 for round in 1 2 3 4 5 6; do
   inventory_runs "$work/runs-before-$round.json"
   jq -r --argjson ids "$target_ids" --argjson protected "$current_run_id" \
@@ -369,6 +369,8 @@ jq -n --slurpfile receipt "$work/receipt.json" --slurpfile final "$work/readback
   echo "- Generated at: $finished_at"
   echo
   echo "## Workflow definitions"
+  echo
+  jq -r '"- Restored from source commits: " + ((.workflow_yaml_files_restored // 0)|tostring) + " workflow YAML files."' "$work/receipt.json"
   echo
   echo "| Discovered | Deleted | Retained |"
   echo "|---:|---:|---:|"
