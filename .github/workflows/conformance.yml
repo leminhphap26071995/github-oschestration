@@ -8,6 +8,8 @@ on:
       - '.ai-workflow/**'
 permissions:
   contents: read
+  actions: read
+  checks: read
 jobs:
   validate:
     runs-on: ubuntu-latest
@@ -21,3 +23,44 @@ jobs:
       - run: python -m unittest discover -s tests -p 'test_*.py' -v
       - run: python -m unittest discover -s quota-monitor/tests -p 'test_*.py' -v
       - run: node --test quota-monitor/tests/test_app_tokens.mjs
+
+  collect-annotations:
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      actions: read
+      checks: read
+      contents: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_PROMPT_DISABLED: "1"
+      GH_NO_UPDATE_NOTIFIER: "1"
+    steps:
+      - name: Install pinned gh-annotations extension
+        run: gh extension install swfz/gh-annotations --pin d1164398536b74f1f95789522fccb9de6b4adb9a
+
+      - name: Collect latest workflow annotations as JSON
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh annotations --repo "$GITHUB_REPOSITORY" --json | tee annotations.json
+          jq -e 'type == "array"' annotations.json
+          {
+            echo "## GitHub Actions annotations"
+            echo
+            echo "- Repository: $GITHUB_REPOSITORY"
+            echo "- Source workflow run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+            echo "- Annotation records: $(jq 'length' annotations.json)"
+            echo
+            jq -r '.[] | "- [" + (.annotation_level // "unknown") + "] " + (.workflow_name // "unknown workflow") + " / " + (.job_name // "unknown job") + ": " + (.message // "")' annotations.json
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload annotation JSON
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: gh-annotations-${{ github.run_id }}
+          path: annotations.json
+          if-no-files-found: warn
+          retention-days: 7
