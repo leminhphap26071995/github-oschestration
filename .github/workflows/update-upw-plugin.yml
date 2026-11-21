@@ -117,4 +117,5 @@ jobs:
           retention-days: 14
       - name: Confirm native Plugin Creator handoff boundary
         if: steps.request.outputs.present == 'true'
-        run: echo "PACKAGE_READY: ChatGPT must use the native Plugin Creator update action with the recorded plugin_id and expected_release_id; this Actions workflow does not mutate the live plugin."
+        run: |
+          echo "PACKAGE_READY: ChatGPT must use the native Plugin Creator update action with the recorded plugin_id and expected_release_id; this Actions workflow does not mutate the live plugin."
