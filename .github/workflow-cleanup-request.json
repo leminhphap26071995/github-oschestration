@@ -8,13 +8,13 @@
     "tests/exhausted-github-quota",
     "feat/actions-os-storage-cost-breakdown"
   ],
-  "scope": "retain-cleanup-and-upw-package",
-  "rationale": "Remove all other workflow definitions and historical Actions runs across the explicitly scoped refs. Retain exactly two workflow definitions on main: the self-cleaning workflow cleanup/report carrier and the UPW plugin overlay package workflow. The cleanup execution deletes all historical runs except its exact current final report run; the retained UPW package workflow remains enabled and ready for a later source push, but its historical runs are removed.",
+  "scope": "retain-cleanup-and-upw-update",
+  "rationale": "Remove every workflow definition and historical Actions run outside the two retained workflow definitions on main. Retain Workflow Cleanup and the UPW Plugin Creator update handoff workflow. The cleanup execution must delete all historical runs except its exact current final report run; historical runs of the retained UPW update workflow are also deleted. Non-default scoped branches must contain no workflow YAML files.",
   "issued_at": "2026-11-21",
-  "execution_attempt": 9,
+  "execution_attempt": 10,
   "reissued_at": "2026-11-21",
   "retained_workflow_paths": [
     ".github/workflows/workflow-cleanup.yml",
-    ".github/workflows/package-upw-plugin.yml"
+    ".github/workflows/update-upw-plugin.yml"
   ]
 }
