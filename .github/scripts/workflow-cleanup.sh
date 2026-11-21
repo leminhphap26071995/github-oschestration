@@ -279,7 +279,7 @@ jq -n --slurpfile definitions "$work/workflows-pages.json" --slurpfile workflows
 # Delete workflow YAMLs from every explicitly scoped non-default branch
 # through the Git Data API. This uses the same contents-write path as the default
 # branch commit and avoids the separate workflow-file Contents API permission.
-printf '%s\\n' '[]' > "$work/branch-workflow-deletions.json"
+echo '[]' > "$work/branch-workflow-deletions.json"
 while IFS= read -r branch_ref; do
   [ -n "$branch_ref" ] || continue
   [ "$branch_ref" != "$target_ref" ] || continue
