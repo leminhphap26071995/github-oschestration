@@ -14,7 +14,7 @@ The ZIP is an overlay: omitted files are retained by Plugin Creator's update ope
 
 1. Read the live UPW plugin metadata and files through Plugin Creator; record its exact plugin ID, current version and current release ID.
 2. Refresh the repository overlay from the intended current plugin source; preserve plugin identity, default prompts, omitted files, audience and scope.
-3. Set `.github/upw-plugin-update-request.json` with owner approval, exact plugin ID, expected current release ID and current version. Commit it to `main` to trigger the automatic preparation workflow.
+3. Set `.github/upw-plugin-update-request.json` with owner approval, exact plugin ID, expected current release ID and current version. Commit it to `main` with `[upw-plugin-update]` in the commit message; both the changed request path and this explicit marker are required to run the preparation job.
 4. Verify artifact source SHA, ZIP integrity, SHA-256 and handoff metadata. The workflow rejects an overlay version that is not newer than the recorded live version or whose manifests do not preserve the default prompt.
 5. Use the native Plugin Creator update action with the exact plugin ID and expected release ID. GitHub Actions cannot invoke that Plugin Creator mutation.
 6. Read back the new release ID/version and every changed file; record the release ID and source SHA in the owning project/ticket checkpoint.

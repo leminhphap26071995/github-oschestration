@@ -11,6 +11,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   prepare:
+    if: ${{ contains(github.event.head_commit.message, '[upw-plugin-update]') }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
