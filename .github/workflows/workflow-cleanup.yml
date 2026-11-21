@@ -24,7 +24,7 @@ jobs:
         run: |
           set -euo pipefail
           request=".github/workflow-cleanup-request.json"
-          jq -e '(. as $r | $r.approved == true and $r.scope == "retain-cleanup-and-upw-package" and $r.retained_workflow_paths == [".github/workflows/workflow-cleanup.yml", ".github/workflows/package-upw-plugin.yml"] and $r.requested_by == "repository-owner" and ($r.target_ref | type == "string" and length > 0) and ($r.target_refs | type == "array" and length > 0 and all(.[]; type == "string" and length > 0)) and ($r.target_refs | index($r.target_ref) != null))' "$request" >/dev/null
+          jq -e '(. as $r | $r.approved == true and $r.scope == "retain-cleanup-and-upw-update" and $r.retained_workflow_paths == [".github/workflows/workflow-cleanup.yml", ".github/workflows/update-upw-plugin.yml"] and $r.requested_by == "repository-owner" and ($r.target_ref | type == "string" and length > 0) and ($r.target_refs | type == "array" and length > 0 and all(.[]; type == "string" and length > 0)) and ($r.target_refs | index($r.target_ref) != null))' "$request" >/dev/null
           target_ref="$(jq -r '.target_ref' "$request")"
           test "$target_ref" = "$REQUEST_REF"
           echo "TARGET_REF=$target_ref" >> "$GITHUB_ENV"
@@ -77,5 +77,5 @@ jobs:
           done
           test "$artifact_ok" = true
           gh api "repos/$repo/contents/.github/workflows?ref=$GITHUB_REF_NAME" > "$RUNNER_TEMP/workflow-directory.json"
-          jq -e 'length == 2 and ([.[].path] | sort) == [".github/workflows/package-upw-plugin.yml", ".github/workflows/workflow-cleanup.yml"]' "$RUNNER_TEMP/workflow-directory.json" >/dev/null
+          jq -e 'length == 2 and ([.[].path] | sort) == [".github/workflows/update-upw-plugin.yml", ".github/workflows/workflow-cleanup.yml"]' "$RUNNER_TEMP/workflow-directory.json" >/dev/null
           echo "PASS: exactly two approved workflows remain and the final cleanup run owns its report artifact."

@@ -1,0 +1,104 @@
+name: Prepare UPW Plugin Creator Update
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/upw-plugin-update-request.json"
+permissions:
+  contents: read
+concurrency:
+  group: upw-plugin-creator-update-${{ github.repository }}
+  cancel-in-progress: false
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout exact requested source
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: Validate owner-approved Plugin Creator update request
+        shell: bash
+        run: |
+          set -euo pipefail
+          request=".github/upw-plugin-update-request.json"
+          test -f "$request"
+          jq -e '
+            .approved == true and
+            .requested_by == "repository-owner" and
+            .plugin_id == "plugins_6adcacd0c4988191a4f3d33a5bec0d29" and
+            (.expected_release_id | type == "string" and length > 0) and
+            (.current_version | type == "string" and test("^[0-9]+\\.[0-9]+\\.[0-9]+$"))
+          ' "$request" >/dev/null
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          request = json.loads(Path(".github/upw-plugin-update-request.json").read_text())
+          manifest = json.loads(Path("plugin/overlay/plugin.json").read_text())
+          host_manifest = json.loads(Path("plugin/overlay/.codex-plugin/plugin.json").read_text())
+
+          def version(value):
+              return tuple(int(part) for part in value.split("."))
+
+          current = request["current_version"]
+          target = manifest["version"]
+          if version(target) <= version(current):
+              raise SystemExit(f"VERSION_NOT_NEWER_THAN_PLUGIN_CREATOR: current={current} overlay={target}")
+
+          root_prompt = manifest.get("extensions", {}).get("com.openai", {}).get("interface", {}).get("defaultPrompt")
+          host_prompt = host_manifest.get("interface", {}).get("defaultPrompt")
+          if not isinstance(root_prompt, list) or not root_prompt or root_prompt != host_prompt:
+              raise SystemExit("DEFAULT_PROMPT_MISSING_OR_MANIFESTS_OUT_OF_SYNC")
+
+          print(f"REQUEST_VALID plugin={request['plugin_id']} current={current} target={target}")
+          PY
+      - name: Validate UPW plugin overlay
+        run: python plugin/validate_overlay.py --root plugin/overlay
+      - name: Package Plugin Creator overlay and bind provenance
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="$(python -c 'import json; print(json.load(open("plugin/overlay/plugin.json"))["version"])')"
+          mkdir -p dist
+          archive="dist/UPW-${version}-plugin-creator-overlay.zip"
+          python plugin/package_overlay.py --root plugin/overlay --output "$archive"
+          sha256sum "$archive" | tee dist/SHA256SUMS
+          python - <<'PY'
+          import hashlib, json
+          from pathlib import Path
+          request = json.loads(Path(".github/upw-plugin-update-request.json").read_text())
+          manifest = json.loads(Path("plugin/overlay/plugin.json").read_text())
+          archive = next(Path("dist").glob("*.zip"))
+          handoff = {
+              "schema_version": 1,
+              "purpose": "Plugin Creator update handoff; this workflow does not publish the live plugin",
+              "plugin_id": request["plugin_id"],
+              "expected_release_id": request["expected_release_id"],
+              "current_version": request["current_version"],
+              "target_version": manifest["version"],
+              "source_sha": "${{ github.sha }}",
+              "workflow_run_id": "${{ github.run_id }}",
+              "archive": archive.name,
+              "archive_sha256": hashlib.sha256(archive.read_bytes()).hexdigest()
+          }
+          Path("dist/plugin-creator-handoff.json").write_text(json.dumps(handoff, indent=2) + "\n")
+          PY
+      - name: Upload update handoff artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: UPW-plugin-creator-update-${{ github.sha }}
+          path: |
+            dist/*.zip
+            dist/SHA256SUMS
+            dist/plugin-creator-handoff.json
+          if-no-files-found: error
+          retention-days: 14
+      - name: Confirm native Plugin Creator handoff boundary
+        run: echo "PACKAGE_READY: ChatGPT must use the native Plugin Creator update action with the recorded plugin_id and expected_release_id; this Actions workflow does not mutate the live plugin."
