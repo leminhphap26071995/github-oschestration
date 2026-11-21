@@ -902,7 +902,7 @@
     "feat/actions-os-storage-cost-breakdown"
   ],
   "recovery_status": "WORKFLOW_DEFINITIONS_RESTORED_AND_CLEANUP_POLICY_FIXED",
-  "workflow_definition_policy": "PRESERVE_ALL_WORKFLOW_YAML; cleanup run history only; never disable workflow definitions as part of cleanup",
+  "workflow_definition_policy": "PRESERVE_ALL_WORKFLOW_YAML; cleanup only run history; never delete or disable workflow definitions",
   "workflow_yaml_files_restored": 5,
   "workflow_yaml_restorations": [
     {
@@ -943,20 +943,32 @@
   ],
   "run_history_recovery": {
     "status": "NOT_RECOVERABLE_FROM_GIT_COMMITS",
-    "detail": "Git commits restore workflow YAML definitions, not GitHub Actions run records. Deleted run IDs/logs/artifacts are provider-side objects and cannot be recreated from source commits. The original cleanup artifact and its recoverable run metadata remain the audit evidence."
+    "detail": "The previously deleted UPW Plugin Manual Release run records cannot be restored from Git commits. Git commits restore workflow YAML definitions only. Their deleted run IDs/logs/artifacts remain unavailable from the provider; the original cleanup report retains the recoverable metadata. Future runs for this protected workflow path are excluded from cleanup."
   },
   "repair_commits": [
     {
       "sha": "bed6cf729ae77d0d0435f1522e04e3dd8976cf2a",
-      "purpose": "Preserve workflow definitions and enabled states; clean run history only; verify per-ref workflow file snapshots"
+      "purpose": "Preserve all workflow YAML definitions and enabled states; snapshot/verify workflow files across every scoped ref"
     },
     {
       "sha": "d81536e00e8e68316d9541f367a7edb4816b016a",
-      "purpose": "Make workflow cleanup final verification allow required workflow paths without requiring exactly two files"
+      "purpose": "Allow additional workflow definitions while verifying required workflow paths"
     },
     {
       "sha": "ae04462f783ff62720a5899cfcbdf66a4b91576b",
-      "purpose": "Add bash -n cleanup script syntax check to conformance"
+      "purpose": "Add cleanup shell syntax validation to conformance"
+    },
+    {
+      "sha": "a4b0c1ae76ab70de1e1e6d0d1e5c17473651b6bd",
+      "purpose": "Exclude UPW Plugin Manual Release from run-history deletion and final cleanup target inventory"
+    },
+    {
+      "sha": "8a232b7827f1960ba9f0d47207b6d13594e6f389",
+      "purpose": "Verify UPW run-history preservation and one final cleanup report run"
     }
-  ]
+  ],
+  "protected_run_workflow_paths": [
+    ".github/workflows/update-upw-plugin.yml"
+  ],
+  "cleanup_run_policy": "Delete historical runs only for non-protected workflow paths; preserve all UPW Plugin Manual Release runs; retain exactly the current cleanup report run for the cleanup workflow"
 }
