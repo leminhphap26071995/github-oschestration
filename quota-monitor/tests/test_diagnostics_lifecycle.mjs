@@ -376,8 +376,14 @@ test("API usage telemetry is pinned and private credentials are isolated to the 
   const privateJob = workflow.split("  private_targets:\n")[1].split("\n  diagnose:\n")[0];
   const diagnoseJob = workflow.split("  diagnose:\n")[1].split("\n  readback:\n")[0];
   const readbackJob = workflow.split("  readback:\n")[1];
-  assert.ok(privateJob.includes("secrets.PRIVATE_MONITOR_TOKEN"));
+  assert.ok(privateJob.includes("PRIVATE_MONITOR_TOKEN: " + "$" + "{{ secrets.PRIVATE_MONITOR_TOKEN }}"));
+  assert.ok(privateJob.includes("PRIVATE_TARGETS_JSON: " + "$" + "{{ secrets.PRIVATE_TARGETS_JSON }}"));
+  assert.ok(privateJob.includes("token: " + "$" + "{{ github.token }}"));
   assert.ok(privateJob.includes("diagnostics: \"true\""));
+  assert.ok(privateJob.includes("Observe configured private repositories"));
+  assert.ok(!privateJob.includes("Monitor private target token rate-limit usage"));
+  assert.ok(!privateJob.includes("steps.private_token.outputs.configured"));
+  assert.ok(!/uses:\s*hesreallyhim\/github-api-usage-monitor@[a-f0-9]+[\s\S]{0,260}token:\s*\$\{\{\s*secrets\.PRIVATE_MONITOR_TOKEN/.test(privateJob));
   assert.ok(!diagnoseJob.includes("secrets.PRIVATE_MONITOR_TOKEN"));
   assert.ok(!readbackJob.includes("secrets.PRIVATE_MONITOR_TOKEN"));
   assert.ok(diagnoseJob.includes("token: " + "$" + "{{ github.token }}"));
