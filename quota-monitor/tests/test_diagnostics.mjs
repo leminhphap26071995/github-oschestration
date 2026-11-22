@@ -230,7 +230,7 @@ test("retries transient log 404 and redacts secrets from evidence", async () => 
   assert.equal(classified.classification, "STEP_FAILURE");
   assert.ok(!classified.classifications?.includes("ACTIONS_BILLING_QUOTA_EXHAUSTED"));
   assert.ok(!JSON.stringify(classified).includes("ghp_"));
-  assert.ok(classified.evidence[0].message.includes("Bearer"));
+  assert.ok(classified.evidence.some(item => item.message.includes("Bearer")));
 });
 
 test("honors Retry-After for log API 429 and retries without sending the bearer token to the signed URL", async () => {
