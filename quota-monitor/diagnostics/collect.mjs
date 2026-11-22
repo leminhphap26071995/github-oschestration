@@ -288,6 +288,8 @@ export async function collectDiagnostics({
   recordedAt = new Date().toISOString(),
   workflowDiagnostic = "",
   workflowDiagnosticStatus = "NOT_PROVIDED",
+  lifecyclePolls = 0,
+  lifecyclePollDelayMs = 15000,
 } = {}) {
   const source = validateEvent(event, repository);
   const api = createGitHubApi({ token, apiUrl, fetchImpl, sleepImpl });
@@ -295,19 +297,63 @@ export async function collectDiagnostics({
   api.setRepository(owner, repo);
 
   const runUrl = "/repos/" + owner + "/" + repo + "/actions/runs/" + source.run_id;
-  const { data: run } = await api.getJson(runUrl);
+  const jobsUrl = "/repos/" + owner + "/" + repo + "/actions/runs/" + source.run_id +
+    "/attempts/" + source.run_attempt + "/jobs?per_page=100";
+  let { data: run } = await api.getJson(runUrl);
   validateRunDetails(run, source);
 
-  let jobsPage;
-  let jobsStatus = "RETRIEVED";
-  try {
-    const jobsUrl = "/repos/" + owner + "/" + repo + "/actions/runs/" + source.run_id +
-      "/attempts/" + source.run_attempt + "/jobs?per_page=100";
-    jobsPage = await api.paginate(jobsUrl, "jobs");
-  } catch (error) {
-    jobsStatus = "API_ERROR";
-    jobsPage = { items: [], pageCount: 0, error: errorRecord(error) };
+  async function fetchJobs() {
+    try {
+      return { status: "RETRIEVED", page: await api.paginate(jobsUrl, "jobs") };
+    } catch (error) {
+      return { status: "API_ERROR", page: { items: [], pageCount: 0, error: errorRecord(error) } };
+    }
   }
+  let jobsResult = await fetchJobs();
+  let jobsPage = jobsResult.page;
+  let jobsStatus = jobsResult.status;
+  let lifecyclePollCount = 0;
+  let lifecyclePollError = null;
+  const wait = sleepImpl || (milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds)));
+  const hasRunnerOrSteps = items => items.some(job =>
+    (Number.isSafeInteger(job.runner_id) && job.runner_id > 0) ||
+    (Array.isArray(job.steps) && job.steps.length > 0)
+  );
+
+  while (
+    source.event_action === "requested" &&
+    lifecyclePollCount < lifecyclePolls &&
+    jobsStatus === "RETRIEVED" &&
+    run.status !== "completed" &&
+    !hasRunnerOrSteps(jobsPage.items)
+  ) {
+    await wait(lifecyclePollDelayMs);
+    lifecyclePollCount += 1;
+    try {
+      const refreshed = await api.getJson(runUrl);
+      validateRunDetails(refreshed.data, source);
+      run = refreshed.data;
+      jobsResult = await fetchJobs();
+      jobsPage = jobsResult.page;
+      jobsStatus = jobsResult.status;
+      if (jobsStatus !== "RETRIEVED") {
+        lifecyclePollError = jobsPage.error ?? { status: "API_ERROR", code: "JOBS_REFRESH_FAILED" };
+        break;
+      }
+    } catch (error) {
+      lifecyclePollError = errorRecord(error);
+      break;
+    }
+  }
+
+  const lifecycleObservation = {
+    requested_event_poll_count: lifecyclePollCount,
+    poll_delay_ms: lifecyclePollDelayMs,
+    final_run_status: run.status ?? null,
+    runner_or_steps_observed: hasRunnerOrSteps(jobsPage.items),
+    jobs_status: jobsStatus,
+    poll_error: lifecyclePollError,
+  };
 
   const jobs = [];
   for (const job of jobsPage.items) jobs.push(await collectJob({ api, job, source }));
@@ -322,6 +368,8 @@ export async function collectDiagnostics({
     checkSuite,
     workflowDiagnostic,
     workflowDiagnosticStatus,
+    lifecyclePolls: Number(process.env.LIFECYCLE_POLL_COUNT || 0),
+    lifecyclePollDelayMs: Number(process.env.LIFECYCLE_POLL_DELAY_MS || 15000),
   });
   for (const checkRun of checkSuite.check_runs || []) {
     for (const annotation of checkRun.annotations || []) delete annotation.raw_details;
@@ -345,6 +393,7 @@ export async function collectDiagnostics({
       diagnostic: sanitizeText(workflowDiagnostic),
     },
     check_suite: checkSuite,
+    lifecycle_observation: lifecycleObservation,
     run_classification: runClassification,
     collector: {
       workflow_sha: observerSha,
@@ -370,6 +419,8 @@ export function renderSummary(record) {
     "- Status / conclusion: " + (record.source.status || "UNKNOWN") + " / " + (record.source.conclusion || "UNKNOWN"),
     "- Check suite: " + (record.source.check_suite_id.value ?? record.source.check_suite_id.state),
     "- Jobs collection: " + record.source.jobs_status + " (" + (record.source.job_count ?? "UNKNOWN") + " jobs)",
+    "- Requested-event polls: " + record.lifecycle_observation.requested_event_poll_count +
+      "; runner/steps observed: " + record.lifecycle_observation.runner_or_steps_observed,
     "- Run classification: " + record.run_classification.classification,
     "- All classifications: " + record.run_classification.classifications.join(", "),
     "- Workflow definition evidence: " + record.workflow_definition.status,
