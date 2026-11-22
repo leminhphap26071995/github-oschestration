@@ -4,16 +4,16 @@ This directory contains the read-only collector and report enrichment used by th
 
 ## First-stage workflow credential audit
 
-The separate \`.github/workflows/quota-token-permission-audit.yml\` workflow verifies the built-in, short-lived \`GITHUB_TOKEN\` available to a GitHub Actions job. It is deliberately limited to read access:
+The separate `.github/workflows/quota-token-permission-audit.yml` workflow verifies the built-in, short-lived `GITHUB_TOKEN` available to a GitHub Actions job. It is deliberately limited to read access:
 
-- \`actions: read\` — inspect workflow runs and jobs.
-- \`checks: read\` — inspect check runs and annotations.
-- \`contents: read\` — read workflow/source files and receipts.
-- \`metadata: read\` is implicit; all other permission keys are \`none\`.
+- `actions: read` — inspect workflow runs and jobs.
+- `checks: read` — inspect check runs and annotations.
+- `contents: read` — read workflow/source files and receipts.
+- `metadata: read` is implicit; all other permission keys are `none`.
 
-The workflow prints the declared permission contract and read-only API probe results to the job log and step summary. It never prints the token, uses no PAT or GitHub App private key, and performs no write, billing, cleanup, cancellation, or deletion operation. It is triggered automatically only by changes to its own workflow, script, tests, README, or the conformance workflow on \`main\`; it has no manual dispatch path.
+The workflow prints the declared permission contract and read-only API probe results to the job log and step summary. It never prints the token, uses no PAT or GitHub App private key, and performs no write, billing, cleanup, cancellation, or deletion operation. It is triggered automatically only by changes to its own workflow, script, tests, README, or the conformance workflow on `main`; it has no manual dispatch path.
 
-Important distinction: GitHub's \`X-Accepted-GitHub-Permissions\` response header identifies what an endpoint requires, not what the token was granted. \`GITHUB_TOKEN\` is a GitHub App installation token, so absence of the classic OAuth \`X-OAuth-Scopes\` header is not evidence of zero permissions. The explicit job-level \`permissions\` block is the grant contract for this workflow; API probes verify the read paths used by the next quota-monitor stage. Public-repository read success is not a complete token-permission inventory.
+Important distinction: GitHub's `X-Accepted-GitHub-Permissions` response header identifies what an endpoint requires, not what the token was granted. `GITHUB_TOKEN` is a GitHub App installation token, so absence of the classic OAuth `X-OAuth-Scopes` header is not evidence of zero permissions. The explicit job-level `permissions` block is the grant contract for this workflow; API probes verify the read paths used by the next quota-monitor stage. Public-repository read success is not a complete token-permission inventory.
 
 This first-stage audit does not inspect billing usage or decide whether Actions quota is exhausted. Those are separate later steps.
 
