@@ -1,10 +1,14 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { mkdtemp, mkdir, writeFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import {
   classifyRootCause,
   collectActionReferences,
   evaluateActionRuntime,
   inspectJobEvidence,
+  inspectWorkflowText,
   parseActionRuntime
 } from "../scripts/workflow-quality-gate.mjs";
 
@@ -50,4 +54,19 @@ test("parses action metadata and rejects retired Node runtimes", () => {
 
 test("extracts action references from workflow steps", () => {
   assert.deepEqual(collectActionReferences("steps:\n  - uses: actions/checkout@v7\n  - uses: ./local/action\n"), ["actions/checkout@v7", "./local/action"]);
+});
+
+
+test("reusable exact-workflow runtime audit inspects local action metadata", async () => {
+  const root = await mkdtemp(join(tmpdir(), "workflow-runtime-audit-"));
+  try {
+    await mkdir(join(root, "local-action"), { recursive: true });
+    await writeFile(join(root, "local-action", "action.yml"), "name: Legacy local action\nruns:\n  using: node20\n  main: index.js\n", "utf8");
+    const results = inspectWorkflowText("steps:\n  - uses: ./local-action\n", root);
+    assert.equal(results.length, 1);
+    assert.equal(results[0].runtime, "node20");
+    assert.equal(results[0].status, "RETIRED");
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
 });
