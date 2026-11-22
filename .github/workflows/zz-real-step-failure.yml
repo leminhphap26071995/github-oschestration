@@ -1,0 +1,29 @@
+name: Real Step Failure Fault Injection
+
+on:
+  push:
+    branches:
+      - test/annotation-no-runner-20261122
+    paths:
+      - ".github/workflows/zz-real-step-failure.yml"
+      - ".github/fixtures/real-step-failure.test.mjs"
+
+permissions: {}
+
+jobs:
+  real-test-failure:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    permissions: {}
+    steps:
+      - name: Checkout exact fault-injection commit
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Set up Node.js 24
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+      - name: Execute an actual failing Node test assertion
+        run: node --test .github/fixtures/real-step-failure.test.mjs

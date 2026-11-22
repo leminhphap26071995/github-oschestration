@@ -1,0 +1,10 @@
+name: Real Invalid Workflow YAML Fault Injection
+on:
+  push:
+    branches: [test/annotation-no-runner-20261122, main
+jobs:
+  never-started:
+    runs-on: ubuntu-latest
+    steps:
+      - name: This step is unreachable because the committed YAML is malformed
+        run: echo "This command must never execute"

@@ -1,0 +1,30 @@
+name: Workflow Quality Gate
+
+on:
+  push:
+    paths:
+      - ".github/workflows/**"
+
+permissions: {}
+
+jobs:
+  actionlint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-go@v6
+        with:
+          go-version: "1.24.3"
+          cache: false
+      - name: Install pinned actionlint
+        run: go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.7
+      - name: Register actual parser problem matcher
+        run: echo "::add-matcher::.github/actionlint-problem-matcher.json"
+      - name: Parse every committed workflow definition
+        run: actionlint -oneline .github/workflows/*.yml
