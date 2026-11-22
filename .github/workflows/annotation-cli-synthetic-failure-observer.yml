@@ -20,7 +20,7 @@ jobs:
       contents: read
     steps:
       - name: Checkout observer source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: ${{ github.sha }}
           persist-credentials: false
@@ -102,7 +102,7 @@ jobs:
 
       - name: Upload CLI output and message evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: annotation-cli-self-test-${{ github.event.workflow_run.id }}-attempt-${{ github.event.workflow_run.run_attempt }}
           path: evidence/

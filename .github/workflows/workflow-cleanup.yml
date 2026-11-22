@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 350
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           ref: ${{ github.sha }}
           persist-credentials: false
@@ -38,7 +38,7 @@ jobs:
           CURRENT_RUN_ID: ${{ github.run_id }}
         run: bash .github/scripts/workflow-cleanup.sh
       - name: Upload final cleanup report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: workflow-cleanup-report-${{ github.run_id }}
           path: workflow-cleanup-report/

@@ -1,0 +1,59 @@
+name: Workflow Quality Gate
+on:
+  push:
+    paths:
+      - ".github/workflows/**"
+      - ".github/actions/**"
+      - "action.yml"
+      - "action.yaml"
+      - "scripts/workflow-quality-gate.mjs"
+      - "tests/workflow-quality-gate.test.mjs"
+      - ".github/actionlint-problem-matcher.json"
+  pull_request:
+    paths:
+      - ".github/workflows/**"
+      - ".github/actions/**"
+      - "action.yml"
+      - "action.yaml"
+      - "scripts/workflow-quality-gate.mjs"
+      - "tests/workflow-quality-gate.test.mjs"
+      - ".github/actionlint-problem-matcher.json"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: workflow-quality-gate-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout exact source
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Install pinned actionlint
+        run: |
+          go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.7
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+
+      - name: Register actionlint problem matcher
+        run: echo "::add-matcher::.github/actionlint-problem-matcher.json"
+
+      - name: Validate workflow YAML and GitHub Actions semantics
+        run: actionlint -oneline
+
+      - name: Test failure classification and evidence-state handling
+        run: node --test tests/workflow-quality-gate.test.mjs
+
+      - name: Inspect referenced action runtime metadata
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/workflow-quality-gate.mjs
