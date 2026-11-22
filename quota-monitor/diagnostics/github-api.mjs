@@ -50,6 +50,9 @@ export function createGitHubApi({
   function assertApiUrl(value) {
     const url = new URL(value, apiRoot);
     if (url.origin !== apiOrigin) throw new Error("UNTRUSTED_GITHUB_API_URL");
+    if (repositoryPath && !url.pathname.startsWith(`/repos/${repositoryPath}/`)) {
+      throw new Error("UNTRUSTED_GITHUB_API_PATH");
+    }
     return url;
   }
 

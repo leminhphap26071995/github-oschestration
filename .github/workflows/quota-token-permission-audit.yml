@@ -6,6 +6,9 @@ on:
       - '.github/workflows/quota-token-permission-audit.yml'
       - 'quota-monitor/check_token_permissions.mjs'
       - 'quota-monitor/tests/test_token_permissions.mjs'
+      - '.github/workflows/actions-run-diagnostics.yml'
+      - 'quota-monitor/diagnostics/**'
+      - 'quota-monitor/tests/test_diagnostics.mjs'
       - 'quota-monitor/README.md'
       - '.github/workflows/conformance.yml'
 permissions: {}

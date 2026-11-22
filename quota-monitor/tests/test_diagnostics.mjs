@@ -91,7 +91,7 @@ test("collects exact run attempt, paginated jobs/annotations, and independent jo
       return jsonResponse({ jobs: [job(103, 903)] });
     }
     if (target.endsWith("/check-runs/901/annotations?per_page=100")) {
-      return jsonResponse([{ path: "src/a.js", annotation_level: "failure", title: "Failure", message: "test failed" }], 200, {
+      return jsonResponse([{ path: "src/a.js", annotation_level: "failure", title: "Failure", message: "test failed", raw_details: "token=annotation-secret" }], 200, {
         link: `<${apiRoot}/repos/owner/repository/check-runs/901/annotations?per_page=100&page=2>; rel="next"`,
       });
     }
@@ -138,6 +138,8 @@ test("collects exact run attempt, paginated jobs/annotations, and independent jo
   assert.ok(calls.some(call => call.url.startsWith("https://logs.example.test/")));
   assert.ok(!JSON.stringify(record).includes(token));
   assert.ok(!JSON.stringify(record).includes("sig=secret"));
+  assert.ok(!JSON.stringify(record).includes("annotation-secret"));
+  assert.ok(!JSON.stringify(record).includes("raw_details"));
   assert.ok(renderSummary(record).includes("Attempt: 2"));
 });
 
@@ -307,6 +309,40 @@ test("validates supported source workflow and failed conclusion", async () => {
     () => collectDiagnostics({ event: success, repository, token, fetchImpl: async () => { throw new Error("not called"); } }),
     /SOURCE_RUN_NOT_FAILED/,
   );
+});
+
+
+test("does not fetch job evidence when required run identity fields are missing", async () => {
+  const calls = [];
+  const fetchImpl = async url => {
+    const target = String(url);
+    calls.push(target);
+    if (target.endsWith("/actions/runs/700")) return jsonResponse(runDetails());
+    if (target.includes("/attempts/2/jobs")) {
+      return jsonResponse({ jobs: [job(101, 901, { head_sha: undefined })] });
+    }
+    throw new Error("Unexpected URL: " + target);
+  };
+  const record = await collectDiagnostics({ event: event(), repository, token, fetchImpl });
+  assert.equal(record.jobs[0].correlation_status, "INCOMPLETE");
+  assert.equal(record.jobs[0].logs.status, "SKIPPED_INCOMPLETE_IDENTITY");
+  assert.ok(!calls.some(url => url.includes("/check-runs/901/annotations")));
+  assert.ok(!calls.some(url => url.endsWith("/actions/jobs/101/logs")));
+});
+
+test("classifies explicit quota evidence in raw annotation details but never serializes secrets", () => {
+  const result = classifyJob({
+    job: job(77, 88, { steps: [] }),
+    annotations: [{
+      title: "Billing gate",
+      message: "Build blocked",
+      raw_details: "Actions billing spending limit exceeded token=private-secret-value",
+    }],
+    logs: { status: "NOT_REQUESTED", text: "" },
+  });
+  assert.equal(result.classification, "QUOTA_EXHAUSTED");
+  assert.ok(!JSON.stringify(result).includes("private-secret-value"));
+  assert.ok(JSON.stringify(result).includes("token=[REDACTED]"));
 });
 
 test("rejects cross-origin pagination links", async () => {

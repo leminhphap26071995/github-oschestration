@@ -111,6 +111,9 @@ test('workflow requests only read permissions, uses the ephemeral token, and has
   const workflow = await readFile(workflowUrl, 'utf8');
   assert.match(workflow, /permissions:\s*\n\s+actions:\s*read\s*\n\s+checks:\s*read\s*\n\s+contents:\s*read/m);
   assert.match(workflow, /GITHUB_TOKEN:\s*\$\{\{\s*github\.token\s*\}\}/);
+  assert.match(workflow, /actions-run-diagnostics\.yml/);
+  assert.match(workflow, /quota-monitor\/diagnostics\/\*\*/);
+  assert.match(workflow, /test_diagnostics\.mjs/);
   assert.doesNotMatch(workflow, /workflow_dispatch/);
   assert.doesNotMatch(workflow, /secrets\.(?!GITHUB_TOKEN)/);
 });

@@ -88,7 +88,6 @@ function summarizeAnnotation(annotation) {
     annotation_level: sanitizeText(annotation.annotation_level),
     title: sanitizeText(annotation.title),
     message: sanitizeText(annotation.message),
-    raw_details: sanitizeText(annotation.raw_details),
   };
 }
 
@@ -116,13 +115,20 @@ async function collectJob({ api, job, source }) {
     run_attempt: fieldState(job, "run_attempt"),
     head_sha: fieldState(job, "head_sha"),
   };
+  const jobId = fieldState(job, "id");
   const mismatch =
     (correlation.run_id.state === "PRESENT" && correlation.run_id.value !== source.run_id) ||
     (correlation.run_attempt.state === "PRESENT" && correlation.run_attempt.value !== source.run_attempt) ||
     (correlation.head_sha.state === "PRESENT" && correlation.head_sha.value !== source.head_sha);
+  const incompleteIdentity =
+    correlation.run_id.state !== "PRESENT" ||
+    correlation.head_sha.state !== "PRESENT" ||
+    jobId.state !== "PRESENT" ||
+    !Number.isSafeInteger(jobId.value) ||
+    jobId.value <= 0;
 
   const result = {
-    job_id: fieldState(job, "id"),
+    job_id: jobId,
     run_id: correlation.run_id,
     run_attempt: correlation.run_attempt,
     head_sha: correlation.head_sha,
@@ -134,21 +140,27 @@ async function collectJob({ api, job, source }) {
     started_at: job.started_at ?? null,
     completed_at: job.completed_at ?? null,
     steps: (job.steps || []).map(summarizeStep),
-    correlation_status: mismatch ? "MISMATCH" : "MATCHED_OR_FIELDS_MISSING",
+    correlation_status: mismatch ? "MISMATCH" : incompleteIdentity ? "INCOMPLETE" : "MATCHED",
     check_run: { status: "NOT_RESOLVED", id: null, url: null, annotation_count: 0, page_count: 0, annotations: [] },
     logs: { status: "NOT_REQUESTED", attempts: 0, http_status: null, retry_after: null },
     classification: "EXECUTION_EVIDENCE_MISSING",
     evidence: [],
   };
 
-  if (mismatch) {
-    result.correlation_status = "MISMATCH";
-    result.check_run.status = "SKIPPED_CORRELATION_MISMATCH";
-    result.logs.status = "SKIPPED_CORRELATION_MISMATCH";
-    result.evidence.push({ source: "job_metadata", type: "IDENTITY_MISMATCH", message: "Job identity does not match the triggering run attempt and SHA." });
+  if (mismatch || incompleteIdentity) {
+    result.check_run.status = mismatch ? "SKIPPED_CORRELATION_MISMATCH" : "SKIPPED_INCOMPLETE_IDENTITY";
+    result.logs.status = mismatch ? "SKIPPED_CORRELATION_MISMATCH" : "SKIPPED_INCOMPLETE_IDENTITY";
+    result.evidence.push({
+      source: "job_metadata",
+      type: mismatch ? "IDENTITY_MISMATCH" : "IDENTITY_INCOMPLETE",
+      message: mismatch
+        ? "Job identity does not match the triggering run attempt and SHA."
+        : "Job run_id, head_sha, or job_id is missing; source evidence was not fetched.",
+    });
     return result;
   }
 
+  let rawAnnotations = [];
   const checkRun = parseCheckRunUrl(job.check_run_url, source.repository, api.apiOrigin);
   if (!checkRun) {
     result.check_run.status = "INVALID_CHECK_RUN_URL";
@@ -166,6 +178,7 @@ async function collectJob({ api, job, source }) {
       annotationsUrl.pathname += "/annotations";
       annotationsUrl.searchParams.set("per_page", "100");
       const page = await api.paginate(annotationsUrl.toString(), null);
+      rawAnnotations = page.items;
       result.check_run.status = "RETRIEVED";
       result.check_run.annotation_count = page.items.length;
       result.check_run.page_count = page.pageCount;
@@ -188,10 +201,9 @@ async function collectJob({ api, job, source }) {
     };
   }
 
-  const annotationInputs = result.check_run.annotations || [];
   const classification = classifyJob({
     job,
-    annotations: annotationInputs,
+    annotations: rawAnnotations,
     logs: { status: result.logs.status, text: rawLogs },
   });
   result.classification = classification.classification;

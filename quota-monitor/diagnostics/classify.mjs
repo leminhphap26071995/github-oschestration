@@ -8,6 +8,7 @@ export function sanitizeText(value) {
     .replace(/Authorization:\s*Bearer\s+\S+/gi, "Authorization: Bearer [REDACTED]")
     .replace(/Bearer\s+[A-Za-z0-9_./+=-]{12,}/g, "Bearer [REDACTED]")
     .replace(/\b(?:gh[pousr]_[A-Za-z0-9_]{20,}|github_pat_[A-Za-z0-9_]{20,})\b/g, "[REDACTED_TOKEN]")
+    .replace(/\b(token|secret|password|api[_-]?key|private[_-]?key)\s*[:=]\s*[^,\s;]+/gi, "$1=[REDACTED]")
     .replace(/(https:\/\/[^\s?]+)\?[^\s]*/g, "$1?[REDACTED_QUERY]")
     .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, " ")
     .replace(/\s+/g, " ")
@@ -40,6 +41,8 @@ export function classifyJob({ job, annotations = [], logs = { status: "NOT_REQUE
     classification = "LOG_PUBLICATION_PENDING";
   } else if (job.conclusion === "success" || job.conclusion === "skipped") {
     classification = "NOT_FAILED";
+  } else if (job.conclusion === null || job.conclusion === undefined) {
+    classification = "UNKNOWN";
   } else {
     classification = "EXECUTION_EVIDENCE_MISSING";
   }
