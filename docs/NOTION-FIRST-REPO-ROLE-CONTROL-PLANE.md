@@ -36,3 +36,9 @@ The host-facing composition entry point is `scripts.context_switching.route_mess
 Required host inputs are normalized Notion domain registry, project/ticket checkpoints, MUST requirements, requirement-to-repository bindings, work-package records and connected GitHub repository metadata. The function returns the existing context transition plus the repository resolution, role continuation, dependency-ready parallel batches and orthogonal state projection.
 
 Use the existing resolver for message intent; do not build a second context resolver. The wrapper is a deterministic composition layer, not a Notion/GitHub client and not proof that a ChatGPT host invokes it.
+## Inventory and usage projections
+
+- `normalize_repository_inventory()` aggregates paginated repository results by GitHub App installation, verifies every connected installation has a complete page set, and labels its coverage as connected installations only. It never claims every possible GitHub account is connected.
+- `compute_actions_usage_projection()` calculates usage percentages only when billing owner, product, billing period, scope type, scope ID and currency match exactly between usage and budget rows. A mismatch returns UNKNOWN with no percentage.
+- Owner-reported exhaustion remains REPORTED and is not promoted to provider-verified quota exhaustion. An exhaustion timestamp is populated only from an explicit provider `exhausted_at` field; collection time is not substituted.
+- The host composition accepts either an already normalized repository catalog or installation-scoped raw pages, and can attach a separate usage projection. UNKNOWN usage telemetry does not block unrelated repository selection.

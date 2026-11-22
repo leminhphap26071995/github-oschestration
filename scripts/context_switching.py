@@ -503,10 +503,15 @@ def route_message(intent: dict[str, Any], *,
 def route_message_with_repository_control(
     intent: dict[str, Any], *,
     project_introduction: dict[str, Any],
-    repository_catalog: list[dict[str, Any]],
     requirements: list[dict[str, Any]],
     notion_repository_route: dict[str, Any],
     role_work_packages: list[dict[str, Any]],
+    repository_catalog: list[dict[str, Any]] | None = None,
+    installations: list[dict[str, Any]] | None = None,
+    repositories_by_installation: list[dict[str, Any]] | None = None,
+    usage_rows: list[dict[str, Any]] | None = None,
+    budget_rows: list[dict[str, Any]] | None = None,
+    owner_report: dict[str, Any] | None = None,
     current_context: dict[str, Any] | None = None,
     context_history: list[dict[str, Any]] | None = None,
     project_checkpoints: dict[str, Any] | None = None,
@@ -525,7 +530,8 @@ def route_message_with_repository_control(
         from .repository_control_plane import (
             project_introduction_route, resolve_task_repositories,
             resume_role_work_package, ready_parallel_work_packages,
-            project_state_projection,
+            project_state_projection, normalize_repository_inventory,
+            compute_actions_usage_projection,
         )
     except ImportError:
         from repository_control_plane import (
@@ -552,6 +558,8 @@ def route_message_with_repository_control(
         "project_introduction_route": intro_route,
         "context_route": context_route,
         "repository_resolution": None,
+        "repository_inventory": None,
+        "usage_projection": None,
         "role_package_states": [],
         "parallel_batches": [],
     }
@@ -585,6 +593,24 @@ def route_message_with_repository_control(
         result.update({"action": "ROLE_PACKAGE_REQUIRED",
                        "reason": "PRIMARY_SPECIALIST_WORK_PACKAGE_REQUIRED"})
         return result
+
+    if repository_catalog is None:
+        inventory = normalize_repository_inventory(
+            installations or [], repositories_by_installation or []
+        )
+        result["repository_inventory"] = inventory
+        if inventory.get("state") not in {
+            "VERIFIED_COMPLETE_FOR_CONNECTED_INSTALLATIONS", "PARTIAL"
+        }:
+            result.update({"action": "REPOSITORY_INVENTORY_UNAVAILABLE",
+                           "reason": inventory.get("state")})
+            return result
+        repository_catalog = inventory.get("repositories", [])
+
+    if usage_rows is not None or budget_rows is not None or owner_report is not None:
+        result["usage_projection"] = compute_actions_usage_projection(
+            usage_rows, budget_rows, owner_report
+        )
 
     repository_resolution = resolve_task_repositories(
         requirements, repository_catalog, notion_repository_route,

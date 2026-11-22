@@ -19,7 +19,7 @@ WORK_PACKAGE_STATES = {
 ROLE_ARTIFACTS = ("SKILL.md", "mindset.md", "knowledge.md", "workflow.md")
 REPO_USAGE_STATES = {
     "AVAILABLE_VERIFIED", "NEAR_LIMIT", "QUOTA_EXHAUSTED",
-    "REPORTED_QUOTA_EXHAUSTED", "UNKNOWN", "API_RATE_LIMITED",
+    "REPORTED_QUOTA_EXHAUSTED", "WITHIN_BUDGET_VERIFIED", "OVER_BUDGET_NO_HARD_CAP", "UNKNOWN", "API_RATE_LIMITED",
     "PERMISSION_DENIED", "NOT_CONFIGURED", "NOT_EXPOSED", "STALE"
 }
 
@@ -56,6 +56,227 @@ def validate_repository_catalog(repositories: list[dict[str, Any]]) -> list[str]
         if usage.get("state") and usage["state"] not in REPO_USAGE_STATES:
             errors.append(f"INVALID_ACTIONS_USAGE_STATE:{full_name}")
     return errors
+
+
+
+def normalize_repository_inventory(
+    installations: list[dict[str, Any]],
+    repositories_by_installation: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """Normalize paginated GitHub App installation inventory without overclaiming scope."""
+    if not installations:
+        return {"state": "UNKNOWN", "reason": "NO_INSTALLATION_EVIDENCE",
+                "repositories": [], "coverage_scope": "CONNECTED_GITHUB_APP_INSTALLATIONS_ONLY"}
+
+    installation_by_id: dict[int, dict[str, Any]] = {}
+    for installation in installations:
+        try:
+            installation_id = int(installation["id"])
+        except (KeyError, TypeError, ValueError):
+            return {"state": "INVALID_INSTALLATION", "errors": ["INSTALLATION_ID_REQUIRED"],
+                    "repositories": []}
+        if installation_id in installation_by_id:
+            return {"state": "INVALID_INSTALLATION",
+                    "errors": [f"DUPLICATE_INSTALLATION:{installation_id}"],
+                    "repositories": []}
+        installation_by_id[installation_id] = installation
+
+    pages_by_id: dict[int, dict[str, Any]] = {}
+    for item in repositories_by_installation:
+        try:
+            installation_id = int(item["installation_id"])
+        except (KeyError, TypeError, ValueError):
+            return {"state": "INVALID_INVENTORY_PAGE",
+                    "errors": ["PAGE_INSTALLATION_ID_REQUIRED"], "repositories": []}
+        if installation_id not in installation_by_id:
+            return {"state": "INVALID_INVENTORY_PAGE",
+                    "errors": [f"UNKNOWN_INSTALLATION:{installation_id}"], "repositories": []}
+        if installation_id in pages_by_id:
+            return {"state": "INVALID_INVENTORY_PAGE",
+                    "errors": [f"DUPLICATE_INSTALLATION_PAGE_SET:{installation_id}"],
+                    "repositories": []}
+        pages_by_id[installation_id] = item
+
+    missing_installations = sorted(set(installation_by_id) - set(pages_by_id))
+    incomplete_installations: list[int] = []
+    normalized: list[dict[str, Any]] = []
+    errors: list[str] = []
+    for installation_id, installation in installation_by_id.items():
+        page_set = pages_by_id.get(installation_id)
+        if page_set is None:
+            continue
+        if page_set.get("pagination_complete") is not True:
+            incomplete_installations.append(installation_id)
+        for raw in page_set.get("repositories", []):
+            owner = raw.get("owner") or {}
+            full_name = raw.get("repository_full_name")
+            if not full_name and owner.get("login") and raw.get("name"):
+                full_name = f"{owner['login']}/{raw['name']}"
+            if not full_name or "/" not in full_name:
+                errors.append(f"REPOSITORY_FULL_NAME_REQUIRED:{installation_id}")
+                continue
+            visibility = raw.get("visibility")
+            if visibility not in VISIBILITIES:
+                errors.append(f"INVALID_VISIBILITY:{full_name}")
+                continue
+            permissions = raw.get("permissions")
+            if not isinstance(permissions, dict):
+                errors.append(f"PERMISSIONS_REQUIRED:{full_name}")
+                continue
+            normalized.append({
+                "full_name": full_name,
+                "owner": owner.get("login") or full_name.split("/", 1)[0],
+                "owner_type": owner.get("type"),
+                "visibility": visibility,
+                "archived": bool(raw.get("archived", False)),
+                "default_branch": raw.get("default_branch"),
+                "permissions": permissions,
+                "installation_id": installation_id,
+                "installation_owner": installation.get("account_login"),
+                "installation_account_type": installation.get("account_type"),
+                "repository_selection": installation.get("repository_selection"),
+                "actions_usage": {"state": "UNKNOWN"},
+                "inventory_source": "GITHUB_APP_INSTALLATION",
+            })
+
+    names = [item["full_name"].casefold() for item in normalized]
+    if len(names) != len(set(names)):
+        errors.append("DUPLICATE_REPOSITORY_ACROSS_INSTALLATIONS")
+    if errors:
+        return {"state": "INVALID_CATALOG", "errors": errors,
+                "repositories": normalized,
+                "coverage_scope": "CONNECTED_GITHUB_APP_INSTALLATIONS_ONLY"}
+    if missing_installations or incomplete_installations:
+        return {
+            "state": "PARTIAL",
+            "missing_installation_ids": missing_installations,
+            "incomplete_installation_ids": sorted(incomplete_installations),
+            "installation_count": len(installation_by_id),
+            "repository_count": len(normalized),
+            "repositories": normalized,
+            "coverage_scope": "CONNECTED_GITHUB_APP_INSTALLATIONS_ONLY",
+        }
+    return {
+        "state": "VERIFIED_COMPLETE_FOR_CONNECTED_INSTALLATIONS",
+        "installation_count": len(installation_by_id),
+        "repository_count": len(normalized),
+        "repositories": sorted(normalized, key=lambda item: item["full_name"].casefold()),
+        "coverage_scope": "CONNECTED_GITHUB_APP_INSTALLATIONS_ONLY",
+        "not_a_claim_of_all_possible_github_accounts": True,
+    }
+
+
+def _billing_scope_key(row: dict[str, Any]) -> tuple[Any, ...] | None:
+    fields = ("billing_owner_id", "product", "billing_period",
+              "scope_type", "scope_id", "currency")
+    values = tuple(row.get(field) for field in fields)
+    return values if all(value not in (None, "") for value in values) else None
+
+
+def compute_actions_usage_projection(
+    usage_rows: list[dict[str, Any]] | None,
+    budget_rows: list[dict[str, Any]] | None,
+    owner_report: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Compute percentages only for exact owner/product/period/scope/currency matches."""
+    usage_rows = usage_rows or []
+    budget_rows = budget_rows or []
+    if not usage_rows or not budget_rows:
+        return {
+            "state": "UNKNOWN",
+            "reason": "USAGE_OR_BUDGET_ROWS_UNAVAILABLE",
+            "records": [],
+            "owner_reported_state": (
+                "REPORTED_QUOTA_EXHAUSTED"
+                if (owner_report or {}).get("state") == "QUOTA_EXHAUSTED" else "UNKNOWN"
+            ),
+            "exhaustion_timestamp": None,
+        }
+
+    budgets: dict[tuple[Any, ...], list[dict[str, Any]]] = {}
+    for budget in budget_rows:
+        key = _billing_scope_key(budget)
+        if key is not None:
+            budgets.setdefault(key, []).append(budget)
+
+    records: list[dict[str, Any]] = []
+    for usage in usage_rows:
+        key = _billing_scope_key(usage)
+        matches = budgets.get(key, []) if key is not None else []
+        if len(matches) != 1:
+            records.append({
+                "state": "UNKNOWN",
+                "reason": "BILLING_SCOPE_MISMATCH" if not matches else "AMBIGUOUS_BUDGET_MATCH",
+                "billing_owner_id": usage.get("billing_owner_id"),
+                "product": usage.get("product"),
+                "billing_period": usage.get("billing_period"),
+                "scope_type": usage.get("scope_type"),
+                "scope_id": usage.get("scope_id"),
+                "usage_percent": None,
+                "remaining_amount": None,
+                "observed_at": usage.get("collected_at"),
+                "exhaustion_timestamp": None,
+            })
+            continue
+
+        budget = matches[0]
+        try:
+            usage_amount = float(usage["usage_amount"])
+            budget_amount = float(budget["budget_amount"])
+        except (KeyError, TypeError, ValueError):
+            records.append({"state": "UNKNOWN", "reason": "USAGE_OR_BUDGET_AMOUNT_INVALID",
+                            "usage_percent": None, "remaining_amount": None,
+                            "observed_at": usage.get("collected_at"),
+                            "exhaustion_timestamp": None})
+            continue
+        if budget_amount <= 0 or usage_amount < 0:
+            records.append({"state": "UNKNOWN", "reason": "USAGE_OR_BUDGET_AMOUNT_OUT_OF_RANGE",
+                            "usage_percent": None, "remaining_amount": None,
+                            "observed_at": usage.get("collected_at"),
+                            "exhaustion_timestamp": None})
+            continue
+
+        percent = round((usage_amount / budget_amount) * 100, 2)
+        remaining = round(budget_amount - usage_amount, 2)
+        hard_cap = budget.get("prevent_further_usage") is True
+        if usage.get("provider_state") == "QUOTA_EXHAUSTED" or (hard_cap and usage_amount >= budget_amount):
+            state = "QUOTA_EXHAUSTED"
+        elif usage_amount >= budget_amount:
+            state = "OVER_BUDGET_NO_HARD_CAP"
+        else:
+            state = "WITHIN_BUDGET_VERIFIED"
+        records.append({
+            "state": state,
+            "billing_owner_id": usage["billing_owner_id"],
+            "product": usage["product"],
+            "billing_period": usage["billing_period"],
+            "scope_type": usage["scope_type"],
+            "scope_id": usage["scope_id"],
+            "currency": usage["currency"],
+            "usage_amount": usage_amount,
+            "budget_amount": budget_amount,
+            "usage_percent": percent,
+            "remaining_amount": remaining,
+            "prevent_further_usage": hard_cap,
+            "observed_at": usage.get("collected_at"),
+            "exhaustion_timestamp": usage.get("exhausted_at"),
+            "evidence_source": usage.get("evidence_source"),
+        })
+
+    overall = "VERIFIED" if records and all(item["state"] != "UNKNOWN" for item in records) else "PARTIAL"
+    return {
+        "state": overall,
+        "records": records,
+        "owner_reported_state": (
+            "REPORTED_QUOTA_EXHAUSTED"
+            if (owner_report or {}).get("state") == "QUOTA_EXHAUSTED" else "UNKNOWN"
+        ),
+        "exhaustion_timestamp": next(
+            (item.get("exhaustion_timestamp") for item in records
+             if item.get("exhaustion_timestamp")), None
+        ),
+        "timestamp_policy": "ONLY_EXPLICIT_PROVIDER_EXHAUSTED_AT_IS_AN_EXHAUSTION_TIMESTAMP",
+    }
 
 
 def _data_is_public_safe(classification: str) -> bool:
