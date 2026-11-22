@@ -392,3 +392,80 @@ test("no run plus a fresh matching organization hard cap classifies quota; synta
   assert.equal(record.coverage_status, "OBSERVED");
   assert.ok(!JSON.stringify(record).includes("billing-collector"));
 });
+
+
+test("retired action runtime in an exact private workflow revision is a real configuration classification", async () => {
+  const fetchImpl = async url => {
+    const targetUrl = String(url);
+    if (targetUrl.endsWith("/branches/main")) return jsonResponse(branchResponse());
+    if (targetUrl.includes("/actions/runs?branch=main")) return jsonResponse({ workflow_runs: [] });
+    if (targetUrl.includes("/contents/.github/workflows/ci.yml?ref=")) {
+      return jsonResponse({ encoding: "base64", content: Buffer.from("name: CI\non:\n  push:\njobs: {}\n").toString("base64") });
+    }
+    throw new Error("Unexpected URL: " + targetUrl);
+  };
+  const record = await monitor({
+    targetsJson: JSON.stringify(config),
+    token,
+    fetchImpl,
+    now,
+    lintImpl: async () => ({ status: "VALID", diagnostic: "" }),
+    runtimeAuditImpl: async () => ({
+      status: "DIAGNOSTIC",
+      classification: "ACTION_RUNTIME_RETIRED_OR_UNSUPPORTED",
+      evidence_types: ["ACTION_RUNTIME_RETIRED_OR_UNSUPPORTED"],
+    }),
+  });
+  assert.equal(record.targets[0].classification, "ACTION_RUNTIME_RETIRED_OR_UNSUPPORTED");
+  assert.ok(record.targets[0].evidence_types.includes("ACTION_RUNTIME_RETIRED_OR_UNSUPPORTED"));
+});
+
+test("retired action runtime is secondary when a real test step already executed and failed", async () => {
+  const fetchImpl = async url => {
+    const targetUrl = String(url);
+    if (targetUrl.endsWith("/branches/main")) return jsonResponse(branchResponse());
+    if (targetUrl.includes("/actions/runs?branch=main")) return jsonResponse({ workflow_runs: [sourceRun()] });
+    if (targetUrl.includes("/contents/.github/workflows/ci.yml?ref=")) {
+      return jsonResponse({ encoding: "base64", content: Buffer.from("name: CI\non:\n  push:\njobs: {}\n").toString("base64") });
+    }
+    if (targetUrl.endsWith("/actions/runs/700")) return jsonResponse(runDetails());
+    if (targetUrl.endsWith("/attempts/1/jobs?per_page=100")) {
+      return jsonResponse({
+        jobs: [{
+          id: 101,
+          run_id: 700,
+          run_attempt: 1,
+          head_sha: sha,
+          runner_id: 900,
+          runner_name: "GitHub Actions runner",
+          name: "test",
+          status: "completed",
+          conclusion: "failure",
+          steps: [{ number: 1, name: "Run failing assertion", status: "completed", conclusion: "failure" }],
+          check_run_url: "https://api.github.com/repos/owner/private-repository/check-runs/101",
+        }],
+      });
+    }
+    if (targetUrl.endsWith("/check-runs/101/annotations?per_page=100")) return jsonResponse([]);
+    if (targetUrl.endsWith("/actions/jobs/101/logs")) {
+      return new Response("AssertionError: expected 1 to equal 2\nProcess completed with exit code 1", { status: 200 });
+    }
+    if (targetUrl.endsWith("/check-suites/88/check-runs?per_page=100")) return jsonResponse({ check_runs: [] });
+    throw new Error("Unexpected URL: " + targetUrl);
+  };
+  const record = await monitor({
+    targetsJson: JSON.stringify(config),
+    token,
+    fetchImpl,
+    now,
+    lintImpl: async () => ({ status: "VALID", diagnostic: "" }),
+    runtimeAuditImpl: async () => ({
+      status: "DIAGNOSTIC",
+      classification: "ACTION_RUNTIME_RETIRED_OR_UNSUPPORTED",
+      evidence_types: ["ACTION_RUNTIME_RETIRED_OR_UNSUPPORTED"],
+    }),
+    sleepImpl: async () => {},
+  });
+  assert.equal(record.targets[0].classification, "STEP_IMPLEMENTATION_FAILURE");
+  assert.ok(record.targets[0].classifications.includes("ACTION_RUNTIME_RETIRED_OR_UNSUPPORTED"));
+});
