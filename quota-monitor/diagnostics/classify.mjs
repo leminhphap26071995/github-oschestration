@@ -273,7 +273,9 @@ export function classifyRun({
       });
     }
   } else if (jobs.length === 0 && classifications.length === 0) {
-    if (source.status && source.status !== "completed") {
+    if (source.status === "completed" && source.conclusion === "success") {
+      classifications.push("NOT_FAILED");
+    } else if (source.status && source.status !== "completed") {
       classifications.push("OBSERVATION_WINDOW_IN_PROGRESS");
       evidence.push({
         source: "run_metadata",
