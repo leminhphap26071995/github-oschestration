@@ -203,6 +203,8 @@ export function classifyJob({ job = {}, annotations = [], logs = { status: "NOT_
       type: "LIFECYCLE",
       message: "The job is queued or waiting; runner assignment is not a quota signal.",
     });
+  } else if (job.status === "in_progress" && job.runner_id !== null && job.runner_id !== undefined && job.runner_id !== 0) {
+    classification = "RUNNER_ASSIGNED";
   } else if (job.status === "in_progress") {
     classification = "EXECUTION_IN_PROGRESS";
   } else if (logs.status === "LOG_PUBLICATION_PENDING") {
@@ -238,8 +240,9 @@ export function classifyJob({ job = {}, annotations = [], logs = { status: "NOT_
     NOT_FAILED: "NOT_FAILED",
     LOG_PUBLICATION_PENDING: "LOG_PUBLICATION_PENDING",
     UNKNOWN: "UNKNOWN",
-    RUNNER_NOT_ASSIGNED_YET: "UNKNOWN",
-    EXECUTION_IN_PROGRESS: "UNKNOWN",
+    RUNNER_NOT_ASSIGNED_YET: "RUNNER_NOT_ASSIGNED_YET",
+    RUNNER_ASSIGNED: "RUNNER_ASSIGNED",
+    EXECUTION_IN_PROGRESS: "EXECUTION_IN_PROGRESS",
   };
 
   const legacyClassification = classification === "UNKNOWN" && job.conclusion === "failure"
@@ -339,7 +342,7 @@ export function classifyRun({
       for (const item of job.classifications || [job.primary_classification || job.classification]) {
         if (item === "LOG_PUBLICATION_PENDING") {
           classifications.push(item, "UNKNOWN");
-        } else if (item && item !== "NOT_FAILED" && item !== "RUNNER_NOT_ASSIGNED_YET" && item !== "EXECUTION_IN_PROGRESS") {
+        } else if (item && item !== "NOT_FAILED") {
           classifications.push(item);
         }
       }
@@ -360,6 +363,9 @@ export function classifyRun({
     "STEP_IMPLEMENTATION_FAILURE",
     "STEP_FAILURE",
     "API_RATE_LIMITED",
+    "RUNNER_ASSIGNED",
+    "EXECUTION_IN_PROGRESS",
+    "RUNNER_NOT_ASSIGNED_YET",
     "OBSERVATION_WINDOW_IN_PROGRESS",
     "UNKNOWN",
     "LOG_PUBLICATION_PENDING",
