@@ -17,6 +17,16 @@ Important distinction: GitHub's `X-Accepted-GitHub-Permissions` response header 
 
 This first-stage audit does not inspect billing usage or decide whether Actions quota is exhausted. Those are separate later steps.
 
+## Second-stage failure diagnostics observer
+
+`.github/workflows/actions-run-diagnostics.yml` observes only failed completions from the two first-stage workflows above. It uses a separate `workflow_run` execution on the trusted default branch, validates the source run against the event payload, and fetches jobs for the exact `run_id` and `run_attempt`. It does not checkout or execute the triggering branch or its artifacts.
+
+For each job, the observer resolves the Check Run from the job's `check_run_url`, validates the repository and Check Run ID, retrieves all annotation pages, and downloads logs only for non-success/non-skipped jobs. Logs are read in memory and are never printed, persisted, or uploaded. The collector emits a sanitized JSON record and a concise GitHub Step Summary.
+
+The observer uses only `actions: read`, `checks: read`, and `contents: read`; it performs GET requests only. It has no manual trigger, billing API call, permission mutation, cleanup, cancellation, deletion, or artifact upload. A collector-side 403/404/429 is recorded as an evidence-retrieval problem, never treated as proof that the source job was denied or that Actions quota is exhausted. Quota classification requires explicit billing/minutes/spending-cap/payment wording in source annotations or source job logs.
+
+The observer is diagnostic evidence, not a billing collector and not proof that a failed source workflow has been repaired.
+
 ## Official source of truth
 
 - Billing usage REST API: https://docs.github.com/en/rest/billing/usage
@@ -76,3 +86,4 @@ Run:
   python -m unittest discover -s quota-monitor/tests -p 'test_*.py' -v
   node --test quota-monitor/tests/test_app_tokens.mjs
   node --test quota-monitor/tests/test_token_permissions.mjs
+  node --test quota-monitor/tests/test_diagnostics.mjs
