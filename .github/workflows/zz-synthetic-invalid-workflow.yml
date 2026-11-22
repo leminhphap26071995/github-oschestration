@@ -1,7 +1,7 @@
 name: Synthetic Invalid Workflow - Real YAML Parse Failure
 on:
   push:
-    branches: [main, test, staging, release
+    branches: [main, test, staging, release, qa
 jobs:
   never-started:
     runs-on: ubuntu-latest
