@@ -1,7 +1,56 @@
-const QUOTA = /(?:actions?[^\n]{0,100}(?:included minutes?|billing|spending (?:limit|cap)|payment required|usage limit)|(?:included minutes?|spending (?:limit|cap)|billing (?:limit|exhausted)|payment required)[^\n]{0,100}actions?|out of hosted compute minutes)/i;
-const PERMISSION = /resource not accessible by integration|permission denied|insufficient permissions|not authorized|access denied|http\s+403\b/i;
-const RUNNER = /no hosted runner available|no runner available|runner (?:is )?unavailable|unable to find a runner|all hosted runners are busy|runner group.{0,40}(?:unavailable|not found)/i;
-const STEP_ERROR = /process completed with exit code [1-9]\d*|##\[error\]|error: process completed with exit code/i;
+const QUOTA_PATTERNS = [
+  /github actions[^\n]{0,160}(?:spending (?:limit|cap)[^\n]{0,50}(?:reached|exceeded)|included (?:compute )?(?:minutes|usage)[^\n]{0,50}(?:exhausted|used up)|billing (?:is )?(?:blocked|disabled|suspended)|payment required|usage blocked)/i,
+  /actions billing[^\n]{0,120}(?:spending (?:limit|cap)|included (?:compute )?(?:minutes|usage)|exhausted|blocked|payment required)/i,
+  /(?:your )?account (?:is currently )?(?:over its spending limit|has exceeded its included usage)[^\n]{0,100}(?:github actions|actions)/i,
+  /(?:included minutes|included compute usage) (?:for|on) github actions[^\n]{0,80}(?:exhausted|used up|blocked)/i,
+];
+const PERMISSION_PATTERNS = [
+  /resource not accessible by integration/i,
+  /github actions (?:token|workflow token).{0,100}(?:does not have|lacks|missing).{0,80}permission/i,
+  /insufficient permissions for (?:the )?github actions token/i,
+  /not authorized to perform this action/i,
+  /environment protection rule.{0,100}(?:approval|required reviewers|denied)/i,
+  /required reviewers? (?:have not|has not) approved/i,
+];
+const RUNNER_PATTERNS = [
+  /no hosted runner available for this job/i,
+  /no runner matching the specified labels was found/i,
+  /unable to find a runner matching the specified labels/i,
+  /all hosted runners are busy and waiting for a runner to become available/i,
+  /runner group.{0,80}(?:unavailable|not found|not authorized)/i,
+];
+const API_RATE_LIMIT_PATTERNS = [
+  /api rate limit exceeded for (?:user|installation)/i,
+  /you have exceeded a secondary rate limit/i,
+  /secondary rate limit.*github/i,
+];
+const ARTIFACT_QUOTA_PATTERNS = [
+  /artifact storage (?:limit|quota).{0,80}(?:exceeded|reached|full)/i,
+  /actions artifact storage limit has been reached/i,
+];
+const WORKFLOW_SYNTAX_PATTERNS = [
+  /could not parse as yaml/i,
+  /yaml: line \d+:/i,
+  /syntax-check/i,
+];
+const WORKFLOW_SCHEMA_PATTERNS = [
+  /workflow is not valid/i,
+  /invalid workflow file/i,
+  /unexpected value/i,
+  /unrecognized function/i,
+  /required property/i,
+  /property .* is not allowed/i,
+];
+const IMPLEMENTATION_PATTERNS = [
+  /\bassertionerror\b/i,
+  /\bassertion failed\b/i,
+  /\bexpected .{1,100} (?:to equal|to be|but (?:got|received))\b/i,
+  /\btests? failed\b/i,
+  /\bcompilation failed\b/i,
+  /\berror ts\d{3,5}\b/i,
+  /\btype error\b/i,
+];
+const STEP_ERROR = /process completed with exit code [1-9]\d*|error: process completed with exit code|##\[error\]/i;
 
 export function sanitizeText(value) {
   return String(value ?? "")
@@ -9,7 +58,6 @@ export function sanitizeText(value) {
     .replace(/Bearer\s+[A-Za-z0-9_./+=-]{12,}/g, "Bearer [REDACTED]")
     .replace(/\b(?:gh[pousr]_[A-Za-z0-9_]{20,}|github_pat_[A-Za-z0-9_]{20,})\b/g, "[REDACTED_TOKEN]")
     .replace(/\b(token|secret|password|api[_-]?key|private[_-]?key)\s*[:=]\s*[^,\s;]+/gi, "$1=[REDACTED]")
-    // Escape untrusted source-log workflow commands before emitting evidence to the Actions runner.
     .replace(/##\[(error|warning|notice|group|endgroup|debug|command|add-mask|set-output|save-state)\]/gi, "[GH_ACTION_COMMAND_ESCAPED:$1]")
     .replace(/::(error|warning|notice|group|endgroup|debug|add-mask|set-output|save-state)::/gi, "[GH_ACTION_COMMAND_ESCAPED]")
     .replace(/(https:\/\/[^\s?]+)\?[^\s]*/g, "$1?[REDACTED_QUERY]")
@@ -20,55 +68,258 @@ export function sanitizeText(value) {
 }
 
 function annotationText(annotation) {
-  return [annotation.title, annotation.message, annotation.raw_details]
+  return [annotation?.title, annotation?.message, annotation?.raw_details]
     .filter(Boolean).join(" ");
 }
 
-function evidenceLines(source, value, pattern, type) {
-  return String(value ?? "").split(/\r?\n/).filter(line => pattern.test(line))
-    .slice(0, 3).map(line => ({ source, type, message: sanitizeText(line) }));
+function textMatches(patterns, value) {
+  const text = String(value ?? "");
+  return patterns.some(pattern => pattern.test(text));
 }
 
-export function classifyJob({ job, annotations = [], logs = { status: "NOT_REQUESTED", text: "" } }) {
+function evidenceLines(source, value, patterns, type) {
+  return String(value ?? "").split(/\r?\n/)
+    .filter(line => textMatches(patterns, line))
+    .slice(0, 5)
+    .map(line => ({ source, type, message: sanitizeText(line) }));
+}
+
+function unique(values) {
+  return [...new Set(values)];
+}
+
+function canonicalizeLegacy(classification) {
+  const map = {
+    QUOTA_EXHAUSTED: "ACTIONS_BILLING_QUOTA_EXHAUSTED",
+    PERMISSION_DENIED: "PERMISSION_OR_POLICY_DENIED",
+    RUNNER_UNAVAILABLE: "RUNNER_UNAVAILABLE",
+    STEP_FAILURE: "STEP_FAILURE",
+    NOT_FAILED: "NOT_FAILED",
+    LOG_PUBLICATION_PENDING: "LOG_PUBLICATION_PENDING",
+    EXECUTION_EVIDENCE_MISSING: "EXECUTION_EVIDENCE_MISSING",
+    UNKNOWN: "UNKNOWN",
+  };
+  return map[classification] || classification;
+}
+
+export function classifyJob({ job = {}, annotations = [], logs = { status: "NOT_REQUESTED", text: "" } } = {}) {
   const annotationValues = annotations.map(annotationText);
   const logText = logs.text || "";
-  const allText = [...annotationValues, logText].join("\n");
-  let classification;
+  const annotationTextValue = annotationValues.join("\n");
+  const allText = annotationTextValue + "\n" + logText;
+  const evidence = [];
+  const classifications = [];
 
-  if (QUOTA.test(allText)) classification = "QUOTA_EXHAUSTED";
-  else if (PERMISSION.test(allText)) classification = "PERMISSION_DENIED";
-  else if (RUNNER.test(allText)) classification = "RUNNER_UNAVAILABLE";
-  else if ((job.steps || []).some(step => step.conclusion === "failure") || STEP_ERROR.test(logText)) {
-    classification = "STEP_FAILURE";
+  if (textMatches(QUOTA_PATTERNS, allText)) {
+    classifications.push("ACTIONS_BILLING_QUOTA_EXHAUSTED");
+    evidence.push(
+      ...evidenceLines("annotation", annotationTextValue, QUOTA_PATTERNS, "ACTIONS_BILLING_QUOTA_EXHAUSTED"),
+      ...evidenceLines("job_log", logText, QUOTA_PATTERNS, "ACTIONS_BILLING_QUOTA_EXHAUSTED"),
+    );
+  }
+  if (textMatches(PERMISSION_PATTERNS, allText)) {
+    classifications.push("PERMISSION_OR_POLICY_DENIED");
+    evidence.push(
+      ...evidenceLines("annotation", annotationTextValue, PERMISSION_PATTERNS, "PERMISSION_OR_POLICY_DENIED"),
+      ...evidenceLines("job_log", logText, PERMISSION_PATTERNS, "PERMISSION_OR_POLICY_DENIED"),
+    );
+  }
+  if (textMatches(RUNNER_PATTERNS, allText)) {
+    classifications.push("RUNNER_UNAVAILABLE");
+    evidence.push(
+      ...evidenceLines("annotation", annotationTextValue, RUNNER_PATTERNS, "RUNNER_UNAVAILABLE"),
+      ...evidenceLines("job_log", logText, RUNNER_PATTERNS, "RUNNER_UNAVAILABLE"),
+    );
+  }
+  if (textMatches(API_RATE_LIMIT_PATTERNS, allText)) {
+    classifications.push("API_RATE_LIMITED");
+    evidence.push(
+      ...evidenceLines("annotation", annotationTextValue, API_RATE_LIMIT_PATTERNS, "API_RATE_LIMITED"),
+      ...evidenceLines("job_log", logText, API_RATE_LIMIT_PATTERNS, "API_RATE_LIMITED"),
+    );
+  }
+  if (textMatches(ARTIFACT_QUOTA_PATTERNS, allText)) {
+    classifications.push("ARTIFACT_STORAGE_QUOTA_EXHAUSTED");
+    evidence.push(
+      ...evidenceLines("annotation", annotationTextValue, ARTIFACT_QUOTA_PATTERNS, "ARTIFACT_STORAGE_QUOTA_EXHAUSTED"),
+      ...evidenceLines("job_log", logText, ARTIFACT_QUOTA_PATTERNS, "ARTIFACT_STORAGE_QUOTA_EXHAUSTED"),
+    );
+  }
+
+  const failedSteps = (Array.isArray(job.steps) ? job.steps : [])
+    .filter(step => step?.conclusion === "failure");
+  const implementationFailure = textMatches(IMPLEMENTATION_PATTERNS, allText);
+  if (failedSteps.length > 0 || STEP_ERROR.test(logText)) {
+    classifications.push(implementationFailure ? "STEP_IMPLEMENTATION_FAILURE" : "STEP_FAILURE");
+    if (failedSteps.length > 0) {
+      for (const step of failedSteps.slice(0, 5)) {
+        evidence.push({
+          source: "job_metadata",
+          type: implementationFailure ? "STEP_IMPLEMENTATION_FAILURE" : "STEP_FAILURE",
+          message: "Failed step: " + sanitizeText(step.name || "unnamed step"),
+        });
+      }
+    }
+    evidence.push(...evidenceLines("job_log", logText, [STEP_ERROR, ...IMPLEMENTATION_PATTERNS],
+      implementationFailure ? "STEP_IMPLEMENTATION_FAILURE" : "STEP_FAILURE"));
+  }
+
+  const distinct = unique(classifications);
+  let classification;
+  if (distinct.length > 0) {
+    classification = distinct[0];
+  } else if (job.status === "queued" || job.status === "waiting" || job.status === "pending") {
+    classification = "RUNNER_NOT_ASSIGNED_YET";
+    evidence.push({
+      source: "job_metadata",
+      type: "LIFECYCLE",
+      message: "The job is queued or waiting; runner assignment is not a quota signal.",
+    });
+  } else if (job.status === "in_progress") {
+    classification = "EXECUTION_IN_PROGRESS";
   } else if (logs.status === "LOG_PUBLICATION_PENDING") {
     classification = "LOG_PUBLICATION_PENDING";
   } else if (job.conclusion === "success" || job.conclusion === "skipped") {
     classification = "NOT_FAILED";
-  } else if (job.conclusion === null || job.conclusion === undefined) {
+  } else if (job.conclusion === null || job.conclusion === undefined || job.conclusion === "failure") {
     classification = "UNKNOWN";
-  } else {
-    classification = "EXECUTION_EVIDENCE_MISSING";
-  }
-
-  const evidence = [
-    ...evidenceLines("annotation", annotationValues.join("\n"), QUOTA, "QUOTA"),
-    ...evidenceLines("job_log", logText, QUOTA, "QUOTA"),
-    ...evidenceLines("annotation", annotationValues.join("\n"), PERMISSION, "PERMISSION"),
-    ...evidenceLines("job_log", logText, PERMISSION, "PERMISSION"),
-    ...evidenceLines("annotation", annotationValues.join("\n"), RUNNER, "RUNNER"),
-    ...evidenceLines("job_log", logText, RUNNER, "RUNNER"),
-    ...evidenceLines("job_log", logText, STEP_ERROR, "STEP_FAILURE"),
-  ].slice(0, 5);
-
-  if (evidence.length === 0 && (job.steps || []).some(step => step.conclusion === "failure")) {
     evidence.push({
       source: "job_metadata",
-      type: "STEP_FAILURE",
-      message: "A workflow step has conclusion=failure.",
+      type: "EVIDENCE_GAP",
+      message: job.runner_id === 0
+        ? "runner_id is explicitly 0 and no authoritative provider cause was found; this is not quota evidence."
+        : "The job has no authoritative root-cause evidence in the retrieved annotations or logs.",
     });
+  } else {
+    classification = "UNKNOWN";
   }
 
-  return { classification, evidence };
+  const legacy = {
+    ACTIONS_BILLING_QUOTA_EXHAUSTED: "QUOTA_EXHAUSTED",
+    PERMISSION_OR_POLICY_DENIED: "PERMISSION_DENIED",
+    RUNNER_UNAVAILABLE: "RUNNER_UNAVAILABLE",
+    STEP_IMPLEMENTATION_FAILURE: "STEP_FAILURE",
+    STEP_FAILURE: "STEP_FAILURE",
+    NOT_FAILED: "NOT_FAILED",
+    LOG_PUBLICATION_PENDING: "LOG_PUBLICATION_PENDING",
+    UNKNOWN: "UNKNOWN",
+    RUNNER_NOT_ASSIGNED_YET: "UNKNOWN",
+    EXECUTION_IN_PROGRESS: "UNKNOWN",
+  };
+
+  return {
+    classification: legacy[classification] || classification,
+    primary_classification: classification,
+    classifications: distinct.length ? distinct : [classification],
+    evidence,
+    evidence_gap: classification === "UNKNOWN" || classification === "LOG_PUBLICATION_PENDING",
+  };
+}
+
+export function classifyRun({
+  source = {},
+  jobs = [],
+  jobsStatus = "RETRIEVED",
+  checkSuite = { status: "NOT_REQUESTED", check_runs: [] },
+  workflowDiagnostic = "",
+  workflowDiagnosticStatus = "NOT_PROVIDED",
+} = {}) {
+  const evidence = [];
+  const classifications = [];
+  const suiteRuns = Array.isArray(checkSuite.check_runs) ? checkSuite.check_runs : [];
+  const suiteText = suiteRuns.map(item => [
+    item.output?.title,
+    item.output?.summary,
+    item.output?.text,
+    ...(item.annotations || []).map(annotationText),
+  ].filter(Boolean).join("\n")).join("\n");
+  const combined = String(workflowDiagnostic || "") + "\n" + suiteText;
+
+  if (textMatches(WORKFLOW_SYNTAX_PATTERNS, workflowDiagnostic)) {
+    classifications.push("WORKFLOW_YAML_SYNTAX_ERROR");
+    evidence.push(...evidenceLines("actionlint", workflowDiagnostic, WORKFLOW_SYNTAX_PATTERNS, "WORKFLOW_YAML_SYNTAX_ERROR"));
+  } else if (textMatches(WORKFLOW_SCHEMA_PATTERNS, workflowDiagnostic)) {
+    classifications.push("WORKFLOW_SCHEMA_OR_EXPRESSION_ERROR");
+    evidence.push(...evidenceLines("actionlint", workflowDiagnostic, WORKFLOW_SCHEMA_PATTERNS, "WORKFLOW_SCHEMA_OR_EXPRESSION_ERROR"));
+  }
+  if (textMatches(QUOTA_PATTERNS, suiteText)) {
+    classifications.push("ACTIONS_BILLING_QUOTA_EXHAUSTED");
+    evidence.push(...evidenceLines("check_suite", suiteText, QUOTA_PATTERNS, "ACTIONS_BILLING_QUOTA_EXHAUSTED"));
+  }
+  if (textMatches(PERMISSION_PATTERNS, suiteText)) {
+    classifications.push("PERMISSION_OR_POLICY_DENIED");
+    evidence.push(...evidenceLines("check_suite", suiteText, PERMISSION_PATTERNS, "PERMISSION_OR_POLICY_DENIED"));
+  }
+  if (textMatches(ARTIFACT_QUOTA_PATTERNS, suiteText)) {
+    classifications.push("ARTIFACT_STORAGE_QUOTA_EXHAUSTED");
+    evidence.push(...evidenceLines("check_suite", suiteText, ARTIFACT_QUOTA_PATTERNS, "ARTIFACT_STORAGE_QUOTA_EXHAUSTED"));
+  }
+  if (textMatches(RUNNER_PATTERNS, suiteText)) {
+    classifications.push("RUNNER_UNAVAILABLE");
+    evidence.push(...evidenceLines("check_suite", suiteText, RUNNER_PATTERNS, "RUNNER_UNAVAILABLE"));
+  }
+
+  if (jobsStatus !== "RETRIEVED") {
+    if (classifications.length === 0) {
+      classifications.push("UNKNOWN");
+      evidence.push({
+        source: "jobs_api",
+        type: "EVIDENCE_GAP",
+        message: "The attempt-scoped jobs collection was not retrieved; an empty local array is not evidence of zero jobs.",
+      });
+    }
+  } else if (jobs.length === 0 && classifications.length === 0) {
+    if (source.status && source.status !== "completed") {
+      classifications.push("OBSERVATION_WINDOW_IN_PROGRESS");
+      evidence.push({
+        source: "run_metadata",
+        type: "LIFECYCLE",
+        message: "The source workflow run is not terminal and currently has no job records.",
+      });
+    } else {
+      classifications.push("UNKNOWN");
+      evidence.push({
+        source: "run_metadata",
+        type: "EVIDENCE_GAP",
+        message: "The provider run is terminal with zero job records; no authoritative cause was present in the retrieved check-suite evidence.",
+      });
+    }
+  }
+
+  if (jobs.length > 0) {
+    for (const job of jobs) {
+      for (const item of job.classifications || [job.primary_classification || job.classification]) {
+        if (item && item !== "NOT_FAILED" && item !== "RUNNER_NOT_ASSIGNED_YET" && item !== "EXECUTION_IN_PROGRESS") {
+          classifications.push(item);
+        }
+      }
+    }
+    if (classifications.length === 0) classifications.push(source.status === "completed" && source.conclusion === "success" ? "NOT_FAILED" : "UNKNOWN");
+  }
+
+  const uniqueClasses = unique(classifications);
+  const priority = [
+    "WORKFLOW_YAML_SYNTAX_ERROR",
+    "WORKFLOW_SCHEMA_OR_EXPRESSION_ERROR",
+    "ACTIONS_BILLING_QUOTA_EXHAUSTED",
+    "ARTIFACT_STORAGE_QUOTA_EXHAUSTED",
+    "PERMISSION_OR_POLICY_DENIED",
+    "RUNNER_UNAVAILABLE",
+    "STEP_IMPLEMENTATION_FAILURE",
+    "STEP_FAILURE",
+    "API_RATE_LIMITED",
+    "OBSERVATION_WINDOW_IN_PROGRESS",
+    "UNKNOWN",
+    "NOT_FAILED",
+  ];
+  const ordered = priority.filter(item => uniqueClasses.includes(item));
+  return {
+    classification: ordered[0] || "UNKNOWN",
+    classifications: ordered.length ? ordered : ["UNKNOWN"],
+    evidence,
+    evidence_gap: ordered.includes("UNKNOWN") || ordered.includes("OBSERVATION_WINDOW_IN_PROGRESS"),
+    workflow_diagnostic_status: workflowDiagnosticStatus,
+  };
 }
 
 export function fieldState(object, key) {
