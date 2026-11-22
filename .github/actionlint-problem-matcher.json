@@ -2,14 +2,14 @@
   "problemMatcher": [
     {
       "owner": "actionlint",
+      "severity": "error",
       "pattern": [
         {
           "regexp": "^(.+):(\\d+):(\\d+): (.*)$",
           "file": 1,
           "line": 2,
           "column": 3,
-          "message": 4,
-          "severity": "error"
+          "message": 4
         }
       ]
     }
