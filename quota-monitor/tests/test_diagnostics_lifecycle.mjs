@@ -380,6 +380,6 @@ test("API usage telemetry is pinned and private credentials are isolated to the 
   assert.ok(privateJob.includes("diagnostics: \"true\""));
   assert.ok(!diagnoseJob.includes("secrets.PRIVATE_MONITOR_TOKEN"));
   assert.ok(!readbackJob.includes("secrets.PRIVATE_MONITOR_TOKEN"));
-  assert.ok(diagnoseJob.includes("token: \${{ github.token }}"));
-  assert.ok(readbackJob.includes("token: \${{ github.token }}"));
+  assert.ok(diagnoseJob.includes("token: " + "$" + "{{ github.token }}"));
+  assert.ok(readbackJob.includes("token: " + "$" + "{{ github.token }}"));
 });
