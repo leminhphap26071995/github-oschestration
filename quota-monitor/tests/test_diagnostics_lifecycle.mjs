@@ -345,3 +345,25 @@ test("a source quality-gate parser annotation is classified as workflow syntax, 
   assert.equal(result.primary_classification, "WORKFLOW_YAML_SYNTAX_ERROR");
   assert.ok(result.classifications.includes("STEP_FAILURE"));
 });
+
+
+test("static-analysis warnings remain distinct from YAML syntax and step execution failures", () => {
+  const result = classifyJob({
+    job: {
+      id: 34,
+      status: "completed",
+      conclusion: "failure",
+      steps: [{ name: "Parse every committed workflow definition", conclusion: "failure" }],
+    },
+    annotations: [{
+      path: ".github/workflows/workflow-cleanup.yml",
+      start_line: 51,
+      title: "actionlint",
+      message: "shellcheck reported issue in this script: SC2034:warning:17:1: attempt appears unused",
+    }],
+    logs: { status: "RETRIEVED", text: "Process completed with exit code 1" },
+  });
+  assert.ok(result.classifications.includes("STATIC_ANALYSIS_WARNING"));
+  assert.ok(result.classifications.includes("STEP_FAILURE"));
+  assert.ok(!result.classifications.includes("ACTIONS_BILLING_QUOTA_EXHAUSTED"));
+});
