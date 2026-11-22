@@ -251,7 +251,7 @@ def collect(scope, owner, token, year, month):
         "scope": scope, "owner": owner, "status": status,
         "actions_usage_status": actions_usage_status,
         "summary_error": summary_error, "usage_items": rows,
-        "totals": totals(rows) if not summary_error else UNKNOWN_TOTALS.copy(),
+        "totals": totals(rows) if scope == "organization" and not summary_error else UNKNOWN_TOTALS.copy(),
         "repositories": repository_rows, "repository_list_error": list_error,
         "budget": budget,
     }

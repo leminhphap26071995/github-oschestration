@@ -135,7 +135,7 @@ class QuotaMonitorTests(unittest.TestCase):
             }],
         }
         dashboard = module.render(report, [])
-        self.assertIn("does not expose personal Actions usage or remaining included compute balance", dashboard)
+        self.assertIn("not personal Actions usage or remaining included compute balance", dashboard)
         self.assertIn("UNKNOWN", dashboard)
         self.assertNotIn("0.00", dashboard)
 
