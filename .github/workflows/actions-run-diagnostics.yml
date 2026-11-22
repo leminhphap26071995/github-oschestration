@@ -14,7 +14,7 @@ on:
       - ".github/workflows/zz-synthetic-invalid-workflow.yml"
       - ".github/workflows/zz-real-invalid-workflow.yml"
       - Real Step Failure Fault Injection
-    types: [requested, in_progress, completed]
+    types: [requested, completed]
 
 permissions: {}
 
@@ -148,6 +148,8 @@ jobs:
           OBSERVER_SHA: ${{ github.sha }}
           WORKFLOW_DIAGNOSTIC_PATH: evidence/actionlint.txt
           WORKFLOW_DIAGNOSTIC_STATUS: ${{ steps.source_workflow.outputs.status || 'UNAVAILABLE' }}
+          LIFECYCLE_POLL_COUNT: "4"
+          LIFECYCLE_POLL_DELAY_MS: "15000"
         run: |
           mkdir -p evidence
           node quota-monitor/diagnostics/collect.mjs > evidence/diagnostics.json
