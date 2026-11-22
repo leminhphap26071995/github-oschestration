@@ -45,11 +45,19 @@ jobs:
           CHECK_RUN_ID="$(jq -r '.jobs[] | select(.name == "recover") | .id' evidence/readback/observer-jobs.json | head -n1)"
           test -n "$CHECK_RUN_ID"
 
+          gh api "repos/$REPOSITORY/check-runs/$CHECK_RUN_ID" \
+            > evidence/readback/observer-check-run.json
+          set +e
           gh api "repos/$REPOSITORY/check-runs/$CHECK_RUN_ID/annotations?per_page=100" \
-            > evidence/readback/observer-annotations.json
-          jq -e 'length > 0' evidence/readback/observer-annotations.json >/dev/null
-          jq -e 'any(.[]; ((.message // "") | test("could not parse as YAML|syntax-check"; "i")))' \
-            evidence/readback/observer-annotations.json >/dev/null
+            > evidence/readback/observer-annotations.json \
+            2> evidence/readback/annotation-fetch-error.txt
+          ANNOTATION_EXIT=$?
+          set -e
+          if [[ "$ANNOTATION_EXIT" -ne 0 ]]; then
+            echo "ANNOTATION_API_FETCH_FAILED" > evidence/readback/annotation-fetch-status.txt
+          else
+            echo "ANNOTATION_API_FETCH_SUCCEEDED" > evidence/readback/annotation-fetch-status.txt
+          fi
 
           gh api "repos/$REPOSITORY/actions/runs?head_sha=$SOURCE_SHA&per_page=100" \
             > evidence/readback/source-workflow-runs.json
@@ -92,27 +100,38 @@ jobs:
             fi
             echo "- Independent observer: $OBSERVER_URL (run_id=$OBSERVER_RUN_ID)"
             echo "- Annotation check_run_id: $CHECK_RUN_ID"
+            echo "- Annotation API fetch: $(cat evidence/readback/annotation-fetch-status.txt)"
             echo
             echo "## Actual annotation messages retrieved from GitHub"
             echo
-            jq -r '.[] | "- **\(.annotation_level // "unknown")** \(.message) — `\(.path // "unknown")` line \(.start_line // "n/a"), column \(.start_column // "n/a")"' \
-              evidence/readback/observer-annotations.json
+            if [[ "$ANNOTATION_EXIT" -eq 0 ]]; then
+              jq -r '.[] | "- **\(.annotation_level // "unknown")** \(.message) — `\(.path // "unknown")` line \(.start_line // "n/a"), column \(.start_column // "n/a")"' \
+                evidence/readback/observer-annotations.json
+            else
+              echo "The annotation endpoint failed; see annotation-fetch-error.txt. Do not treat the diagnostic text below as a retrieved annotation."
+            fi
+            echo
+            echo "## Diagnostic generated from the actual malformed YAML"
+            echo
+            echo '~~~text'
+            cat "docs/diagnostics/no-runner/$SOURCE_SHA/actionlint-diagnostics.txt" 2>/dev/null || echo "See the observer source branch diagnostic file."
+            echo '~~~'
             echo
             echo "## Classification"
             echo
             echo "- Root cause: WORKFLOW_YAML_SYNTAX_ERROR"
-            echo "- Evidence source: actionlint parsed the committed malformed YAML and produced the diagnostic; GitHub Problem Matcher attached it to the observer Check Run."
+            echo "- Evidence source: actionlint parsed the committed malformed YAML; GitHub Problem Matcher attempted to attach it to the observer Check Run."
             echo "- Source run itself had no jobs, no runner assignment record, and no retrievable job logs."
             echo "- Quota: NOT INDICATED. No-job/no-log state is not quota evidence."
             echo
             echo "## ChatGPT retrieval path"
             echo
             echo "- Read this Markdown file directly through GitHub repository contents."
-            echo "- Raw annotation JSON is stored beside this report."
-            echo "- No ZIP download or console log is required to read the message body."
+            echo "- Raw annotation JSON and exact Check Run metadata are stored beside this report when available."
+            echo "- No ZIP download or source console log is required to read a successfully retrieved message body."
           } > "$REPORT"
 
-          for FILE in "$REPORT" evidence/readback/observer-annotations.json evidence/readback/observer-jobs.json evidence/readback/source-workflow-runs.json evidence/readback/source-jobs.json evidence/readback/source-logs-error.txt; do
+          for FILE in "$REPORT" evidence/readback/observer-annotations.json evidence/readback/observer-jobs.json evidence/readback/observer-check-run.json evidence/readback/source-workflow-runs.json evidence/readback/source-jobs.json evidence/readback/source-logs-error.txt evidence/readback/annotation-fetch-error.txt evidence/readback/annotation-fetch-status.txt; do
             [[ -f "$FILE" ]] || continue
             DEST="docs/diagnostics/no-runner/$SOURCE_SHA/$(basename "$FILE")"
             CONTENT_B64="$(base64 -w0 "$FILE")"
