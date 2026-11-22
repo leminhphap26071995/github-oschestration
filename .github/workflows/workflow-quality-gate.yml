@@ -20,6 +20,7 @@ on:
       - ".github/actionlint-problem-matcher.json"
 
 permissions:
+  actions: read
   contents: read
 
 concurrency:
@@ -31,6 +32,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
+      actions: read
       contents: read
     steps:
       - name: Checkout exact source
@@ -52,6 +54,14 @@ jobs:
 
       - name: Test failure classification and evidence-state handling
         run: node --test tests/workflow-quality-gate.test.mjs
+
+      - name: Verify diagnostics observer workflow is enabled
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          state="$(gh api "repos/${{ github.repository }}/actions/workflows/actions-run-diagnostics.yml" --jq .state)"
+          echo "Diagnostics observer workflow state: $state"
+          test "$state" = "active"
 
       - name: Inspect referenced action runtime metadata
         env:
