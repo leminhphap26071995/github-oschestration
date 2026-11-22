@@ -481,8 +481,7 @@ export async function monitorPrivateTargets({
   }
 
   const blockedClasses = new Set([
-    "UNKNOWN", "RUNNER_NOT_ASSIGNED_YET", "RUNNER_ASSIGNED",
-    "EXECUTION_IN_PROGRESS", "OBSERVATION_WINDOW_IN_PROGRESS",
+    "UNKNOWN", "RUNNER_NOT_ASSIGNED_YET", "OBSERVATION_WINDOW_IN_PROGRESS",
     "LOG_PUBLICATION_PENDING", "EXECUTION_EVIDENCE_MISSING",
   ]);
   const blocked = results.some(item =>
