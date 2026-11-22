@@ -383,3 +383,19 @@ test("API usage telemetry is pinned and private credentials are isolated to the 
   assert.ok(diagnoseJob.includes("token: " + "$" + "{{ github.token }}"));
   assert.ok(readbackJob.includes("token: " + "$" + "{{ github.token }}"));
 });
+
+
+test("disabled scheduled workflow state is an admission block, not quota exhaustion", () => {
+  const result = classifyJob({
+    job: {
+      id: 35,
+      status: "completed",
+      conclusion: "failure",
+      steps: [{ name: "Verify diagnostics observer workflow is enabled", conclusion: "failure" }],
+    },
+    annotations: [],
+    logs: { status: "RETRIEVED", text: "Diagnostics observer workflow state: disabled_inactivity\nProcess completed with exit code 1" },
+  });
+  assert.ok(result.classifications.includes("ACTIONS_ADMISSION_BLOCKED"));
+  assert.ok(!result.classifications.includes("ACTIONS_BILLING_QUOTA_EXHAUSTED"));
+});
