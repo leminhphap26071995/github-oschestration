@@ -15,7 +15,7 @@ API = "https://api.github.com"
 VERSION = "2026-03-10"
 ORG_RE = re.compile(r"^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$")
 UNKNOWN_TOTALS = {k: None for k in
-                  ("gross_minutes", "discounted_minutes", "billable_minutes", "net_amount")}
+                  ("gross_minutes", "discounted_minutes", "net_minutes", "net_amount")}
 
 
 def get(token, path):
@@ -71,7 +71,7 @@ def items(data):
     for item in (data or {}).get("usageItems", []):
         if not isinstance(item, dict):
             continue
-        product = str(item.get("product", "Actions"))
+        product = str(item.get("product", ""))
         if product.lower() != "actions":
             continue
         output.append({
@@ -97,7 +97,7 @@ def totals(rows):
     return {
         "gross_minutes": total(minutes, "gross_quantity"),
         "discounted_minutes": total(minutes, "discount_quantity"),
-        "billable_minutes": total(minutes, "net_quantity"),
+        "net_minutes": total(minutes, "net_quantity"),
         "net_amount": total(rows, "net_amount", 6),
     }
 
@@ -191,6 +191,7 @@ def collect(scope, owner, token, year, month):
     if not token:
         return {
             "scope": scope, "owner": owner, "status": "UNKNOWN",
+            "actions_usage_status": "UNKNOWN",
             "summary_error": "BILLING_TOKEN_NOT_CONFIGURED",
             "usage_items": [], "totals": UNKNOWN_TOTALS.copy(),
             "repositories": [], "repository_list_error": "BILLING_TOKEN_NOT_CONFIGURED",
@@ -198,19 +199,32 @@ def collect(scope, owner, token, year, month):
                        "error": "BILLING_TOKEN_NOT_CONFIGURED" if scope == "organization" else None,
                        "items": []},
         }
-    summary, summary_error = get(token, path_for(scope, owner, year, month))
-    rows = items(summary) if not summary_error else []
     if scope == "user":
+        # The user-level billing usage endpoint reports Copilot usage, not Actions usage.
+        # Do not turn its empty Actions rows into a false zero-consumption signal.
+        summary, summary_error, rows = None, None, []
+        actions_usage_status = "NOT_EXPOSED_BY_USER_BILLING_API"
         repos, list_error = pages(token, "/user/repos?visibility=all&affiliation=owner&sort=full_name")
         repos = [r for r in repos if r.get("owner", {}).get("type") == "User"
                  and r.get("owner", {}).get("login", "").lower() == owner.lower()]
     else:
+        summary, summary_error = get(token, path_for(scope, owner, year, month))
+        rows = items(summary) if not summary_error else []
+        actions_usage_status = "UNKNOWN" if summary_error else "OK"
         repos, list_error = pages(token, f"/orgs/{owner}/repos?type=all&sort=full_name")
         repos = [r for r in repos if r.get("owner", {}).get("login", "").lower() == owner.lower()]
     repository_rows = []
     for repo in repos:
         name = repo.get("full_name")
         if not isinstance(name, str) or "/" not in name:
+            continue
+        if scope == "user":
+            repository_rows.append({
+                "full_name": name, "visibility": "private" if repo.get("private") else "public",
+                "archived": bool(repo.get("archived", False)),
+                "status": "NOT_EXPOSED", "error": None,
+                "usage_items": [], "totals": UNKNOWN_TOTALS.copy(),
+            })
             continue
         data, error = get(token, path_for(scope, owner, year, month, name))
         repo_items = items(data) if not error else []
@@ -229,11 +243,15 @@ def collect(scope, owner, token, year, month):
     errors = [summary_error, list_error, budget.get("error")]
     errors += [r["error"] for r in repository_rows]
     errors = [e for e in errors if e]
-    status = "UNKNOWN" if summary_error and list_error else "PARTIAL" if errors else "OK"
+    if scope == "user":
+        status = "UNKNOWN" if list_error else "PARTIAL"
+    else:
+        status = "UNKNOWN" if summary_error and list_error else "PARTIAL" if errors else "OK"
     return {
         "scope": scope, "owner": owner, "status": status,
+        "actions_usage_status": actions_usage_status,
         "summary_error": summary_error, "usage_items": rows,
-        "totals": totals(rows) if not summary_error else UNKNOWN_TOTALS.copy(),
+        "totals": totals(rows) if scope == "organization" and not summary_error else UNKNOWN_TOTALS.copy(),
         "repositories": repository_rows, "repository_list_error": list_error,
         "budget": budget,
     }
@@ -246,10 +264,11 @@ def collect_all(user_token, org_map, username, organizations):
     accounts += [collect("organization", org, org_map.get(org), year, month)
                  for org in organizations]
     return {
-        "schema_version": 2, "collected_at_utc": now.isoformat(),
+        "schema_version": 3, "collected_at_utc": now.isoformat(),
         "billing_period": f"{year:04d}-{month:02d}",
         "data_source": "GitHub Billing Usage Summary REST API",
-        "remaining_included_minutes": "NOT_EXPOSED_BY_USAGE_SUMMARY_API",
+        "billing_unit_model": "INCLUDED_COMPUTE_CURRENCY_AMOUNT",
+        "included_compute_balance_status": "NOT_EXPOSED_BY_USAGE_SUMMARY_API",
         "accounts": accounts,
     }
 
@@ -263,9 +282,9 @@ def render(report, history):
         "# GitHub Actions Usage Dashboard", "",
         f"Billing period: {report['billing_period']}  ",
         f"Updated (UTC): {report['collected_at_utc']}", "",
-        "> Shows Actions consumption and billed amounts. The API does not expose remaining included-minute allowance; no balance or percentage is inferred.",
+        "> Shows Actions usage quantities and net billed amounts. GitHub's included compute allowance is a monetary amount; the user-level billing endpoint reports Copilot usage, not personal Actions usage or remaining included compute balance. No personal Actions balance or percentage is inferred.",
         "", "## Account and organization overview", "",
-        "| Scope | Owner | Repositories | Status | Actions budget | Total min | Included min | Billable min | Net amount |",
+        "| Scope | Owner | Repositories | Status | Actions data | Actions budget | Gross min | Discounted min | Net min | Net amount (USD) |",
         "|---|---|---:|---|---|---:|---:|---:|---:|",
     ]
     for a in report["accounts"]:
@@ -273,12 +292,12 @@ def render(report, history):
         t = a["totals"]
         lines.append(
             f"| {a['scope']} | {a['owner']} | {count} | {a['status']} "
-            f"| {a['budget']['status']} | {fmt(t['gross_minutes'])} "
-            f"| {fmt(t['discounted_minutes'])} | {fmt(t['billable_minutes'])} "
-            f"| {fmt(t['net_amount'], 4)} |"
+            f"| {a.get('actions_usage_status', 'UNKNOWN')} | {a['budget']['status']} "
+            f"| {fmt(t['gross_minutes'])} | {fmt(t['discounted_minutes'])} "
+            f"| {fmt(t['net_minutes'])} | {fmt(t['net_amount'], 4)} |"
         )
     lines += ["", "## Repository breakdown", "",
-              "| Repository | Visibility | Archived | Status | Total min | Included min | Billable min | Net amount |",
+              "| Repository | Visibility | Archived | Status | Gross min | Discounted min | Net min | Net amount (USD) |",
               "|---|---|---:|---|---:|---:|---:|---:|"]
     repos = [r for a in report["accounts"] for r in a["repositories"]]
     for r in sorted(repos, key=lambda x: x["full_name"].lower()):
@@ -286,7 +305,7 @@ def render(report, history):
         lines.append(
             f"| {r['full_name']} | {r['visibility']} | {'yes' if r['archived'] else 'no'} "
             f"| {r['status']} | {fmt(t['gross_minutes'])} | {fmt(t['discounted_minutes'])} "
-            f"| {fmt(t['billable_minutes'])} | {fmt(t['net_amount'], 4)} |"
+            f"| {fmt(t['net_minutes'])} | {fmt(t['net_amount'], 4)} |"
         )
     if not repos:
         lines.append("| — | — | — | No repository usage rows returned | — | — | — | — |")
@@ -316,14 +335,14 @@ def render(report, history):
                    for r in a["repositories"] if r.get("error")]
     lines += issues or ["- None"]
     lines += ["", "## Recent snapshots", "",
-              "| Collected (UTC) | Period | Owners | Repositories | Total min | Included min | Billable min | Net amount | Status |",
+              "| Collected (UTC) | Period | Owners | Repositories | Gross min | Discounted min | Net min | Net amount (USD) | Status |",
               "|---|---|---:|---:|---:|---:|---:|---:|---|"]
     for h in reversed(history[-30:]):
         lines.append(
             f"| {h.get('collected_at_utc', 'unknown')} | {h.get('billing_period', 'unknown')} "
             f"| {h.get('owner_count', 0)} | {h.get('repository_count', 0)} "
             f"| {fmt(h.get('gross_minutes'))} | {fmt(h.get('discounted_minutes'))} "
-            f"| {fmt(h.get('billable_minutes'))} | {fmt(h.get('net_amount'), 4)} "
+            f"| {fmt(h.get('net_minutes'))} | {fmt(h.get('net_amount'), 4)} "
             f"| {h.get('status', 'UNKNOWN')} |"
         )
     return "\n".join(lines) + "\n"
@@ -339,7 +358,7 @@ def write_report(report, directory):
     if not isinstance(history, list):
         history = []
     accounts = report["accounts"]
-    keys = ("gross_minutes", "discounted_minutes", "billable_minutes", "net_amount")
+    keys = ("gross_minutes", "discounted_minutes", "net_minutes", "net_amount")
     aggregate = {}
     for key in keys:
         values = [a["totals"][key] for a in accounts]

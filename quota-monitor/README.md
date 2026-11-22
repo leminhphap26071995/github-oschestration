@@ -81,7 +81,7 @@ These state/poll-log artifacts measure REST API rate-limit buckets. They do not 
 
 A generic 403/404/429, runner_id=0, empty jobs/steps, BlobNotFound, missing run, or aggregate usage total never proves Actions quota exhaustion. Collector API failures remain separate from source workflow failures.
 
-The public repository's standard GitHub-hosted runners do not consume included private-repository Actions minutes. This provides an independent compute path for configured private targets, but it is not independent of account suspension or GitHub-wide service outages.
+The public repository's standard GitHub-hosted runners are free independently and do not draw from the private owner's included compute usage pool. This provides an independent compute path for configured private targets, but it is not independent of account suspension or GitHub-wide service outages.
 
 See [GITHUB-ACTIONS-OBSERVABILITY-ARCHITECTURE.md](../docs/GITHUB-ACTIONS-OBSERVABILITY-ARCHITECTURE.md) for the complete evidence and security contract.
 
@@ -94,7 +94,7 @@ See [GITHUB-ACTIONS-OBSERVABILITY-ARCHITECTURE.md](../docs/GITHUB-ACTIONS-OBSERV
 
 ## API endpoints and attribution
 
-The collector uses GET /users/{username}/settings/billing/usage/summary and GET /organizations/{org}/settings/billing/usage/summary, filtered to product=Actions and the current billing month.
+The collector uses GET /organizations/{org}/settings/billing/usage/summary, filtered to product=Actions and the current billing month. It does not call the user-level billing usage endpoint for Actions: GitHub documents user-level billing usage as Copilot usage, not personal Actions usage. For personal accounts, Actions usage and remaining included compute balance are explicitly NOT_EXPOSED_BY_USER_BILLING_API; repository inventory is retained, but usage totals remain UNKNOWN rather than zero.
 
 It also preserves the endpoint's repository-filtered usage data for the repositories returned by the owner-scoped inventory. Repository totals are attributed only when the API query succeeds. A missing token or denied request is UNKNOWN, never zero.
 
@@ -106,7 +106,7 @@ The usage summary is public preview and only exposes the previous 24 months. Git
 
 The private CI workflow uses these secrets:
 
-- USER_BILLING_TOKEN: a fine-grained personal token for the personal account with Plan: read and Metadata: read for the personal repositories being inventoried.
+- USER_BILLING_TOKEN: a fine-grained personal token with Metadata: read for personal repository inventory. The collector does not use the user-level billing usage endpoint for Actions because that endpoint reports Copilot usage, not personal Actions usage.
 - GITHUB_APP_ID and GITHUB_APP_PRIVATE_KEY: one GitHub App used to obtain short-lived organization installation tokens.
 
 Configure the GitHub App with organization Administration: read. Metadata: read is the implicit read-only repository metadata permission. Install the App on each organization to monitor and grant access to all repositories if repository-level inventory is required. The App installation access token is minted during each CI run and expires after one hour. No per-org token secret is stored.
@@ -121,9 +121,9 @@ targets.json is an explicit include list for coverage overrides. At runtime, pre
 
 ## Data semantics and limitations
 
-- Linux, Windows and macOS are reported separately by SKU and minute unit.
+- Organization Actions runner quantities (minutes) and net billed amounts are reported separately by SKU when returned by the API. The included compute allowance is a monetary amount shared with eligible private/internal runner and cloud-sandbox compute/memory usage; minute quantities are not a remaining-balance measure.
 - Artifact/shared storage, cache storage and custom image storage are reported separately by SKU and the unit GitHub returns.
-- grossQuantity, discountQuantity and netQuantity are shown only when returned by the API.
+- grossQuantity, discountQuantity and netQuantity are shown only when returned by the API. The dashboard labels these as gross/discounted/net usage quantities, never as included or remaining minutes.
 - Storage billing accrues over time; current stored bytes and accrued billable storage are different measurements.
 - Organization budgets are configuration; observed spend is compared using the returned Actions netAmount.
 - Missing credentials, unsupported token types, denied billing roles or API errors remain UNKNOWN/PARTIAL.
