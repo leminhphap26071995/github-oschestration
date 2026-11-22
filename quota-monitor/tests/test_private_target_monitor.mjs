@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { monitorPrivateTargets } from "../diagnostics/private-target-monitor.mjs";
+import { evaluateBillingEvidence, monitorPrivateTargets } from "../diagnostics/private-target-monitor.mjs";
 
 const token = "private-monitor-token-that-must-not-leak";
 const repository = "owner/private-repository";
@@ -244,4 +244,140 @@ test("push expectation must be explicitly every_push to avoid false missing-run 
   });
   assert.equal(record.coverage_status, "BLOCKED");
   assert.equal(record.blocker, "PUSH_EXPECTATION_MUST_BE_EXPLICIT");
+});
+
+
+test("fresh organization Actions hard-cap evidence is authoritative for a matching private target", () => {
+  const snapshotState = {
+    status: "RETRIEVED",
+    snapshot: {
+      collected_at_utc: "2026-11-22T00:50:00.000Z",
+      remaining_included_minutes: "NOT_EXPOSED_BY_USAGE_SUMMARY_API",
+      accounts: [{
+        scope: "organization",
+        owner: "owner",
+        status: "OK",
+        summary_error: null,
+        budget: {
+          status: "HARD_CAP_REACHED",
+          items: [{
+            scope: "organization",
+            entity: "owner",
+            product_skus: ["Actions"],
+            prevent_further_usage: true,
+            status: "HARD_CAP_REACHED",
+          }],
+        },
+      }],
+    },
+  };
+  const result = evaluateBillingEvidence({
+    snapshotState,
+    target: { repository, billing_scope: "organization" },
+    now,
+    maxAgeMinutes: 60,
+  });
+  assert.equal(result.status, "HARD_CAP_REACHED");
+  assert.equal(result.classification, "ACTIONS_BILLING_QUOTA_EXHAUSTED");
+  assert.equal(result.evidence_type, "BILLING_HARD_CAP_SNAPSHOT");
+});
+
+test("personal included Actions minutes remain UNKNOWN because the usage summary API does not expose remaining allowance", () => {
+  const result = evaluateBillingEvidence({
+    snapshotState: {
+      status: "RETRIEVED",
+      snapshot: {
+        collected_at_utc: "2026-11-22T00:50:00.000Z",
+        remaining_included_minutes: "NOT_EXPOSED_BY_USAGE_SUMMARY_API",
+        accounts: [{
+          scope: "user",
+          owner: "owner",
+          status: "OK",
+          summary_error: null,
+          budget: { status: "NOT_APPLICABLE", items: [] },
+        }],
+      },
+    },
+    target: { repository, billing_scope: "user" },
+    now,
+    maxAgeMinutes: 60,
+  });
+  assert.equal(result.status, "PERSONAL_REMAINING_QUOTA_NOT_EXPOSED");
+  assert.equal(result.classification, null);
+});
+
+test("stale billing snapshots never classify a private run as quota exhausted", () => {
+  const result = evaluateBillingEvidence({
+    snapshotState: {
+      status: "RETRIEVED",
+      snapshot: {
+        collected_at_utc: "2026-11-20T00:00:00.000Z",
+        accounts: [],
+      },
+    },
+    target: { repository, billing_scope: "organization" },
+    now,
+    maxAgeMinutes: 60,
+  });
+  assert.equal(result.status, "STALE_SNAPSHOT");
+  assert.equal(result.classification, null);
+});
+
+test("no run plus a fresh matching organization hard cap classifies quota; syntax evidence still takes precedence", async () => {
+  const billingConfig = {
+    ...structuredClone(config),
+    targets: [{
+      ...structuredClone(config.targets[0]),
+      billing_scope: "organization",
+    }],
+    billing_snapshot: {
+      repository: "owner/billing-collector",
+      branch: "main",
+      path: "ops/github-actions-usage/usage-latest.json",
+      max_age_minutes: 60,
+    },
+  };
+  const snapshot = {
+    collected_at_utc: "2026-11-22T00:50:00.000Z",
+    accounts: [{
+      scope: "organization",
+      owner: "owner",
+      status: "OK",
+      summary_error: null,
+      budget: {
+        status: "HARD_CAP_REACHED",
+        items: [{
+          scope: "organization",
+          entity: "owner",
+          product_skus: ["Actions"],
+          prevent_further_usage: true,
+          status: "HARD_CAP_REACHED",
+        }],
+      },
+    }],
+  };
+  const fetchImpl = async url => {
+    const targetUrl = String(url);
+    if (targetUrl.includes("/repos/owner/billing-collector/contents/ops/github-actions-usage/usage-latest.json")) {
+      return jsonResponse({ encoding: "base64", content: Buffer.from(JSON.stringify(snapshot)).toString("base64") });
+    }
+    if (targetUrl.endsWith("/branches/main")) return jsonResponse(branchResponse());
+    if (targetUrl.includes("/actions/runs?branch=main")) return jsonResponse({ workflow_runs: [] });
+    if (targetUrl.includes("/contents/.github/workflows/ci.yml?ref=")) {
+      return jsonResponse({ encoding: "base64", content: Buffer.from("name: CI\non:\n  push:\njobs: {}\n").toString("base64") });
+    }
+    throw new Error("Unexpected URL: " + targetUrl);
+  };
+  const record = await monitorPrivateTargets({
+    targetsJson: JSON.stringify(billingConfig),
+    token,
+    fetchImpl,
+    now,
+    lintImpl: async () => ({ status: "VALID", diagnostic: "" }),
+  });
+  assert.equal(record.targets[0].classification, "ACTIONS_BILLING_QUOTA_EXHAUSTED");
+  assert.equal(record.targets[0].billing_evidence_status, "HARD_CAP_REACHED");
+  assert.ok(record.targets[0].evidence_types.includes("BILLING_HARD_CAP_SNAPSHOT"));
+  assert.equal(record.billing_coverage_status, "OBSERVED");
+  assert.ok(!JSON.stringify(record).includes("billing-collector"));
 });
