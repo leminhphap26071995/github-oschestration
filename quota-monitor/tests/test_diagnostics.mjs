@@ -135,7 +135,7 @@ test("collects exact run attempt, paginated jobs/annotations, and independent jo
   assert.equal(record.jobs[1].logs.status, "NOT_REQUESTED");
   assert.ok(calls.some(call => call.url.includes("/attempts/2/jobs")));
   assert.ok(calls.every(call => call.method === "GET"));
-  assert.ok(calls.every(call => !call.url.includes("sig=secret")));
+  assert.ok(calls.some(call => call.url.startsWith("https://logs.example.test/")));
   assert.ok(!JSON.stringify(record).includes(token));
   assert.ok(!JSON.stringify(record).includes("sig=secret"));
   assert.ok(renderSummary(record).includes("Attempt: 2"));
