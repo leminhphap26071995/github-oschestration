@@ -82,7 +82,7 @@ test("collects exact run attempt, paginated jobs/annotations, and independent jo
     const target = String(url);
     calls.push({ url: target, method: options.method, authorization: options.headers?.Authorization });
     if (target.endsWith("/actions/runs/700")) return jsonResponse(runDetails());
-    if (target.includes("/attempts/2/jobs?per_page=100")) {
+    if (target.endsWith("/attempts/2/jobs?per_page=100")) {
       return jsonResponse({ jobs: [job(101, 901), job(102, 902, { conclusion: "success", steps: [] })] }, 200, {
         link: `<${apiRoot}/repos/owner/repository/actions/runs/700/attempts/2/jobs?per_page=100&page=2>; rel="next"`,
       });
@@ -90,7 +90,7 @@ test("collects exact run attempt, paginated jobs/annotations, and independent jo
     if (target.includes("/attempts/2/jobs?per_page=100&page=2")) {
       return jsonResponse({ jobs: [job(103, 903)] });
     }
-    if (target.includes("/check-runs/901/annotations?per_page=100")) {
+    if (target.endsWith("/check-runs/901/annotations?per_page=100")) {
       return jsonResponse([{ path: "src/a.js", annotation_level: "failure", title: "Failure", message: "test failed" }], 200, {
         link: `<${apiRoot}/repos/owner/repository/check-runs/901/annotations?per_page=100&page=2>; rel="next"`,
       });
@@ -163,7 +163,7 @@ test("rejects source SHA mismatch before reading jobs", async () => {
   );
 });
 
-test("does not fetch annotations or logs from a malformed or foreign check_run_url", async () => {
+test("rejects annotations from a foreign check_run_url while keeping job-log retrieval independent", async () => {
   const calls = [];
   const fetchImpl = async url => {
     const target = String(url);
@@ -227,26 +227,35 @@ test("retries transient log 404 and redacts secrets from evidence", async () => 
   const classified = classifyJob({ job: job(77, 88), annotations: [], logs });
   assert.equal(classified.classification, "QUOTA_EXHAUSTED");
   assert.ok(!JSON.stringify(classified).includes("ghp_"));
-  assert.ok(classified.evidence[0].message.includes("[REDACTED_TOKEN]"));
+  assert.ok(classified.evidence[0].message.includes("Bearer [REDACTED]"));
 });
 
-test("honors Retry-After for log API 429 and reports rate limit separately", async () => {
+test("honors Retry-After for log API 429 and retries without sending the bearer token to the signed URL", async () => {
   const waits = [];
-  let calls = 0;
+  let apiCalls = 0;
   const api = createGitHubApi({
     token,
     sleepImpl: async ms => waits.push(ms),
-    fetchImpl: async () => {
-      calls++;
-      if (calls === 1) return jsonResponse({ message: "rate limit" }, 429, { "retry-after": "2" });
-      return new Response(null, { status: 302, headers: { location: "https://logs.example.test/log" } });
+    fetchImpl: async (url, options = {}) => {
+      const target = String(url);
+      if (target.endsWith("/actions/jobs/77/logs")) {
+        apiCalls++;
+        if (apiCalls === 1) return jsonResponse({ message: "rate limit" }, 429, { "retry-after": "2" });
+        return new Response(null, { status: 302, headers: { location: "https://logs.example.test/log" } });
+      }
+      if (target === "https://logs.example.test/log") {
+        assert.equal(options.headers?.Authorization, undefined);
+        return new Response("log text", { status: 200 });
+      }
+      throw new Error("Unexpected URL: " + target);
     },
     maxLogAttempts: 2,
   });
   api.setRepository("owner", "repository");
   const logs = await api.downloadJobLogs(77);
-  assert.equal(logs.status, "API_ERROR");
-  assert.equal(logs.http_status, 302);
+  assert.equal(logs.status, "RETRIEVED");
+  assert.equal(logs.http_status, 200);
+  assert.equal(logs.attempts, 2);
   assert.deepEqual(waits, [2000]);
 });
 

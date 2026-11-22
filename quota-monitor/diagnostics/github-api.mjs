@@ -100,8 +100,10 @@ export function createGitHubApi({
     );
     let lastStatus = null;
     let lastRetryAfter = null;
+    let attempts = 0;
 
     for (let attempt = 1; attempt <= maxLogAttempts; attempt++) {
+      attempts = attempt;
       try {
         const response = await fetchImpl(endpoint, {
           method: "GET",
@@ -176,7 +178,7 @@ export function createGitHubApi({
         : lastStatus === 429
           ? "API_RATE_LIMITED"
           : "API_ERROR",
-      attempts: maxLogAttempts,
+      attempts,
       http_status: lastStatus,
       retry_after: lastRetryAfter,
       text: "",
