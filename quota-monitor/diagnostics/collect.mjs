@@ -87,16 +87,17 @@ function parseCheckRunUrl(value, repository, apiOrigin) {
   }
 }
 
-function summarizeAnnotation(annotation) {
-  return {
+function summarizeAnnotation(annotation, includeRawDetails = false) {
+  const record = {
     path: sanitizeText(annotation.path),
     start_line: annotation.start_line ?? null,
     end_line: annotation.end_line ?? null,
     annotation_level: sanitizeText(annotation.annotation_level),
     title: sanitizeText(annotation.title),
     message: sanitizeText(annotation.message),
-    raw_details: sanitizeText(annotation.raw_details),
   };
+  if (includeRawDetails) record.raw_details = sanitizeText(annotation.raw_details);
+  return record;
 }
 
 function summarizeStep(step) {
@@ -156,7 +157,7 @@ async function collectCheckSuite({ api, source }) {
           record.annotations_status = annotations.status;
           record.annotation_count = annotations.annotation_count;
           record.annotation_page_count = annotations.page_count;
-          record.annotations = annotations.annotations;
+          record.annotations = annotations.raw.map(item => summarizeAnnotation(item, true));
         } catch (error) {
           Object.assign(record, { annotations_status: "API_ERROR", annotations_error: errorRecord(error) });
         }
@@ -315,13 +316,16 @@ export async function collectDiagnostics({
   }
   const checkSuite = await collectCheckSuite({ api, source });
   const runClassification = classifyRun({
-    source: { ...source, status: run.status, conclusion: run.conclusion },
+    source: { ...source, status: run.status ?? source.status, conclusion: run.conclusion ?? source.conclusion },
     jobs,
     jobsStatus,
     checkSuite,
     workflowDiagnostic,
     workflowDiagnosticStatus,
   });
+  for (const checkRun of checkSuite.check_runs || []) {
+    for (const annotation of checkRun.annotations || []) delete annotation.raw_details;
+  }
 
   return {
     schema_version: 2,
