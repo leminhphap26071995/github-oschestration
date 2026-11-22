@@ -56,24 +56,33 @@ jobs:
           RUN_URL="$(jq -r '.html_url' evidence/source-run.json)"
           gh annotations -repo "$REPOSITORY" -json > evidence/gh-annotations-all-latest.json
 
-          # The extension reports the latest run for each workflow. Bind its output
-          # to this exact source run before evaluating any annotation message.
-          jq --arg run_url "$RUN_URL"             '[.[] | select(.workflow_url == $run_url)]'             evidence/gh-annotations-all-latest.json             > evidence/gh-annotations-exact-run.json
+          # gh-annotations lists the latest run per workflow; bind the output
+          # to the exact completed source run before evaluating message content.
+          jq --arg run_url "$RUN_URL" '
+            [.[] | select(.workflow_url == $run_url)]
+          ' evidence/gh-annotations-all-latest.json > evidence/gh-annotations-exact-run.json
 
           jq -e --arg marker "$EXPECTED_MARKER" '
             any(.[]; ((.message // "") | contains($marker)))
           ' evidence/gh-annotations-exact-run.json >/dev/null
 
-          jq -n             --arg repository "$REPOSITORY"             --arg run_url "$RUN_URL"             --argjson run_id "$RUN_ID"             --argjson attempt "$RUN_ATTEMPT"             --arg marker "$EXPECTED_MARKER"             --argjson annotation_count "$(jq 'length' evidence/gh-annotations-exact-run.json)"             '{
+          jq -n \
+            --arg repository "$REPOSITORY" \
+            --arg run_url "$RUN_URL" \
+            --argjson run_id "$RUN_ID" \
+            --argjson attempt "$RUN_ATTEMPT" \
+            --arg marker "$EXPECTED_MARKER" \
+            --slurpfile exact evidence/gh-annotations-exact-run.json \
+            '{
               result: "PASS",
               repository: $repository,
               source_run_id: $run_id,
               source_run_attempt: $attempt,
               source_run_url: $run_url,
               cli: "swfz/gh-annotations",
-              exact_run_annotation_count: $annotation_count,
+              exact_run_annotation_count: ($exact[0] | length),
               expected_message_marker: $marker,
-              retrieved_messages: [.]
+              retrieved_messages: ($exact[0] | map(.message))
             }' > evidence/cli-verification-receipt.json
 
           jq -r '
