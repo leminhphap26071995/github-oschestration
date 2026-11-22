@@ -40,7 +40,7 @@ This first-stage audit does not inspect billing usage or decide whether Actions 
 `.github/workflows/actions-run-diagnostics.yml` is the single automatic observer workflow. It has two entry paths:
 
 1. `workflow_run` on requested and completed events for an explicit allowlist of repository workflows.
-2. A 15-minute schedule that polls explicitly configured private targets from a public-repository runner. The private-target job also runs after a successful Workflow Quality Gate completion from the trusted main branch, providing an automatic non-manual probe after workflow configuration changes.
+2. A 15-minute schedule that polls explicitly configured private targets from a public-repository runner. The private-target job also listens for the requested event of Workflow Quality Gate from the trusted main branch, then polls that exact source run until it completes successfully before reading private targets. This provides an automatic non-manual probe after workflow configuration changes.
 
 For workflow-run events, the observer runs on the trusted default branch, validates the source run against the event payload, and fetches the exact source workflow blob at the source SHA as data. It never checks out or executes the triggering branch. On a requested event it polls up to four times at 15-second intervals until a runner/step appears or the source run completes; the completed event then captures terminal evidence.
 
