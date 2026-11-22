@@ -82,7 +82,7 @@ export function sanitizeText(value) {
 }
 
 function annotationText(annotation) {
-  return [annotation?.title, annotation?.message, annotation?.raw_details]
+  return [annotation?.path, annotation?.title, annotation?.message, annotation?.raw_details]
     .filter(Boolean).join(" ");
 }
 
@@ -123,6 +123,21 @@ export function classifyJob({ job = {}, annotations = [], logs = { status: "NOT_
   const allText = annotationTextValue + "\n" + logText;
   const evidence = [];
   const classifications = [];
+
+  const workflowParserOutput = /(?:\.github\/workflows\/|workflow:)[^\s:]+:\d+:\d+:/i.test(allText);
+  if (workflowParserOutput && textMatches(WORKFLOW_SYNTAX_PATTERNS, allText)) {
+    classifications.push("WORKFLOW_YAML_SYNTAX_ERROR");
+    evidence.push(
+      ...evidenceLines("annotation", annotationTextValue, WORKFLOW_SYNTAX_PATTERNS, "WORKFLOW_YAML_SYNTAX_ERROR"),
+      ...evidenceLines("job_log", logText, WORKFLOW_SYNTAX_PATTERNS, "WORKFLOW_YAML_SYNTAX_ERROR"),
+    );
+  } else if (workflowParserOutput && textMatches(WORKFLOW_SCHEMA_PATTERNS, allText)) {
+    classifications.push("WORKFLOW_SCHEMA_OR_EXPRESSION_ERROR");
+    evidence.push(
+      ...evidenceLines("annotation", annotationTextValue, WORKFLOW_SCHEMA_PATTERNS, "WORKFLOW_SCHEMA_OR_EXPRESSION_ERROR"),
+      ...evidenceLines("job_log", logText, WORKFLOW_SCHEMA_PATTERNS, "WORKFLOW_SCHEMA_OR_EXPRESSION_ERROR"),
+    );
+  }
 
   if (textMatches(QUOTA_PATTERNS, allText)) {
     classifications.push("ACTIONS_BILLING_QUOTA_EXHAUSTED");
