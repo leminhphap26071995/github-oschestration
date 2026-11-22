@@ -40,8 +40,8 @@ test("requires explicit billing evidence for quota classification", () => {
 });
 
 test("parses action metadata and rejects retired Node runtimes", () => {
-  assert.equal(parseActionRuntime("name: legacy\\nruns:\\n  using: node20\\n  main: index.js"), "node20");
-  assert.equal(parseActionRuntime("name: current\\nruns:\\n  using: node24\\n  main: index.js"), "node24");
+  assert.equal(parseActionRuntime("name: legacy\nruns:\n  using: node20\n  main: index.js"), "node20");
+  assert.equal(parseActionRuntime("name: current\nruns:\n  using: node24\n  main: index.js"), "node24");
   assert.equal(evaluateActionRuntime("node20"), "RETIRED");
   assert.equal(evaluateActionRuntime("node16"), "RETIRED");
   assert.equal(evaluateActionRuntime("node24"), "SUPPORTED");
@@ -49,5 +49,5 @@ test("parses action metadata and rejects retired Node runtimes", () => {
 });
 
 test("extracts action references from workflow steps", () => {
-  assert.deepEqual(collectActionReferences("steps:\\n  - uses: actions/checkout@v7\\n  - uses: ./local/action\\n"), ["actions/checkout@v7", "./local/action"]);
+  assert.deepEqual(collectActionReferences("steps:\n  - uses: actions/checkout@v7\n  - uses: ./local/action\n"), ["actions/checkout@v7", "./local/action"]);
 });
