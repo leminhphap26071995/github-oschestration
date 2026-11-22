@@ -29,10 +29,10 @@ jobs:
         env:
           GITHUB_APP_ID: ${{ secrets.GITHUB_APP_ID }}
           GITHUB_APP_PRIVATE_KEY: ${{ secrets.GITHUB_APP_PRIVATE_KEY }}
-          TARGET_REPOSITORY: ${{ fromJSON(file('.ai-workflow/diagnostics/requests/GM-48-annotations.json')).repository }}
         shell: bash
         run: |
           set -euo pipefail
+          TARGET_REPOSITORY="$(jq -r '.repository' .ai-workflow/diagnostics/requests/GM-48-annotations.json)"
           node --input-type=module <<'NODE'
           import { appendFile } from "node:fs/promises";
           import { createAppJwt } from "./quota-monitor/prepare_app_tokens.mjs";
@@ -90,12 +90,12 @@ jobs:
       - name: Verify exact source runs and collect annotations
         env:
           GH_TOKEN: ${{ env.TARGET_GH_TOKEN }}
-          TARGET_REPOSITORY: ${{ fromJSON(file('.ai-workflow/diagnostics/requests/GM-48-annotations.json')).repository }}
         shell: bash
         run: |
           set -euo pipefail
           request=".ai-workflow/diagnostics/requests/GM-48-annotations.json"
           mkdir -p evidence
+          TARGET_REPOSITORY="$(jq -r '.repository' "$request")"
           jq -c '.runs[]' "$request" | while IFS= read -r target; do
             run_id="$(jq -r '.run_id' <<<"$target")"
             attempt="$(jq -r '.run_attempt' <<<"$target")"
