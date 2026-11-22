@@ -10,7 +10,7 @@ on:
       - '.github/workflows/conformance.yml'
 permissions: {}
 concurrency:
-  group: quota-token-read-audit-\${{ github.ref }}
+  group: quota-token-read-audit-${{ github.ref }}
   cancel-in-progress: false
 jobs:
   audit:
@@ -24,11 +24,11 @@ jobs:
       - name: Checkout exact source
         uses: actions/checkout@v7
         with:
-          ref: \${{ github.sha }}
+          ref: ${{ github.sha }}
           persist-credentials: false
       - name: Audit temporary workflow credential
         env:
-          GITHUB_TOKEN: \${{ github.token }}
-          GITHUB_REPOSITORY: \${{ github.repository }}
-          GITHUB_SHA: \${{ github.sha }}
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_SHA: ${{ github.sha }}
         run: node quota-monitor/check_token_permissions.mjs
