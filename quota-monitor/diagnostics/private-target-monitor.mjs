@@ -159,6 +159,7 @@ export async function monitorPrivateTargets({
   fetchImpl = globalThis.fetch,
   now = new Date(),
   lintImpl,
+  sleepImpl,
   actionlintPath = "actionlint",
 } = {}) {
   if (!token) return {
@@ -271,6 +272,7 @@ export async function monitorPrivateTargets({
             token,
             apiUrl,
             fetchImpl,
+            sleepImpl,
             recordedAt: now.toISOString(),
             workflowDiagnostic: definition.diagnostic || "",
             workflowDiagnosticStatus: definition.status,
