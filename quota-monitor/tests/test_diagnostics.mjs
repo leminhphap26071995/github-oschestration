@@ -345,6 +345,67 @@ test("classifies explicit quota evidence in raw annotation details but never ser
   assert.ok(JSON.stringify(result).includes("token=[REDACTED]"));
 });
 
+
+test("missing check_run_url is recorded while job-log retrieval remains independent", async () => {
+  const calls = [];
+  const fetchImpl = async url => {
+    const target = String(url);
+    calls.push(target);
+    if (target.endsWith("/actions/runs/700")) return jsonResponse(runDetails());
+    if (target.includes("/attempts/2/jobs")) {
+      return jsonResponse({ jobs: [job(101, 901, { check_run_url: undefined })] });
+    }
+    if (target.endsWith("/actions/jobs/101/logs")) {
+      return new Response("Process completed with exit code 1", { status: 200 });
+    }
+    throw new Error("Unexpected URL: " + target);
+  };
+  const record = await collectDiagnostics({ event: event(), repository, token, fetchImpl });
+  assert.equal(record.jobs[0].check_run.status, "INVALID_CHECK_RUN_URL");
+  assert.equal(record.jobs[0].logs.status, "RETRIEVED");
+  assert.equal(record.jobs[0].classification, "STEP_FAILURE");
+  assert.ok(!calls.some(url => url.includes("/check-runs/901/annotations")));
+});
+
+test("collector annotation 404/429 and log 403 remain retrieval errors, not source causes", async () => {
+  const fetchImpl = async url => {
+    const target = String(url);
+    if (target.endsWith("/actions/runs/700")) return jsonResponse(runDetails());
+    if (target.includes("/attempts/2/jobs")) {
+      return jsonResponse({ jobs: [
+        job(101, 901, { steps: [] }),
+        job(102, 902, { steps: [] }),
+      ] });
+    }
+    if (target.includes("/check-runs/901/annotations")) return jsonResponse({ message: "not found" }, 404);
+    if (target.includes("/check-runs/902/annotations")) {
+      return jsonResponse({ message: "rate limited" }, 429, { "retry-after": "60" });
+    }
+    if (target.endsWith("/actions/jobs/101/logs") || target.endsWith("/actions/jobs/102/logs")) {
+      return jsonResponse({ message: "denied" }, 403);
+    }
+    throw new Error("Unexpected URL: " + target);
+  };
+  const record = await collectDiagnostics({ event: event(), repository, token, fetchImpl });
+  assert.equal(record.jobs[0].check_run.http_status, 404);
+  assert.equal(record.jobs[1].check_run.http_status, 429);
+  assert.equal(record.jobs[1].check_run.retry_after, "60");
+  for (const item of record.jobs) {
+    assert.equal(item.logs.status, "API_ERROR");
+    assert.equal(item.classification, "EXECUTION_EVIDENCE_MISSING");
+    assert.notEqual(item.classification, "PERMISSION_DENIED");
+    assert.notEqual(item.classification, "QUOTA_EXHAUSTED");
+  }
+});
+
+test("unknown job conclusion remains UNKNOWN when no source evidence exists", () => {
+  assert.equal(classifyJob({
+    job: job(77, 88, { conclusion: null, steps: [] }),
+    annotations: [],
+    logs: { status: "NOT_REQUESTED", text: "" },
+  }).classification, "UNKNOWN");
+});
+
 test("rejects cross-origin pagination links", async () => {
   const api = createGitHubApi({
     token,
