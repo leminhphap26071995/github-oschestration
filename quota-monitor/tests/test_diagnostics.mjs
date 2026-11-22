@@ -297,7 +297,7 @@ test("explicit source-job permission and runner evidence are classified independ
   }).classification, "RUNNER_UNAVAILABLE");
 });
 
-test("validates supported source workflow and failed conclusion", async () => {
+test("validates source workflow identity and accepts successful runs for external observers", async () => {
   const badPath = event();
   badPath.workflow.path = ".github/workflows/other.yml";
   await assert.rejects(
@@ -305,10 +305,14 @@ test("validates supported source workflow and failed conclusion", async () => {
     /EVENT_WORKFLOW_PATH_MISMATCH/,
   );
   const success = event({ conclusion: "success" });
-  await assert.rejects(
-    () => collectDiagnostics({ event: success, repository, token, fetchImpl: async () => { throw new Error("not called"); } }),
-    /SOURCE_RUN_NOT_FAILED/,
-  );
+  const fetchImpl = async url => {
+    const target = String(url);
+    if (target.endsWith("/actions/runs/700")) return jsonResponse(runDetails({ conclusion: "success" }));
+    if (target.includes("/attempts/2/jobs")) return jsonResponse({ jobs: [] });
+    throw new Error("Unexpected URL: " + target);
+  };
+  const record = await collectDiagnostics({ event: success, repository, token, fetchImpl });
+  assert.equal(record.run_classification.classification, "NOT_FAILED");
 });
 
 
