@@ -124,7 +124,9 @@ export function classifyJob({ job = {}, annotations = [], logs = { status: "NOT_
   const evidence = [];
   const classifications = [];
 
-  const workflowParserOutput = /(?:\.github\/workflows\/|workflow:)[^\s:]+:\d+:\d+:/i.test(allText);
+  const workflowParserOutput =
+    annotations.some(annotation => /^\.github\/workflows\/.+\.ya?ml$/i.test(annotation?.path || "")) ||
+    /(?:\.github\/workflows\/|workflow:)[^\s:]+:\d+:\d+:/i.test(allText);
   if (workflowParserOutput && textMatches(WORKFLOW_SYNTAX_PATTERNS, allText)) {
     classifications.push("WORKFLOW_YAML_SYNTAX_ERROR");
     evidence.push(
