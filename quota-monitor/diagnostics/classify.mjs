@@ -150,13 +150,8 @@ export function classifyJob({ job = {}, annotations = [], logs = { status: "NOT_
     );
   }
 
-  if (textMatches(QUOTA_PATTERNS, allText)) {
-    classifications.push("ACTIONS_BILLING_QUOTA_EXHAUSTED");
-    evidence.push(
-      ...evidenceLines("annotation", annotationTextValue, QUOTA_PATTERNS, "ACTIONS_BILLING_QUOTA_EXHAUSTED"),
-      ...evidenceLines("job_log", logText, QUOTA_PATTERNS, "ACTIONS_BILLING_QUOTA_EXHAUSTED"),
-    );
-  }
+  // Billing exhaustion is never inferred from step logs or annotations: workflow code can emit both.
+  // Only a provider-owned workflow-level check-run output or an authoritative billing snapshot may prove it.
   if (textMatches(STATIC_ANALYSIS_PATTERNS, allText)) {
     classifications.push("STATIC_ANALYSIS_WARNING");
     evidence.push(
@@ -308,6 +303,10 @@ export function classifyRun({
     item.output?.text,
     ...(item.annotations || []).map(annotationText),
   ].filter(Boolean).join("\n")).join("\n");
+  const trustedProviderOutput = suiteRuns
+    .filter(item => item.app_slug === "github-actions" && item.name === "GitHub Actions")
+    .map(item => [item.output?.title, item.output?.summary, item.output?.text].filter(Boolean).join("\n"))
+    .join("\n");
   const combined = String(workflowDiagnostic || "") + "\n" + suiteText;
 
   if (textMatches(WORKFLOW_SYNTAX_PATTERNS, workflowDiagnostic)) {
@@ -317,9 +316,9 @@ export function classifyRun({
     classifications.push("WORKFLOW_SCHEMA_OR_EXPRESSION_ERROR");
     evidence.push(...evidenceLines("actionlint", workflowDiagnostic, WORKFLOW_SCHEMA_PATTERNS, "WORKFLOW_SCHEMA_OR_EXPRESSION_ERROR"));
   }
-  if (textMatches(QUOTA_PATTERNS, suiteText)) {
+  if (textMatches(QUOTA_PATTERNS, trustedProviderOutput)) {
     classifications.push("ACTIONS_BILLING_QUOTA_EXHAUSTED");
-    evidence.push(...evidenceLines("check_suite", suiteText, QUOTA_PATTERNS, "ACTIONS_BILLING_QUOTA_EXHAUSTED"));
+    evidence.push(...evidenceLines("provider_check_run", trustedProviderOutput, QUOTA_PATTERNS, "ACTIONS_BILLING_QUOTA_EXHAUSTED"));
   }
   if (textMatches(ADMISSION_PATTERNS, suiteText)) {
     classifications.push("ACTIONS_ADMISSION_BLOCKED");

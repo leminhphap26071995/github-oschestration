@@ -52,6 +52,7 @@ jobs:
           SOURCE_RUN_ID: ${{ github.event.workflow_run.id }}
         run: |
           for attempt in $(seq 1 20); do
+            echo "Waiting for trusted quality gate completion (poll $attempt/20)"
             status="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN_ID" --jq .status)"
             conclusion="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN_ID" --jq .conclusion)"
             if [ "$status" = "completed" ]; then
@@ -63,23 +64,9 @@ jobs:
           done
           echo "Trusted quality gate completion was not observed within five minutes"
           exit 1
-      - name: Check whether the private target token is configured
-        id: private_token
-        env:
-          PRIVATE_MONITOR_TOKEN: ${{ secrets.PRIVATE_MONITOR_TOKEN }}
-        run: |
-          if [ -n "$PRIVATE_MONITOR_TOKEN" ]; then
-            echo "configured=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "configured=false" >> "$GITHUB_OUTPUT"
-          fi
-      - name: Monitor private target token rate-limit usage
-        if: steps.private_token.outputs.configured == 'true'
-        uses: hesreallyhim/github-api-usage-monitor@52198b2c0a112e8647664f4042ae301e718ad7df
-        with:
-          token: ${{ secrets.PRIVATE_MONITOR_TOKEN }}
-          diagnostics: "true"
-          artifact_name: private-api-usage-targets-${{ github.run_id }}
+      # Do not conditionally invoke a JavaScript action with an optional secret.
+      # Its pre hook can execute before GitHub evaluates a step-level if condition.
+      # The collector handles missing credentials and emits a redacted BLOCKED receipt.
       - name: Checkout trusted observer source
         uses: actions/checkout@v7
         with:
