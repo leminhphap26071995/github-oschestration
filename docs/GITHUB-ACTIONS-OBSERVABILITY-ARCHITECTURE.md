@@ -46,9 +46,9 @@ The source workflow's own annotations are collected from its job Check Runs. Whe
 
 ### D. Private repository observer
 
-The same public repository also schedules private-target-monitor.mjs every 15 minutes. Standard GitHub-hosted runners in public repositories are free of included private-repository Actions minutes, so this is an independent compute path for private repositories whose included minutes are exhausted. It is not independent of a GitHub account suspension, GitHub-wide outage, or all possible billing restrictions.
+The same public repository schedules private-target-monitor.mjs every 15 minutes. It also starts a private-target probe from the requested event of Workflow Quality Gate on the trusted main branch, then waits for that exact source run to complete successfully before reading private targets. This provides an automatic probe after workflow configuration changes without exposing private credentials to untrusted branch runs. Standard GitHub-hosted runners in public repositories are free of included private-repository Actions minutes, so this is an independent compute path for private repositories whose included minutes are exhausted. It is not independent of a GitHub account suspension, GitHub-wide outage, or all possible billing restrictions.
 
-The observer jobs also run the pinned hesreallyhim/github-api-usage-monitor action with diagnostics enabled. Workflow-run and annotation-readback jobs measure the observer GITHUB_TOKEN; the scheduled private-target job measures its public observer token and, only when configured, the private read-only token. Each token gets a separately named state/poll-log artifact. This is REST API bucket telemetry only; it is not evidence of included Actions minutes or billing exhaustion.
+The observer jobs also run the pinned hesreallyhim/github-api-usage-monitor action with diagnostics enabled. Workflow-run and annotation-readback jobs measure the observer GITHUB_TOKEN; the scheduled/trusted-quality-gate private-target job measures its public observer token and, only when configured, the private read-only token. Each token gets a separately named state/poll-log artifact. This is REST API bucket telemetry only; it is not evidence of included Actions minutes or billing exhaustion.
 
 The monitor reads its target list and read-only access token only from repository Secrets:
 
