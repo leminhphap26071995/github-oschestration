@@ -8,7 +8,7 @@ The public repository's `.github/workflows/github-api-usage-monitor-smoke.yml` i
 
 - It monitors the authenticated token's REST API rate-limit buckets during one workflow job and writes a per-job Step Summary.
 - Diagnostics are enabled; the action uploads `state.json` and `poll-log.json` as a run-scoped artifact for inspection.
-- It uses only the job's built-in `GITHUB_TOKEN`, with no additional repository permissions, PAT, App private key, or secret.
+- It uses only the job's built-in `GITHUB_TOKEN`, with no additional repository permissions, PAT, App private key, or secret. The smoke workflow makes one controlled authenticated repository-metadata GET after the action's main step so the post hook can demonstrate an observed core-bucket delta.
 - The action supports Linux and macOS runners; this smoke workflow uses Ubuntu.
 - The action's poller queries `GET /rate_limit`; it measures API request-rate-limit usage, not Actions runner minutes, artifact storage billing, or organization spending budgets.
 - The action's polling data is sampled and may include other concurrent jobs sharing the same token's rate-limit pool. It is telemetry, not an exact per-step accounting ledger.
