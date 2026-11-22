@@ -379,5 +379,6 @@ test("no run plus a fresh matching organization hard cap classifies quota; synta
   assert.equal(record.targets[0].billing_evidence_status, "HARD_CAP_REACHED");
   assert.ok(record.targets[0].evidence_types.includes("BILLING_HARD_CAP_SNAPSHOT"));
   assert.equal(record.billing_coverage_status, "OBSERVED");
+  assert.equal(record.coverage_status, "OBSERVED");
   assert.ok(!JSON.stringify(record).includes("billing-collector"));
 });
