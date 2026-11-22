@@ -102,7 +102,7 @@ function inspectReference(reference, root) {
 }
 
 export function collectActionReferences(workflowText) {
-  return [...String(workflowText).matchAll(/^\s*-\s*uses:\s*([^\s#]+)/gm)].map(match => match[1]);
+  return [...String(workflowText).matchAll(/^\s*(?:-\s*)?uses:\s*([^\s#]+)/gm)].map(match => match[1]);
 }
 
 export function main(root = process.cwd()) {
