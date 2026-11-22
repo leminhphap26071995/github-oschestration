@@ -216,7 +216,7 @@ test("retries transient log 404 and redacts secrets from evidence", async () => 
       }
       if (target === "https://logs.example.test/log") {
         assert.equal(options.headers?.Authorization, undefined);
-        return new Response("Actions billing spending limit exceeded. Bearer ghp_abcdefghijklmnopqrstuvwxyz123456", { status: 200 });
+        return new Response("Process completed with exit code 1. Bearer ghp_abcdefghijklmnopqrstuvwxyz123456", { status: 200 });
       }
       throw new Error("Unexpected URL: " + target);
     },
@@ -227,7 +227,8 @@ test("retries transient log 404 and redacts secrets from evidence", async () => 
   assert.equal(logCalls, 3);
   assert.deepEqual(waits, [250, 500]);
   const classified = classifyJob({ job: job(77, 88), annotations: [], logs });
-  assert.equal(classified.classification, "QUOTA_EXHAUSTED");
+  assert.equal(classified.classification, "STEP_FAILURE");
+  assert.ok(!classified.classifications?.includes("ACTIONS_BILLING_QUOTA_EXHAUSTED"));
   assert.ok(!JSON.stringify(classified).includes("ghp_"));
   assert.ok(classified.evidence[0].message.includes("Bearer [REDACTED]"));
 });
@@ -334,7 +335,7 @@ test("does not fetch job evidence when required run identity fields are missing"
   assert.ok(!calls.some(url => url.endsWith("/actions/jobs/101/logs")));
 });
 
-test("classifies explicit quota evidence in raw annotation details but never serializes secrets", () => {
+test("quota-like raw annotation details are not billing proof and secrets are sanitized", () => {
   const result = classifyJob({
     job: job(77, 88, { steps: [] }),
     annotations: [{
@@ -344,9 +345,9 @@ test("classifies explicit quota evidence in raw annotation details but never ser
     }],
     logs: { status: "NOT_REQUESTED", text: "" },
   });
-  assert.equal(result.classification, "QUOTA_EXHAUSTED");
+  assert.equal(result.classification, "EXECUTION_EVIDENCE_MISSING");
   assert.ok(!JSON.stringify(result).includes("private-secret-value"));
-  assert.ok(JSON.stringify(result).includes("token=[REDACTED]"));
+  assert.ok(sanitizeText("token=private-secret-value").includes("token=[REDACTED]"));
 });
 
 

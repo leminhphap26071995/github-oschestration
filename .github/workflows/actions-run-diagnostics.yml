@@ -52,6 +52,7 @@ jobs:
           SOURCE_RUN_ID: ${{ github.event.workflow_run.id }}
         run: |
           for attempt in $(seq 1 20); do
+            echo "Waiting for trusted quality gate completion (poll $attempt/20)"
             status="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN_ID" --jq .status)"
             conclusion="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN_ID" --jq .conclusion)"
             if [ "$status" = "completed" ]; then
