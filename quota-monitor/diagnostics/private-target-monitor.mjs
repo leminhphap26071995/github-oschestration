@@ -480,9 +480,14 @@ export async function monitorPrivateTargets({
     }
   }
 
+  const blockedClasses = new Set([
+    "UNKNOWN", "RUNNER_NOT_ASSIGNED_YET", "RUNNER_ASSIGNED",
+    "EXECUTION_IN_PROGRESS", "OBSERVATION_WINDOW_IN_PROGRESS",
+    "LOG_PUBLICATION_PENDING", "EXECUTION_EVIDENCE_MISSING",
+  ]);
   const blocked = results.some(item =>
     item.status === "TARGET_API_ERROR" || item.status === "DIAGNOSTICS_API_ERROR" ||
-    item.classification === "UNKNOWN" || item.status === "NO_RUN_OBSERVED"
+    blockedClasses.has(item.classification)
   );
   const billingCoverageStatus = !billingSnapshotConfig ? "NOT_CONFIGURED" :
     billingSnapshotState.status !== "RETRIEVED" ? billingSnapshotState.status :
