@@ -1,0 +1,210 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { classifyJob, classifyRun } from "../diagnostics/classify.mjs";
+import { collectDiagnostics } from "../diagnostics/collect.mjs";
+
+const repository = "owner/repository";
+const token = "test-token-that-must-not-be-serialized";
+const sha = "a".repeat(40);
+const root = "https://api.github.com";
+
+function jsonResponse(value, status = 200) {
+  return new Response(JSON.stringify(value), {
+    status,
+    headers: { "content-type": "application/json" },
+  });
+}
+
+function event(overrides = {}) {
+  const source = {
+    id: 700,
+    run_attempt: 2,
+    workflow_id: 50,
+    check_suite_id: 88,
+    path: ".github/workflows/failing.yml",
+    head_sha: sha,
+    head_branch: "feature/diagnostics",
+    event: "push",
+    conclusion: "failure",
+    status: "completed",
+    html_url: "https://github.com/owner/repository/actions/runs/700",
+    ...overrides,
+  };
+  return {
+    action: "completed",
+    repository: { full_name: repository },
+    workflow: {
+      id: 50,
+      name: "Failing workflow",
+      path: ".github/workflows/failing.yml",
+    },
+    workflow_run: source,
+  };
+}
+
+function runDetails(overrides = {}) {
+  return {
+    id: 700,
+    run_attempt: 2,
+    workflow_id: 50,
+    check_suite_id: 88,
+    path: ".github/workflows/failing.yml",
+    head_sha: sha,
+    head_branch: "feature/diagnostics",
+    event: "push",
+    conclusion: "failure",
+    status: "completed",
+    repository: { full_name: repository },
+    ...overrides,
+  };
+}
+
+test("a real actionlint parser diagnostic classifies a zero-job run as workflow syntax failure", async () => {
+  const calls = [];
+  const fetchImpl = async url => {
+    const target = String(url);
+    calls.push(target);
+    if (target.endsWith("/actions/runs/700")) return jsonResponse(runDetails());
+    if (target.endsWith("/attempts/2/jobs?per_page=100")) return jsonResponse({ jobs: [] });
+    if (target.endsWith("/check-suites/88/check-runs?per_page=100")) return jsonResponse({ check_runs: [] });
+    throw new Error("Unexpected URL: " + target);
+  };
+  const record = await collectDiagnostics({
+    event: event(),
+    repository,
+    token,
+    fetchImpl,
+    workflowDiagnostic: ".github/workflows/failing.yml:3:0: could not parse as YAML: yaml: line 3: did not find expected ',' or ']' [syntax-check]",
+    workflowDiagnosticStatus: "RETRIEVED",
+  });
+  assert.equal(record.source.job_count, 0);
+  assert.equal(record.run_classification.classification, "WORKFLOW_YAML_SYNTAX_ERROR");
+  assert.ok(calls.some(url => url.includes("/check-suites/88/check-runs")));
+  assert.ok(!JSON.stringify(record).includes(token));
+});
+
+test("an explicit provider billing message in a workflow-level check run classifies quota exhaustion", async () => {
+  const fetchImpl = async url => {
+    const target = String(url);
+    if (target.endsWith("/actions/runs/700")) return jsonResponse(runDetails());
+    if (target.endsWith("/attempts/2/jobs?per_page=100")) return jsonResponse({ jobs: [] });
+    if (target.endsWith("/check-suites/88/check-runs?per_page=100")) {
+      return jsonResponse({
+        check_runs: [{
+          id: 901,
+          name: "GitHub Actions",
+          status: "completed",
+          conclusion: "failure",
+          output: {
+            title: "Workflow run was not started",
+            summary: "The job was not started because your account is currently over its spending limit or has exceeded its included usage for GitHub Actions.",
+            text: "",
+          },
+        }],
+      });
+    }
+    if (target.endsWith("/check-runs/901/annotations?per_page=100")) return jsonResponse([]);
+    throw new Error("Unexpected URL: " + target);
+  };
+  const record = await collectDiagnostics({ event: event(), repository, token, fetchImpl });
+  assert.equal(record.source.job_count, 0);
+  assert.equal(record.run_classification.classification, "ACTIONS_BILLING_QUOTA_EXHAUSTED");
+  assert.equal(record.check_suite.check_runs[0].id.value, 901);
+});
+
+test("zero jobs, runner_id absence and unavailable logs never imply quota", async () => {
+  const fetchImpl = async url => {
+    const target = String(url);
+    if (target.endsWith("/actions/runs/700")) return jsonResponse(runDetails());
+    if (target.endsWith("/attempts/2/jobs?per_page=100")) return jsonResponse({ jobs: [] });
+    if (target.endsWith("/check-suites/88/check-runs?per_page=100")) return jsonResponse({ check_runs: [] });
+    throw new Error("Unexpected URL: " + target);
+  };
+  const record = await collectDiagnostics({ event: event(), repository, token, fetchImpl });
+  assert.equal(record.run_classification.classification, "UNKNOWN");
+  assert.equal(record.run_classification.evidence_gap, true);
+  assert.notEqual(record.run_classification.classification, "ACTIONS_BILLING_QUOTA_EXHAUSTED");
+});
+
+test("a jobs API failure is not normalized into a zero-job source run", async () => {
+  const fetchImpl = async url => {
+    const target = String(url);
+    if (target.endsWith("/actions/runs/700")) return jsonResponse(runDetails());
+    if (target.endsWith("/attempts/2/jobs?per_page=100")) return jsonResponse({ message: "Resource not accessible by integration" }, 403);
+    if (target.endsWith("/check-suites/88/check-runs?per_page=100")) return jsonResponse({ check_runs: [] });
+    throw new Error("Unexpected URL: " + target);
+  };
+  const record = await collectDiagnostics({ event: event(), repository, token, fetchImpl });
+  assert.equal(record.source.jobs_status, "API_ERROR");
+  assert.equal(record.source.job_count, null);
+  assert.equal(record.run_classification.classification, "UNKNOWN");
+  assert.ok(record.source.jobs_error.http_status === 403);
+});
+
+test("generic 403, 429, runner_id zero and empty steps are not quota or source permission proof", () => {
+  const result = classifyJob({
+    job: { id: 12, status: "completed", conclusion: "failure", runner_id: 0, steps: [] },
+    annotations: [],
+    logs: { status: "API_ERROR", http_status: 403, text: "" },
+  });
+  assert.equal(result.primary_classification, "UNKNOWN");
+  assert.notEqual(result.classifications[0], "ACTIONS_BILLING_QUOTA_EXHAUSTED");
+  assert.notEqual(result.classifications[0], "PERMISSION_OR_POLICY_DENIED");
+});
+
+test("independent causes are preserved rather than hidden by priority ordering", () => {
+  const result = classifyJob({
+    job: {
+      id: 12,
+      status: "completed",
+      conclusion: "failure",
+      steps: [{ name: "Run tests", conclusion: "failure" }],
+    },
+    annotations: [{
+      title: "Billing gate",
+      message: "Actions billing spending limit exceeded.",
+    }],
+    logs: { status: "RETRIEVED", text: "AssertionError: expected 1 to equal 2\nProcess completed with exit code 1" },
+  });
+  assert.ok(result.classifications.includes("ACTIONS_BILLING_QUOTA_EXHAUSTED"));
+  assert.ok(result.classifications.includes("STEP_IMPLEMENTATION_FAILURE"));
+});
+
+test("a queued job without a runner is lifecycle state, not quota exhaustion", () => {
+  const result = classifyJob({
+    job: { id: 12, status: "queued", conclusion: null, runner_id: null, steps: [] },
+    annotations: [],
+    logs: { status: "NOT_REQUESTED", text: "" },
+  });
+  assert.equal(result.primary_classification, "RUNNER_NOT_ASSIGNED_YET");
+  assert.notEqual(result.primary_classification, "ACTIONS_BILLING_QUOTA_EXHAUSTED");
+});
+
+test("workflow-level quota classification requires an explicit Actions billing message", () => {
+  const positive = classifyRun({
+    source: { status: "completed", conclusion: "failure" },
+    jobs: [],
+    jobsStatus: "RETRIEVED",
+    checkSuite: {
+      status: "RETRIEVED",
+      check_runs: [{
+        output: { summary: "GitHub Actions included minutes exhausted; further usage is blocked." },
+        annotations: [],
+      }],
+    },
+  });
+  const negative = classifyRun({
+    source: { status: "completed", conclusion: "failure" },
+    jobs: [],
+    jobsStatus: "RETRIEVED",
+    checkSuite: {
+      status: "RETRIEVED",
+      check_runs: [{
+        output: { summary: "Workflow failed. BlobNotFound. HTTP 403." },
+        annotations: [],
+      }],
+    },
+  });
+  assert.equal(positive.classification, "ACTIONS_BILLING_QUOTA_EXHAUSTED");
+  assert.equal(negative.classification, "UNKNOWN");
+});
