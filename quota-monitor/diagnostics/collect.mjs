@@ -121,7 +121,7 @@ function errorRecord(error) {
 async function collectAnnotations({ api, repository, checkRunId }) {
   const url = "/repos/" + repository + "/check-runs/" + checkRunId + "/annotations?per_page=100";
   const page = await api.paginate(url, null);
-  return { status: "RETRIEVED", annotation_count: page.items.length, page_count: page.pageCount, annotations: page.items.map(summarizeAnnotation), raw: page.items };
+  return { status: "RETRIEVED", annotation_count: page.items.length, page_count: page.pageCount, annotations: page.items.map(item => summarizeAnnotation(item)), raw: page.items };
 }
 
 async function collectCheckSuite({ api, source }) {
