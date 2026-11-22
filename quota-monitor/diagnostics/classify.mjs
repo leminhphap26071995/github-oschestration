@@ -17,6 +17,8 @@ const ADMISSION_PATTERNS = [
   /actions (?:are|is) disabled by (?:the )?(?:repository|organization|enterprise) policy/i,
   /workflow execution is disabled for this repository/i,
   /this repository is not permitted to use github actions/i,
+  /workflow state:\s*disabled_(?:inactivity|manually)/i,
+  /\bdisabled_(?:inactivity|manually)\b/i,
 ];
 const ACTION_RUNTIME_PATTERNS = [
   /node\.js\s+(?:16|20)\s+(?:actions|runtime).{0,100}(?:deprecated|retired|no longer supported)/i,
