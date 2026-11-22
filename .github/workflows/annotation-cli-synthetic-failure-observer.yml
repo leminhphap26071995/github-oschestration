@@ -40,7 +40,7 @@ jobs:
           REPOSITORY: ${{ github.repository }}
           RUN_ID: ${{ github.event.workflow_run.id }}
           RUN_ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
-          EXPECTED_MARKER: "SYNTHETIC_ANNOTATION_MESSAGE: annotation CLI retrieval proof"
+          EXPECTED_MARKER: "SYNTHETIC_ANNOTATION_MESSAGE: annotation CLI retrieval proof v2"
         shell: bash
         run: |
           set -euo pipefail

@@ -17,5 +17,5 @@ jobs:
       - name: Emit deterministic synthetic error annotation
         shell: bash
         run: |
-          echo "::error file=annotation-cli-self-test.txt,line=7,title=ANNOTATION_CLI_SELF_TEST::SYNTHETIC_ANNOTATION_MESSAGE: annotation CLI retrieval proof"
+          echo "::error file=annotation-cli-self-test.txt,line=7,title=ANNOTATION_CLI_SELF_TEST::SYNTHETIC_ANNOTATION_MESSAGE: annotation CLI retrieval proof v2"
           exit 1
