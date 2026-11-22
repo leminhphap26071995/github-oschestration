@@ -52,7 +52,7 @@ jobs:
           set -euo pipefail
           repo="$GITHUB_REPOSITORY"
           inventory_ok=false
-          for attempt in $(seq 1 12); do
+          for _attempt in $(seq 1 12); do
             gh api --paginate --slurp "repos/$repo/actions/runs?per_page=100" > "$RUNNER_TEMP/post-upload-runs.json"
             if jq -e --argjson current "$GITHUB_RUN_ID" --arg cleanup ".github/workflows/workflow-cleanup.yml" --arg update ".github/workflows/update-upw-plugin.yml" \
               'any(.[].workflow_runs[]; .id == $current and .path == $cleanup) and all(.[].workflow_runs[]; .id == $current or .path == $update)' \
@@ -65,7 +65,7 @@ jobs:
           test "$inventory_ok" = true
           artifact_name="workflow-cleanup-report-$GITHUB_RUN_ID"
           artifact_ok=false
-          for attempt in $(seq 1 6); do
+          for _attempt in $(seq 1 6); do
             gh api "repos/$repo/actions/runs/$GITHUB_RUN_ID/artifacts?per_page=100" > "$RUNNER_TEMP/report-artifacts.json"
             if jq -e --arg name "$artifact_name" \
               'any(.artifacts[]; .name == $name and .expired == false and (.size_in_bytes // 0) > 0)' \
