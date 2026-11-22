@@ -324,3 +324,24 @@ test("a queued run that never receives a runner remains an observation gap, not 
   assert.equal(record.run_classification.classification, "OBSERVATION_WINDOW_IN_PROGRESS");
   assert.notEqual(record.run_classification.classification, "ACTIONS_BILLING_QUOTA_EXHAUSTED");
 });
+
+
+test("a source quality-gate parser annotation is classified as workflow syntax, not a generic step failure", () => {
+  const result = classifyJob({
+    job: {
+      id: 33,
+      status: "completed",
+      conclusion: "failure",
+      steps: [{ name: "Workflow quality gate", conclusion: "failure" }],
+    },
+    annotations: [{
+      path: ".github/workflows/zz-real-invalid-workflow.yml",
+      start_line: 4,
+      title: "actionlint",
+      message: "could not parse as YAML: yaml: line 4: did not find expected ',' or ']'",
+    }],
+    logs: { status: "RETRIEVED", text: "Process completed with exit code 1" },
+  });
+  assert.equal(result.primary_classification, "WORKFLOW_YAML_SYNTAX_ERROR");
+  assert.ok(result.classifications.includes("STEP_FAILURE"));
+});
