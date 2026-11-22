@@ -133,7 +133,7 @@ jobs:
           ref: ${{ github.sha }}
           persist-credentials: false
       - name: Download sanitized diagnostic receipt
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         continue-on-error: true
         with:
           name: actions-diagnostics-raw-${{ github.run_id }}
