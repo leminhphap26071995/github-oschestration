@@ -11,7 +11,7 @@ There is no honest universal 100% root-cause guarantee: GitHub may omit a cause,
 - Authoritative evidence produces a specific classification with its provenance.
 - Missing, stale, contradictory, or inaccessible evidence produces UNKNOWN / EVIDENCE_GAP.
 - No inference from runner_id=0, empty jobs/steps, HTTP 403/404/429, BlobNotFound, a missing run, or aggregate usage totals to quota exhaustion.
-- API rate limits, Actions compute minutes/spending caps, artifact storage, and billing API permissions are separate domains.
+- API rate limits, Actions compute minutes/spending caps, artifact storage, and billing API permissions are separate domains. The API usage monitor measures only REST API bucket consumption.
 - Synthetic echo-generated annotations are not accepted as provider or implementation evidence.
 
 ## 2. Integrated lifecycle
@@ -47,6 +47,8 @@ The source workflow's own annotations are collected from its job Check Runs. Whe
 ### D. Private repository observer
 
 The same public repository also schedules private-target-monitor.mjs every 15 minutes. Standard GitHub-hosted runners in public repositories are free of included private-repository Actions minutes, so this is an independent compute path for private repositories whose included minutes are exhausted. It is not independent of a GitHub account suspension, GitHub-wide outage, or all possible billing restrictions.
+
+The observer jobs also run the pinned hesreallyhim/github-api-usage-monitor action with diagnostics enabled. Workflow-run and annotation-readback jobs measure the observer GITHUB_TOKEN; the scheduled private-target job measures its public observer token and, only when configured, the private read-only token. Each token gets a separately named state/poll-log artifact. This is REST API bucket telemetry only; it is not evidence of included Actions minutes or billing exhaustion.
 
 The monitor reads its target list and read-only access token only from repository Secrets:
 
