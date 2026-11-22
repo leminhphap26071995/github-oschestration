@@ -293,7 +293,7 @@ test("fresh organization Actions hard-cap evidence is authoritative for a matchi
   assert.equal(result.evidence_type, "BILLING_HARD_CAP_SNAPSHOT");
 });
 
-test("personal included Actions minutes remain UNKNOWN because the usage summary API does not expose remaining allowance", () => {
+test("personal Actions included compute balance remains UNKNOWN because the user billing endpoint does not expose it", () => {
   const result = evaluateBillingEvidence({
     snapshotState: {
       status: "RETRIEVED",
