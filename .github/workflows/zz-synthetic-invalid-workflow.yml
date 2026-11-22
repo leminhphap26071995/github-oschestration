@@ -1,0 +1,10 @@
+name: Synthetic Invalid Workflow - Real YAML Parse Failure
+on:
+  push:
+    branches: [main
+jobs:
+  never-started:
+    runs-on: ubuntu-latest
+    steps:
+      - name: This step must never execute
+        run: echo "This line is unreachable because the workflow YAML is invalid"
