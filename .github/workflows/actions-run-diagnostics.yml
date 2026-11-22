@@ -73,6 +73,7 @@ jobs:
         env:
           PRIVATE_MONITOR_TOKEN: ${{ secrets.PRIVATE_MONITOR_TOKEN }}
           PRIVATE_TARGETS_JSON: ${{ secrets.PRIVATE_TARGETS_JSON }}
+          GH_TOKEN: ${{ secrets.PRIVATE_MONITOR_TOKEN }}
         run: node quota-monitor/diagnostics/private-target-monitor.mjs
       - name: Upload redacted private target evidence
         if: always()
