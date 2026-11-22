@@ -4,7 +4,7 @@ This directory contains the read-only collector and report enrichment used by th
 
 ## Separate signal: per-workflow GitHub REST API rate-limit telemetry
 
-The public repository's `.github/workflows/github-api-usage-monitor-smoke.yml` is a narrow, automatic-only integration of [hesreallyhim/github-api-usage-monitor](https://github.com/hesreallyhim/github-api-usage-monitor) v2.1.0, pinned to release commit `52198b2c0a112e8647664f4042ae301e718ad7df`.
+The public repository's `.github/workflows/github-api-usage-monitor-smoke.yml` is the focused smoke integration of [hesreallyhim/github-api-usage-monitor](https://github.com/hesreallyhim/github-api-usage-monitor) v2.1.0, pinned to release commit `52198b2c0a112e8647664f4042ae301e718ad7df`. The same pinned action is also integrated into the real `actions-run-diagnostics.yml` workflow-run, annotation-readback, and scheduled private-target jobs.
 
 - It monitors the authenticated token's REST API rate-limit buckets during one workflow job and writes a per-job Step Summary.
 - Diagnostics are enabled; the action uploads `state.json` and `poll-log.json` as a run-scoped artifact for inspection.
@@ -35,15 +35,55 @@ Important distinction: GitHub's `X-Accepted-GitHub-Permissions` response header 
 
 This first-stage audit does not inspect billing usage or decide whether Actions quota is exhausted. Those are separate later steps.
 
-## Second-stage failure diagnostics observer
+## Unified GitHub Actions lifecycle and quota observer
 
-`.github/workflows/actions-run-diagnostics.yml` observes only failed completions from the two first-stage workflows above. It uses a separate `workflow_run` execution on the trusted default branch, validates the source run against the event payload, and fetches jobs for the exact `run_id` and `run_attempt`. It does not checkout or execute the triggering branch or its artifacts.
+`.github/workflows/actions-run-diagnostics.yml` is the single automatic observer workflow. It has two entry paths:
 
-For each job, the observer resolves the Check Run from the job's `check_run_url`, validates the repository and Check Run ID, retrieves all annotation pages, and downloads logs only for non-success/non-skipped jobs. Logs are read in memory and are never printed, persisted, or uploaded. The collector emits a sanitized JSON record and a concise GitHub Step Summary.
+1. `workflow_run` on requested and completed events for an explicit allowlist of repository workflows.
+2. A 15-minute schedule that polls explicitly configured private targets from a public-repository runner.
 
-The observer uses only `actions: read`, `checks: read`, and `contents: read`; it performs GET requests only. It has no manual trigger, billing API call, permission mutation, cleanup, cancellation, deletion, or artifact upload. A collector-side 403/404/429 is recorded as an evidence-retrieval problem, never treated as proof that the source job was denied or that Actions quota is exhausted. Quota classification requires explicit billing/minutes/spending-cap/payment wording in source annotations or source job logs.
+For workflow-run events, the observer runs on the trusted default branch, validates the source run against the event payload, and fetches the exact source workflow blob at the source SHA as data. It never checks out or executes the triggering branch. On a requested event it polls up to four times at 15-second intervals until a runner/step appears or the source run completes; the completed event then captures terminal evidence.
 
-The observer is diagnostic evidence, not a billing collector and not proof that a failed source workflow has been repaired.
+The collector retrieves:
+- Exact run and attempt metadata.
+- Attempt-scoped jobs and their raw runner_id/runner_name field states.
+- Job Check Run IDs and all annotation pages.
+- Workflow Check Suite IDs, Check Runs, outputs, and annotations, including the zero-job case.
+- Job logs with bounded retries and Retry-After handling.
+- Exact source workflow actionlint diagnostics and source-file SHA-256.
+
+The separate readback job waits for collection, then retrieves the actual Check Run annotations from the observer's diagnose job. The final artifact contains both the sanitized source diagnostic receipt and the observer annotation readback. Raw job logs are read in memory only; they are not printed or persisted.
+
+The scheduled private-target job reads PRIVATE_MONITOR_TOKEN and PRIVATE_TARGETS_JSON only from repository Secrets. The private token is referenced only inside this schedule job, never in the workflow_run observer. The token needs Actions: read, Checks: read, Contents: read, and Metadata: read for every configured target. The target list must use opaque aliases and explicitly define expected workflow paths and trigger expectations:
+- every_push only when the workflow truly runs on every push to the configured branch.
+- schedule with an explicit expected interval for scheduled workflows.
+
+Path-filtered or conditional triggers are not inferred. When an expected run is absent after the grace window, the monitor fetches the exact workflow file at the branch SHA and runs actionlint. A parser diagnostic can prove malformed YAML; otherwise the result is NO_RUN_OBSERVED with UNKNOWN cause. A missing run is never converted into quota exhaustion.
+
+The private-target report deliberately redacts repository names, workflow paths, branch names, SHAs, run IDs, raw logs, and provider messages before uploading to this public repository. It emits only opaque target/workflow aliases, lifecycle status, classification, and evidence types. Missing credentials produce BLOCKED, not a healthy zero.
+
+The pinned API usage monitor action runs at the beginning of observer jobs:
+- GITHUB_TOKEN telemetry for workflow-run collection, annotation readback, and the public scheduled observer.
+- PRIVATE_MONITOR_TOKEN telemetry only when that secret is configured in the scheduled private-target job.
+
+These state/poll-log artifacts measure REST API rate-limit buckets. They do not measure included Actions minutes, runner billing, artifact-storage quota, or organization spending caps.
+
+### Evidence classification rules
+
+- ACTIONS_BILLING_QUOTA_EXHAUSTED requires an explicit provider billing/spending/included-usage message in a Check Suite, annotation, or trusted log, or a separately verified hard-cap state.
+- ACTIONS_ADMISSION_BLOCKED requires explicit repository/organization policy evidence.
+- ACTION_RUNTIME_RETIRED_OR_UNSUPPORTED identifies deprecated/unsupported action runtimes and runner compatibility.
+- WORKFLOW_YAML_SYNTAX_ERROR and WORKFLOW_SCHEMA_OR_EXPRESSION_ERROR require parser/provider evidence tied to the exact workflow source or a real parser Check Run annotation.
+- STEP_IMPLEMENTATION_FAILURE and STEP_FAILURE require an executed failing step and its evidence.
+- STATIC_ANALYSIS_WARNING preserves ShellCheck/actionlint/linter findings separately.
+- API_RATE_LIMITED is separate from Actions compute/billing quota.
+- RUNNER_NOT_ASSIGNED_YET, OBSERVATION_WINDOW_IN_PROGRESS, LOG_PUBLICATION_PENDING, and UNKNOWN are lifecycle/evidence states, not quota proof.
+
+A generic 403/404/429, runner_id=0, empty jobs/steps, BlobNotFound, missing run, or aggregate usage total never proves Actions quota exhaustion. Collector API failures remain separate from source workflow failures.
+
+The public repository's standard GitHub-hosted runners do not consume included private-repository Actions minutes. This provides an independent compute path for configured private targets, but it is not independent of account suspension or GitHub-wide service outages.
+
+See [GITHUB-ACTIONS-OBSERVABILITY-ARCHITECTURE.md](../docs/GITHUB-ACTIONS-OBSERVABILITY-ARCHITECTURE.md) for the complete evidence and security contract.
 
 ## Official source of truth
 
