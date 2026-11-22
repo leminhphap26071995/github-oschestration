@@ -50,6 +50,7 @@ jobs:
           const [owner, repo] = target.split("/");
           const selectedRun = request.runs.find(item => item.latest_for_workflow === true);
           if (!selectedRun) throw new Error("LATEST_TARGET_RUN_MISSING");
+          if (!/^[a-f0-9]{40}$/.test(request.test_source_sha || "")) throw new Error("INVALID_TARGET_TEST_SOURCE_SHA");
 
           async function canRead(token) {
             const headers = {
@@ -218,13 +219,9 @@ jobs:
           set -euo pipefail
           python -B scripts/validate_workspace.py --root . | tee ../evidence/target-structure-validation.json
           python -B -m unittest discover -s tests -v 2>&1 | tee ../evidence/target-unittest.log
-          test_count="$(sed -nE 's/^Ran ([0-9]+) tests?.*/\\1/p' ../evidence/target-unittest.log | tail -n 1)"
+          test_count="$(awk '/^Ran [0-9]+ tests?/{print $2}' ../evidence/target-unittest.log | tail -n 1)"
           test -n "$test_count"
-          jq -n --arg repository "leminhphap-improvement/ai-workflow-archtiecture" \\
-            --arg source_sha "${{ steps.credentials.outputs.target_source_sha }}" \\
-            --argjson tests_run "$test_count" \\
-            '{repository:$repository, source_sha:$source_sha, tests_run:$tests_run, result:"PASS"}' \\
-            > ../evidence/target-test-receipt.json
+          jq -n --arg repository "leminhphap-improvement/ai-workflow-archtiecture" --arg source_sha "${{ steps.credentials.outputs.target_source_sha }}" --argjson tests_run "$test_count" '{repository:$repository, source_sha:$source_sha, tests_run:$tests_run, result:"PASS"}' > ../evidence/target-test-receipt.json
 
       - name: Upload annotation and conformance evidence
         uses: actions/upload-artifact@v4
