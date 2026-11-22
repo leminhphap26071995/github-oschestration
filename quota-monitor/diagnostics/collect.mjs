@@ -18,7 +18,7 @@ function validateEvent(event, repository) {
   assert(typeof event.workflow.name === "string" && event.workflow.name.length > 0, "MISSING_WORKFLOW_NAME");
   assert(typeof event.workflow.path === "string" && /^\.github\/workflows\/[A-Za-z0-9._/-]+\.ya?ml$/i.test(event.workflow.path), "INVALID_WORKFLOW_PATH");
   assert(!event.workflow.path.includes(".."), "INVALID_WORKFLOW_PATH");
-  assert(source.path === event.workflow.path, "EVENT_RUN_PATH_MISMATCH");
+  assert(source.path === event.workflow.path, "EVENT_WORKFLOW_PATH_MISMATCH");
 
   const runId = source.id;
   const attempt = source.run_attempt;
