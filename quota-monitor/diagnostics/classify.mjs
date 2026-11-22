@@ -9,6 +9,9 @@ export function sanitizeText(value) {
     .replace(/Bearer\s+[A-Za-z0-9_./+=-]{12,}/g, "Bearer [REDACTED]")
     .replace(/\b(?:gh[pousr]_[A-Za-z0-9_]{20,}|github_pat_[A-Za-z0-9_]{20,})\b/g, "[REDACTED_TOKEN]")
     .replace(/\b(token|secret|password|api[_-]?key|private[_-]?key)\s*[:=]\s*[^,\s;]+/gi, "$1=[REDACTED]")
+    // Escape untrusted source-log workflow commands before emitting evidence to the Actions runner.
+    .replace(/##\[(error|warning|notice|group|endgroup|debug|command|add-mask|set-output|save-state)\]/gi, "[GH_ACTION_COMMAND_ESCAPED:$1]")
+    .replace(/::(error|warning|notice|group|endgroup|debug|add-mask|set-output|save-state)::/gi, "[GH_ACTION_COMMAND_ESCAPED]")
     .replace(/(https:\/\/[^\s?]+)\?[^\s]*/g, "$1?[REDACTED_QUERY]")
     .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, " ")
     .replace(/\s+/g, " ")
