@@ -28,9 +28,6 @@ function validateEvent(event, repository) {
   assert(Number.isSafeInteger(workflowId) && workflowId > 0, "INVALID_WORKFLOW_ID");
   assert(typeof source.head_sha === "string" && /^[a-f0-9]{40}$/i.test(source.head_sha), "INVALID_HEAD_SHA");
   assert(typeof source.head_branch === "string" && source.head_branch.length > 0, "MISSING_HEAD_BRANCH");
-  if (event.action === "completed") {
-    assert(source.conclusion && source.conclusion !== "success", "SOURCE_RUN_NOT_FAILED");
-  }
 
   const checkSuiteId = fieldState(source, "check_suite_id");
   if (checkSuiteId.state === "PRESENT") {
