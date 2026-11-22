@@ -1,5 +1,6 @@
 import unittest
 
+from scripts.context_switching import DOMAIN_CONTEXTS, route_message_with_repository_control
 from scripts.repository_control_plane import (
     project_introduction_route, project_state_projection,
     ready_parallel_work_packages, resolve_task_repositories,
@@ -79,6 +80,7 @@ class RepositoryControlPlaneTests(unittest.TestCase):
             "deliverables": ["plugin update"], "dependencies": [],
             "acceptance_evidence": [], "status": "IN_PROGRESS",
             "first_unmet_criterion": "update skill", "next_action": "implement",
+            "source_sha": "abc123", "last_result": "source inspection complete",
             "role_artifacts": ["SKILL.md", "mindset.md", "knowledge.md", "workflow.md"],
         }
         result = resume_role_work_package(package)
@@ -92,6 +94,7 @@ class RepositoryControlPlaneTests(unittest.TestCase):
             "deliverables": ["plugin update"], "dependencies": [],
             "acceptance_evidence": [], "status": "DONE",
             "first_unmet_criterion": None, "next_action": None,
+            "source_sha": "abc123", "last_result": "complete",
             "role_artifacts": ["SKILL.md", "mindset.md", "knowledge.md", "workflow.md"],
             "implementation_ref": "commit:abc",
             "verification_evidence": "tests", "consumer_evidence": "host",
@@ -99,6 +102,7 @@ class RepositoryControlPlaneTests(unittest.TestCase):
         self.assertEqual("DONE_WITHOUT_EVIDENCE", resume_role_work_package(package)["state"])
         package["adversarial_review"] = "review"
         package["readback_verified"] = True
+        package["acceptance_evidence"] = ["R4"]
         self.assertEqual("ALREADY_DONE", resume_role_work_package(package)["state"])
 
     def test_parallel_packages_require_dependencies_and_disjoint_write_paths(self):
@@ -112,7 +116,8 @@ class RepositoryControlPlaneTests(unittest.TestCase):
         self.assertEqual([["A", "B"], ["C", "D"]], batches)
 
     def test_work_package_done_requires_implementation_and_consumer_evidence(self):
-        package = {"implementation_ref": "commit:abc", "verification_evidence": "tests",
+        package = {"source_sha": "abc123", "acceptance_evidence": ["R1"],
+                   "implementation_ref": "commit:abc", "verification_evidence": "tests",
                    "consumer_evidence": None, "adversarial_review": "review",
                    "readback_verified": True}
         self.assertEqual("NOT_DONE", work_package_completion_gate(package)["state"])
@@ -127,6 +132,58 @@ class RepositoryControlPlaneTests(unittest.TestCase):
         })
         self.assertEqual(6, len(result))
         self.assertEqual("In Progress", result["ticket_status"])
+
+
+    def test_blocked_role_package_keeps_same_role_and_reports_blocked_state(self):
+        package = {
+            "work_package_id": "WP-01", "requirement_ids": ["R4"],
+            "role_id": "ai-native-tooling-engineer", "role_bundle_version": "1",
+            "deliverables": ["plugin update"], "dependencies": [],
+            "acceptance_evidence": [], "status": "BLOCKED",
+            "first_unmet_criterion": "host invocation", "next_action": "recover host evidence",
+            "source_sha": "abc123", "last_result": "plugin release readback complete",
+            "role_artifacts": ["SKILL.md", "mindset.md", "knowledge.md", "workflow.md"],
+        }
+        result = resume_role_work_package(package)
+        self.assertEqual("BLOCKED_SAME_ROLE", result["state"])
+        self.assertEqual("ai-native-tooling-engineer", result["role_id"])
+
+    def test_integrated_router_uses_notion_repo_map_and_ignores_intro_repo_hints(self):
+        package = {
+            "work_package_id": "WP-01", "requirement_ids": ["R1", "R2"],
+            "role_id": "ai-native-tooling-engineer", "role_bundle_version": "1",
+            "deliverables": ["control plane"], "dependencies": [],
+            "acceptance_evidence": ["R1"], "status": "IN_PROGRESS",
+            "first_unmet_criterion": "consumer acceptance", "next_action": "verify host",
+            "source_sha": "abc123", "last_result": "module merged",
+            "role_artifacts": ["SKILL.md", "mindset.md", "knowledge.md", "workflow.md"],
+        }
+        checkpoints = {
+            "p1": {
+                "project": {"project_id": "p1", "domain": "software-engineering"},
+                "tickets": {"t1": {"ticket_id": "t1", "project_id": "p1",
+                                   "domain": "software-engineering", "source_lock": "main"}},
+            }
+        }
+        result = route_message_with_repository_control(
+            {"intent_type": "PROJECT_TASK"},
+            project_introduction={"project_id": "p1", "goal_id": "g1",
+                                  "repository": "attacker/unapproved"},
+            repository_catalog=self.repos,
+            requirements=self.requirements,
+            notion_repository_route=self.route,
+            role_work_packages=[package],
+            project_checkpoints=checkpoints,
+            registry=DOMAIN_CONTEXTS,
+            state={"session_state": "ACTIVE"},
+        )
+        self.assertEqual("LOAD_TASK_EXECUTION_CONTEXT", result["action"])
+        self.assertTrue(result["project_introduction_route"]["ignore_project_intro_repository_hints"])
+        self.assertEqual("user/public-runner",
+                         result["repository_resolution"]["active_execution_repository"]["full_name"])
+        self.assertEqual("CONTINUE_SAME_ROLE", result["role_package_states"][0]["state"])
+        self.assertEqual("ai-native-tooling-engineer", result["active_role_id"])
+        self.assertEqual("ACTIVE", result["state_projection"]["session_state"])
 
 
 if __name__ == "__main__":

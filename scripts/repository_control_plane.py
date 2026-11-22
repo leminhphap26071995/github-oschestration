@@ -170,7 +170,7 @@ def resume_role_work_package(work_package: dict[str, Any]) -> dict[str, Any]:
     """Continue the same unfinished role; completed packages are not repeated."""
     required = (
         "work_package_id", "requirement_ids", "role_id", "role_bundle_version",
-        "deliverables", "dependencies", "acceptance_evidence", "status",
+        "deliverables", "dependencies", "acceptance_evidence", "status", "source_sha", "last_result",
         "first_unmet_criterion", "next_action"
     )
     missing = [key for key in required if key not in work_package]
@@ -187,14 +187,20 @@ def resume_role_work_package(work_package: dict[str, Any]) -> dict[str, Any]:
         if not all(work_package.get(key) for key in (
             "implementation_ref", "verification_evidence", "consumer_evidence",
             "adversarial_review", "readback_verified"
-        )):
+        )) or not work_package.get("acceptance_evidence"):
             return {"state": "DONE_WITHOUT_EVIDENCE", "role_id": work_package["role_id"]}
         return {"state": "ALREADY_DONE", "role_id": work_package["role_id"],
                 "work_package_id": work_package["work_package_id"]}
     if status == "SUPERSEDED":
         return {"state": "SUPERSEDED", "role_id": work_package["role_id"]}
+    if status == "BLOCKED":
+        state = "BLOCKED_SAME_ROLE"
+    elif status == "READY":
+        state = "START_SAME_ROLE"
+    else:
+        state = "CONTINUE_SAME_ROLE"
     return {
-        "state": "CONTINUE_SAME_ROLE",
+        "state": state,
         "role_id": work_package["role_id"],
         "work_package_id": work_package["work_package_id"],
         "first_unmet_criterion": work_package["first_unmet_criterion"],
@@ -209,7 +215,7 @@ def ready_parallel_work_packages(work_packages: list[dict[str, Any]]) -> list[li
     by_id = {wp["work_package_id"]: wp for wp in work_packages}
     completed = {wp["work_package_id"] for wp in work_packages if wp.get("status") == "DONE"}
     pending = {wp["work_package_id"] for wp in work_packages
-               if wp.get("status") in {"READY", "IN_PROGRESS"}}
+               if wp.get("status") == "READY"}
     batches: list[list[str]] = []
     while pending:
         ready = [by_id[wid] for wid in sorted(pending)
@@ -232,6 +238,8 @@ def ready_parallel_work_packages(work_packages: list[dict[str, Any]]) -> list[li
 def work_package_completion_gate(work_package: dict[str, Any]) -> dict[str, Any]:
     """A report/checkpoint cannot close implementation without consumer evidence."""
     required = {
+        "source_sha": "SOURCE_IDENTITY_MISSING",
+        "acceptance_evidence": "ACCEPTANCE_EVIDENCE_MISSING",
         "implementation_ref": "IMPLEMENTATION_NOT_READ_BACK",
         "verification_evidence": "VERIFICATION_EVIDENCE_MISSING",
         "consumer_evidence": "CONSUMER_EVIDENCE_MISSING",
