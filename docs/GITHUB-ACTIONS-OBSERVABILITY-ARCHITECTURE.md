@@ -55,7 +55,7 @@ The monitor reads its target list and read-only access token only from repositor
 - PRIVATE_MONITOR_TOKEN
 - PRIVATE_TARGETS_JSON
 
-The token needs repository Actions: read, Checks: read, Contents: read, and Metadata: read for every configured private target. It is never printed. Private repository names, workflow paths, branch names, SHAs, run IDs, raw logs, and provider messages are not written to public artifacts; the artifact uses opaque target/workflow aliases and classification/evidence types only.
+The token needs repository Actions: read, Checks: read, Contents: read, and Metadata: read for every configured private target and the optional private billing-snapshot repository. It is never printed. Private repository names, workflow paths, branch names, SHAs, run IDs, raw logs, and provider messages are not written to public artifacts; the artifact uses opaque target/workflow aliases and classification/evidence types only.
 
 A target configuration must explicitly state expected workflows. Supported expectations are:
 - every_push: the workflow is expected on every push to the configured branch.
@@ -101,7 +101,9 @@ A workflow cannot observe its own failure to be admitted when its billing owner 
 
 The scheduled monitor in this public repository is a separate compute path for private targets, but it requires owner-configured credentials and an explicit expected-workflow inventory. Until both Secrets exist, the private observer reports BLOCKED; it must not report a healthy zero or claim private coverage.
 
-Usage-summary APIs report consumption, not necessarily remaining included minutes. Consumption totals alone cannot prove the private Actions allowance is exhausted. The system uses explicit provider admission/check-run messages or verified hard-cap state where available. If GitHub exposes no such state for a personal account and no provider message exists, the cause remains UNKNOWN.
+The private observer can optionally read the existing billing collector's usage-latest.json snapshot from a private repository using the same read-only token. It accepts only a fresh, target-matching Actions budget item with prevent_further_usage=true and status=HARD_CAP_REACHED as independent hard-cap evidence. A hard cap can explain a missing run or a run with no assigned runner/steps; it never overrides an observed executed-step failure or a proven workflow syntax/permission failure.
+
+Usage-summary APIs report consumption, not necessarily remaining included minutes. The collector explicitly reports remaining_included_minutes as NOT_EXPOSED_BY_USAGE_SUMMARY_API. Personal-account included-minute exhaustion therefore cannot be proven from consumption totals alone. Stale snapshots, missing billing credentials, unknown account status, non-matching budgets, and personal-account remaining allowance all remain UNKNOWN/partial. If GitHub exposes no hard-cap state for a personal account and no provider message exists, the cause remains UNKNOWN.
 
 No quota is deliberately exhausted for testing. A real quota-exhaustion E2E is only performed against a safe disposable target when the owner explicitly authorizes the billing impact. Otherwise the live quota case remains NOT VERIFIED.
 
@@ -136,7 +138,7 @@ Add these GitHub repository Secrets to this public observer repository only afte
 
 PRIVATE_MONITOR_TOKEN: a read-only fine-grained PAT or GitHub App installation token with Actions, Checks, Contents, and Metadata read access to the configured private repositories.
 
-PRIVATE_TARGETS_JSON: JSON configuration with opaque aliases, private repository identifiers, branch, expected workflow paths/events, and grace intervals. Use every_push only for workflows that truly run on every push; use schedule for scheduled workflows.
+PRIVATE_TARGETS_JSON: JSON configuration with opaque aliases, private repository identifiers, branch, expected workflow paths/events, grace intervals, and optional billing_scope per target. An optional billing_snapshot object identifies the private collector repository, branch, JSON path, and maximum snapshot age. Use every_push only for workflows that truly run on every push; use schedule for scheduled workflows.
 
 Example shape (placeholders only; do not commit real private repository names):
 
@@ -148,6 +150,7 @@ Example shape (placeholders only; do not commit real private repository names):
       "id": "target-01",
       "repository": "OWNER/PRIVATE_REPOSITORY",
       "branch": "main",
+      "billing_scope": "user",
       "expected_workflows": [
         {
           "id": "workflow-ci",
@@ -158,9 +161,17 @@ Example shape (placeholders only; do not commit real private repository names):
         }
       ]
     }
-  ]
+  ],
+  "billing_snapshot": {
+    "repository": "OWNER/PRIVATE_BILLING_COLLECTOR",
+    "branch": "main",
+    "path": "ops/github-actions-usage/usage-latest.json",
+    "max_age_minutes": 1500
+  }
 }
 ~~~
+
+Set billing_scope to user or organization to match the collector account record. The snapshot is optional; if omitted, billing coverage is NOT_CONFIGURED. A personal account snapshot can establish that remaining included minutes are not exposed, but cannot establish their remaining balance. Organization/repository Actions budgets are authoritative only when the matching budget item explicitly reports HARD_CAP_REACHED with prevent_further_usage=true.
 
 If these Secrets are absent, cross-repository private coverage remains BLOCKED. Do not copy credentials from another repository by assumption; GitHub Secrets are not readable through the connector and must be explicitly provisioned by the owner.
 
