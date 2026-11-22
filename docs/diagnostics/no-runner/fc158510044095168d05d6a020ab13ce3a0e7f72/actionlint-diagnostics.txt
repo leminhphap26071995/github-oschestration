@@ -1,0 +1,1 @@
+.github/workflows/zz-synthetic-invalid-workflow.yml:3:0: could not parse as YAML: yaml: line 3: did not find expected ',' or ']' [syntax-check]
