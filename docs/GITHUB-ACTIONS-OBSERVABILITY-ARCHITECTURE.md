@@ -63,7 +63,7 @@ A target configuration must explicitly state expected workflows. Supported expec
 
 Path-filtered or otherwise conditional triggers are not inferred. They remain unsupported until their trigger semantics are explicitly configured, preventing false missing-run alerts.
 
-If an expected run is absent after the grace window, the monitor fetches the exact workflow file at the current branch SHA and runs actionlint. It reports a real syntax error when the parser finds one; otherwise it reports NO_RUN_OBSERVED with UNKNOWN cause. A missing run is not proof of quota exhaustion.
+For every observed or missing run, the monitor fetches the exact workflow file at the source/branch SHA and runs actionlint plus the reusable workflow-quality-gate action-runtime metadata audit. It can distinguish malformed YAML/schema from retired or unsupported remote action runtimes; inaccessible action metadata remains UNKNOWN. If an expected run is absent after the grace window and neither parser nor runtime audit proves a configuration fault, it reports NO_RUN_OBSERVED with UNKNOWN cause. A missing run is not proof of quota exhaustion.
 
 ## 3. Evidence and classification contract
 
@@ -74,6 +74,7 @@ Canonical classes currently supported by the collector include:
 - ACTIONS_BILLING_QUOTA_EXHAUSTED
 - ACTIONS_ADMISSION_BLOCKED
 - ACTION_RUNTIME_RETIRED_OR_UNSUPPORTED
+- ACTION_RUNTIME_METADATA_UNAVAILABLE (evidence gap, not a failure class)
 - STATIC_ANALYSIS_WARNING
 - ARTIFACT_STORAGE_QUOTA_EXHAUSTED
 - PERMISSION_OR_POLICY_DENIED
