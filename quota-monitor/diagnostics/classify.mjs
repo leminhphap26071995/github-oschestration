@@ -40,6 +40,7 @@ const WORKFLOW_SCHEMA_PATTERNS = [
   /unrecognized function/i,
   /required property/i,
   /property .* is not allowed/i,
+  /unexpected key|unknown key|unknown property/i,
 ];
 const IMPLEMENTATION_PATTERNS = [
   /\bassertionerror\b/i,
@@ -207,8 +208,11 @@ export function classifyJob({ job = {}, annotations = [], logs = { status: "NOT_
     EXECUTION_IN_PROGRESS: "UNKNOWN",
   };
 
+  const legacyClassification = classification === "UNKNOWN" && job.conclusion === "failure"
+    ? "EXECUTION_EVIDENCE_MISSING"
+    : legacy[classification] || classification;
   return {
-    classification: legacy[classification] || (classification === "UNKNOWN" && job.conclusion === "failure" ? "EXECUTION_EVIDENCE_MISSING" : classification),
+    classification: legacyClassification,
     primary_classification: classification,
     classifications: distinct.length ? distinct : [classification],
     evidence,
