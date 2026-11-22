@@ -25,66 +25,115 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: gh extension install swfz/gh-annotations
 
-      - name: Mint least-privilege installation token for target private repository
+      - name: Resolve an existing least-privilege credential for the target private repository
         env:
           GITHUB_APP_ID: ${{ secrets.GITHUB_APP_ID }}
           GITHUB_APP_PRIVATE_KEY: ${{ secrets.GITHUB_APP_PRIVATE_KEY }}
+          CANDIDATE_TARGET_REPO_READ_TOKEN: ${{ secrets.TARGET_REPO_READ_TOKEN }}
+          CANDIDATE_CROSS_REPO_GH_TOKEN: ${{ secrets.CROSS_REPO_GH_TOKEN }}
+          CANDIDATE_GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          CANDIDATE_GH_PAT: ${{ secrets.GH_PAT }}
+          CANDIDATE_GITHUB_PAT: ${{ secrets.GITHUB_PAT }}
+          CANDIDATE_USER_BILLING_TOKEN: ${{ secrets.USER_BILLING_TOKEN }}
+          EXECUTOR_GITHUB_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           set -euo pipefail
-          export TARGET_REPOSITORY="$(jq -r '.repository' .ai-workflow/diagnostics/requests/GM-48-annotations.json)"
           node --input-type=module <<'NODE'
-          import { appendFile } from "node:fs/promises";
+          import { appendFile, readFile } from "node:fs/promises";
           import { createAppJwt } from "./quota-monitor/prepare_app_tokens.mjs";
 
           const api = process.env.GITHUB_API_URL || "https://api.github.com";
-          const appId = process.env.GITHUB_APP_ID;
-          const privateKey = process.env.GITHUB_APP_PRIVATE_KEY;
-          const target = process.env.TARGET_REPOSITORY;
-          if (!appId || !privateKey) throw new Error("GITHUB_APP_CREDENTIALS_NOT_CONFIGURED");
-          if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(target || "")) throw new Error("INVALID_TARGET_REPOSITORY");
-
+          const request = JSON.parse(await readFile(".ai-workflow/diagnostics/requests/GM-48-annotations.json", "utf8"));
+          const target = request.repository;
           const [owner, repo] = target.split("/");
-          const jwt = createAppJwt(appId, privateKey);
-          const headers = {
-            Accept: "application/vnd.github+json",
-            Authorization: "Bearer " + jwt,
-            "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "cross-repository-annotation-cli",
-          };
+          const selectedRun = request.runs.find(item => item.latest_for_workflow === true);
+          if (!selectedRun) throw new Error("LATEST_TARGET_RUN_MISSING");
 
-          let installation = null;
-          for (let page = 1; page <= 100; page += 1) {
-            const response = await fetch(`${api}/app/installations?per_page=100&page=${page}`, { headers });
-            if (!response.ok) throw new Error("INSTALLATION_DISCOVERY_HTTP_" + response.status);
-            const rows = await response.json();
-            installation = rows.find(item => item.account?.login?.toLowerCase() === owner.toLowerCase()) || installation;
-            if (installation || rows.length < 100) break;
+          async function canRead(token) {
+            const headers = {
+              Accept: "application/vnd.github+json",
+              Authorization: "Bearer " + token,
+              "X-GitHub-Api-Version": "2022-11-28",
+              "User-Agent": "cross-repository-annotation-cli",
+            };
+            const run = await fetch(api + "/repos/" + target + "/actions/runs/" + selectedRun.run_id, { headers });
+            if (!run.ok) return { ok: false, stage: "actions", status: run.status };
+            const check = await fetch(api + "/repos/" + target + "/check-runs/" + selectedRun.check_run_id + "/annotations?per_page=1", { headers });
+            if (!check.ok) return { ok: false, stage: "checks", status: check.status };
+            return { ok: true };
           }
-          if (!installation) throw new Error("APP_NOT_INSTALLED_FOR_TARGET_OWNER:" + owner);
 
-          const tokenResponse = await fetch(`${api}/app/installations/${installation.id}/access_tokens`, {
-            method: "POST",
-            headers: { ...headers, "Content-Type": "application/json" },
-            body: JSON.stringify({
-              repositories: [repo],
-              permissions: { actions: "read", checks: "read", contents: "read" },
-            }),
-          });
-          if (!tokenResponse.ok) {
-            const payload = await tokenResponse.json().catch(() => ({}));
-            throw new Error("APP_TOKEN_MINT_HTTP_" + tokenResponse.status + ":" + String(payload.message || "permission or repository selection denied").slice(0, 180));
+          const candidates = [
+            ["TARGET_REPO_READ_TOKEN", process.env.CANDIDATE_TARGET_REPO_READ_TOKEN],
+            ["CROSS_REPO_GH_TOKEN", process.env.CANDIDATE_CROSS_REPO_GH_TOKEN],
+            ["GH_TOKEN", process.env.CANDIDATE_GH_TOKEN],
+            ["GH_PAT", process.env.CANDIDATE_GH_PAT],
+            ["GITHUB_PAT", process.env.CANDIDATE_GITHUB_PAT],
+            ["USER_BILLING_TOKEN", process.env.CANDIDATE_USER_BILLING_TOKEN],
+            ["EXECUTOR_GITHUB_TOKEN", process.env.EXECUTOR_GITHUB_TOKEN],
+          ];
+          const attempts = [];
+          let selected = null;
+
+          for (const [name, token] of candidates) {
+            if (!token) {
+              attempts.push(name + "=ABSENT");
+              continue;
+            }
+            const probe = await canRead(token);
+            attempts.push(name + "=" + (probe.ok ? "READ_OK" : probe.stage + "_HTTP_" + probe.status));
+            if (probe.ok) {
+              selected = { name, token };
+              break;
+            }
           }
-          const tokenData = await tokenResponse.json();
-          if (!tokenData.token) throw new Error("APP_TOKEN_MISSING");
-          const permissions = tokenData.permissions || {};
-          for (const [key, value] of Object.entries({ actions: "read", checks: "read", contents: "read" })) {
-            if (permissions[key] !== value) throw new Error("APP_TOKEN_PERMISSION_MISMATCH:" + key);
+
+          if (!selected && process.env.GITHUB_APP_ID && process.env.GITHUB_APP_PRIVATE_KEY) {
+            const jwt = createAppJwt(process.env.GITHUB_APP_ID, process.env.GITHUB_APP_PRIVATE_KEY);
+            const jwtHeaders = {
+              Accept: "application/vnd.github+json",
+              Authorization: "Bearer " + jwt,
+              "X-GitHub-Api-Version": "2022-11-28",
+              "User-Agent": "cross-repository-annotation-cli",
+            };
+            let installation = null;
+            for (let page = 1; page <= 100; page += 1) {
+              const response = await fetch(api + "/app/installations?per_page=100&page=" + page, { headers: jwtHeaders });
+              if (!response.ok) throw new Error("APP_INSTALLATION_DISCOVERY_HTTP_" + response.status);
+              const rows = await response.json();
+              installation = rows.find(item => item.account?.login?.toLowerCase() === owner.toLowerCase()) || installation;
+              if (installation || rows.length < 100) break;
+            }
+            if (!installation) {
+              attempts.push("GITHUB_APP=NOT_INSTALLED");
+            } else {
+              const response = await fetch(api + "/app/installations/" + installation.id + "/access_tokens", {
+                method: "POST",
+                headers: { ...jwtHeaders, "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  repositories: [repo],
+                  permissions: { actions: "read", checks: "read", contents: "read" },
+                }),
+              });
+              if (!response.ok) {
+                attempts.push("GITHUB_APP_TOKEN_HTTP_" + response.status);
+              } else {
+                const data = await response.json();
+                const probe = await canRead(data.token);
+                attempts.push("GITHUB_APP=" + (probe.ok ? "READ_OK" : probe.stage + "_HTTP_" + probe.status));
+                if (probe.ok) selected = { name: "GITHUB_APP_INSTALLATION", token: data.token };
+              }
+            }
+          } else if (!selected) {
+            attempts.push("GITHUB_APP_CREDENTIALS=ABSENT");
           }
-          process.stdout.write("::add-mask::" + tokenData.token + "\n");
-          await appendFile(process.env.GITHUB_ENV, "TARGET_GH_TOKEN=" + tokenData.token + "\n");
-          console.log("APP_TOKEN_READY owner=" + owner + " repo=" + repo +
-            " permissions=actions:read,checks:read,contents:read expires_at=" + tokenData.expires_at);
+
+          if (!selected) throw new Error("NO_CROSS_REPO_READ_CREDENTIAL:" + attempts.join(","));
+          process.stdout.write("::add-mask::" + selected.token + "\n");
+          await appendFile(process.env.GITHUB_ENV, "TARGET_GH_TOKEN=" + selected.token + "\n");
+          console.log("CROSS_REPO_CREDENTIAL_READY source=" + selected.name +
+            " target=" + target + " permissions=verified-actions-read,checks-read");
           NODE
 
       - name: Verify exact source runs and collect annotations
@@ -95,6 +144,7 @@ jobs:
           request=".ai-workflow/diagnostics/requests/GM-48-annotations.json"
           mkdir -p evidence
           TARGET_REPOSITORY="$(jq -r '.repository' "$request")"
+
           jq -c '.runs[]' "$request" | while IFS= read -r target; do
             run_id="$(jq -r '.run_id' <<<"$target")"
             attempt="$(jq -r '.run_attempt' <<<"$target")"
