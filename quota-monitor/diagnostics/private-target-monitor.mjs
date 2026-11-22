@@ -504,6 +504,7 @@ export function renderPrivateTargetSummary(record) {
     "# Private GitHub Actions observer",
     "",
     "- Coverage: " + record.coverage_status,
+    "- Billing coverage: " + (record.billing_coverage_status || "NOT_CONFIGURED"),
     "- Private target details: redacted from this public repository artifact",
     "",
     "| Target | Workflow | Status | Run observed | Classification | Billing evidence | Evidence |",
