@@ -197,7 +197,7 @@ The fault-injection branch is isolated and intentionally not merged. The former 
 
 - The scheduled private-target job has not yet produced a live schedule-run receipt.
 - PRIVATE_MONITOR_TOKEN and PRIVATE_TARGETS_JSON must be explicitly provisioned by the owner. The optional billing_snapshot configuration must point to the private collector's usage-latest.json and include billing_scope for each target.
-- The currently inspected private collector snapshot is stale and reports BILLING_TOKEN_NOT_CONFIGURED; it cannot establish a billing hard cap. Its remaining included personal-account minutes are explicitly NOT_EXPOSED_BY_USAGE_SUMMARY_API.
+- The last inspected private collector snapshot (2026-11-17) reported BILLING_TOKEN_NOT_CONFIGURED; it cannot establish a billing hard cap. The user-level billing usage endpoint reports Copilot usage, not personal Actions usage, so personal Actions included compute balance is NOT_EXPOSED_BY_USER_BILLING_API.
 - No live Actions quota was deliberately exhausted. This remains NOT VERIFIED; do not treat a private run with no steps/logs as quota without explicit provider evidence or a fresh matching hard-cap snapshot.
 
 The system does not promise universal 100% root-cause classification when GitHub withholds evidence. It guarantees conservative, evidence-bound output: specific class only when proven; otherwise UNKNOWN/BLOCKED with the missing evidence named.
@@ -205,7 +205,7 @@ The system does not promise universal 100% root-cause classification when GitHub
 
 ## 8. Live reconciliation — 2026-11-22
 
-The previous verification checkpoint at HEAD 461e40a1fd596879efe06ca01069ff82a7e529d0 is superseded by main HEAD 991769f1a1e75190a360ef0c3277362de9b13aff.
+The previous verification checkpoint at HEAD 461e40a1fd596879efe06ca01069ff82a7e529d0 is superseded by code HEAD 6c9ae5ecb64f49b81fdf2bf98b604d17c49de74a (PR #3; included-compute billing semantics correction).
 
 ### Real defects found and corrected
 
@@ -234,6 +234,29 @@ The same job's public observer token telemetry recorded 64 REST API requests in 
 ### Remaining acceptance boundary
 
 - Real malformed-YAML zero-job and real executed-step failure E2E remain verified on the isolated fault-injection branch; the synthetic echo branch is not acceptance evidence.
-- Live Actions quota exhaustion was not forced and remains NOT VERIFIED. Personal included Actions minutes are not exposed by the usage-summary API; no fresh private billing snapshot is available.
+- Live Actions quota exhaustion was not forced and remains NOT VERIFIED. Personal Actions included compute balance is not exposed by the user-level billing usage endpoint; no fresh private billing snapshot is available.
 - Cross-repository private polling remains BLOCKED until the owner provisions `PRIVATE_MONITOR_TOKEN` and `PRIVATE_TARGETS_JSON` as repository Secrets. Do not paste the token into chat.
 - Actual permission-denied, artifact-storage/retention, and secondary API-throttle E2E remain outstanding. Unknown or unavailable evidence must remain UNKNOWN/BLOCKED, never be relabelled as quota.
+
+
+## 9. Billing semantics correction — 2026-11-22
+
+Merged in [PR #3](https://github.com/leminhphap26071995/github-oschestration/pull/3), code HEAD `6c9ae5ecb64f49b81fdf2bf98b604d17c49de74a`.
+
+- The collector no longer calls the user-level billing usage endpoint for Actions. GitHub documents user-level billing usage endpoints as Copilot usage; they are not a source for personal Actions usage or remaining included compute balance.
+- Personal account collection now sets `actions_usage_status=NOT_EXPOSED_BY_USER_BILLING_API`, keeps usage totals UNKNOWN (never zero), and labels repository inventory as NOT_EXPOSED for Actions usage. The root snapshot records `included_compute_balance_status=NOT_EXPOSED_BY_USAGE_SUMMARY_API`.
+- The misleading `remaining_included_minutes` field was removed. The collector schema is now v3. `discountQuantity` is shown as discounted usage quantity, not "included minutes"; `netQuantity` is named `net_minutes`, not "billable minutes".
+- Organization-level Actions usage remains measured from the organization usage summary. An Actions budget proves a hard cap only when the matching scope/SKU has `prevent_further_usage=true` and observed net amount reaches the budget amount. A user-scoped budget exposed by the current budget API is for Copilot AI credits, not personal Actions compute.
+- GitHub's current model expresses included compute as a monetary amount shared by eligible private/internal runner compute and cloud-sandbox compute/memory. Standard runners in public repositories remain free independently and do not draw from that pool. Artifact/cache storage is a separate allowance and billing signal.
+
+Official contracts:
+- [GitHub Actions billing](https://docs.github.com/en/billing/concepts/product-billing/github-actions)
+- [GitHub Actions billing and usage](https://docs.github.com/en/actions/concepts/billing-and-usage)
+- [Billing usage REST API](https://docs.github.com/en/rest/billing/usage?apiVersion=2026-03-10)
+- [Billing budgets REST API](https://docs.github.com/en/rest/billing/budgets?apiVersion=2026-03-10)
+
+Exact-main verification for this correction:
+- Portable AI Workflow Conformance: [45037803431](https://github.com/leminhphap26071995/github-oschestration/actions/runs/45037803431) — SUCCESS on code HEAD 6c9ae5ecb64f49b81fdf2bf98b604d17c49de74a.
+- Credential Read Audit: [45037803508](https://github.com/leminhphap26071995/github-oschestration/actions/runs/45037803508) — SUCCESS on the same SHA.
+
+No account budget, spending cap, quota, or private credential was changed.
