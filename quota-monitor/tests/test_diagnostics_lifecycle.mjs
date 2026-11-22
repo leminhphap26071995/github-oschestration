@@ -367,3 +367,19 @@ test("static-analysis warnings remain distinct from YAML syntax and step executi
   assert.ok(result.classifications.includes("STEP_FAILURE"));
   assert.ok(!result.classifications.includes("ACTIONS_BILLING_QUOTA_EXHAUSTED"));
 });
+
+
+test("API usage telemetry is pinned and private credentials are isolated to the scheduled job", async () => {
+  const workflow = await readFile(".github/workflows/actions-run-diagnostics.yml", "utf8");
+  const pinned = "hesreallyhim/github-api-usage-monitor@52198b2c0a112e8647664f4042ae301e718ad7df";
+  assert.ok(workflow.includes(pinned));
+  const privateJob = workflow.split("  private_targets:\n")[1].split("\n  diagnose:\n")[0];
+  const diagnoseJob = workflow.split("  diagnose:\n")[1].split("\n  readback:\n")[0];
+  const readbackJob = workflow.split("  readback:\n")[1];
+  assert.ok(privateJob.includes("secrets.PRIVATE_MONITOR_TOKEN"));
+  assert.ok(privateJob.includes("diagnostics: \"true\""));
+  assert.ok(!diagnoseJob.includes("secrets.PRIVATE_MONITOR_TOKEN"));
+  assert.ok(!readbackJob.includes("secrets.PRIVATE_MONITOR_TOKEN"));
+  assert.ok(diagnoseJob.includes("token: \${{ github.token }}"));
+  assert.ok(readbackJob.includes("token: \${{ github.token }}"));
+});
