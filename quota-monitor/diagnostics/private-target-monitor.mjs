@@ -107,6 +107,7 @@ async function getWorkflowDefinition({ api, repository, path, sha, workflowId, l
       status: lint.status,
       classification: result.classification,
       evidence_types: [...new Set(result.evidence.map(item => item.type))],
+      diagnostic: lint.diagnostic,
     };
   } catch (error) {
     const details = apiError(error);
@@ -255,6 +256,15 @@ export async function monitorPrivateTargets({
       const run = candidates[0];
       if (run) {
         try {
+          const definition = await getWorkflowDefinition({
+            api,
+            repository: target.repository,
+            path: expected.path,
+            sha: run.head_sha,
+            workflowId: expected.id,
+            lintImpl,
+            actionlintPath,
+          });
           const diagnostics = await collectDiagnostics({
             event: eventForRun(target.repository, run),
             repository: target.repository,
@@ -262,13 +272,21 @@ export async function monitorPrivateTargets({
             apiUrl,
             fetchImpl,
             recordedAt: now.toISOString(),
+            workflowDiagnostic: definition.diagnostic || "",
+            workflowDiagnosticStatus: definition.status,
           });
-          results.push(safeRunRecord({
+          const safeRecord = safeRunRecord({
             targetId: target.id,
             workflowId: expected.id,
             run,
             diagnostics,
-          }));
+          });
+          if (definition.classification && definition.classification !== "UNKNOWN" &&
+              !safeRecord.classifications.includes(definition.classification)) {
+            safeRecord.classifications.push(definition.classification);
+            safeRecord.classification = definition.classification;
+          }
+          results.push(safeRecord);
         } catch (error) {
           results.push({
             target_id: target.id,
