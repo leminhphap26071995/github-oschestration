@@ -1,0 +1,30 @@
+# Notion-First Repository and Role Continuity Control Plane
+
+This is a public-safe, provider-neutral decision layer. It contains no private project inventory, ticket payloads, billing records, credentials or private evidence.
+
+## Routing contract
+
+1. Project Introduction identifies the project/goal and routes ChatGPT to Notion. It is not a repository allowlist or source authority.
+2. Notion supplies the canonical project/ticket, normalized MUST requirements, requirement-to-repository bindings, access decisions, role work packages, dependencies and first unmet criterion.
+3. GitHub supplies the visible repository catalog, permissions, refs, commit identity and provider usage evidence.
+4. The active host reconciles the Notion route with GitHub inventory and chooses exactly one task-scoped execution repository, separate from the persistent default repository.
+
+## Repository placement
+
+Visibility is a data-placement and convenience attribute, not a blanket denial. Public repositories and standard public runners are suitable for generic or sanitized work. Private project payloads, credentials, billing records and private evidence remain in private storage. An unsuitable candidate should be replaced with another eligible route; it should not stop independent work.
+
+Each requirement maps to one or more repository roles: SOURCE, EXECUTION, CONSUMER, TEST, DEPENDENCY, OBSERVER or MIRROR. A repository appearing in the catalog does not activate it for a project or task.
+
+## Role continuity
+
+A work package records its requirement IDs, role ID and bundle version, deliverables, dependencies, acceptance evidence, owner-created session reference, status, source identity, last result, first unmet criterion and next action. An unfinished package resumes under the same role. A completed package is not repeated and requires implementation, verification, consumer and source-readback evidence.
+
+Parallel packages are scheduled only when dependencies are met and their write paths do not overlap. Project, ticket, requirement, repository-usage, work-package and session states remain independent.
+
+## Implementation
+
+- `scripts/repository_control_plane.py` implements the deterministic decisions.
+- `tests/test_repository_control_plane.py` covers routing, access, public-safe placement, same-role continuation, dependency-safe parallelism and evidence-gated completion.
+- `conformance.yml` runs the repository's automatic regression suite on push and pull request. No manual dispatch is added.
+
+The module consumes normalized provider data; it is not itself a Notion/GitHub client and does not prove host runtime invocation.
