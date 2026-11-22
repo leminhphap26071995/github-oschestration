@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFile, readdir } from "node:fs/promises";
 import { classifyJob, classifyRun } from "../diagnostics/classify.mjs";
 import { collectDiagnostics } from "../diagnostics/collect.mjs";
 
@@ -207,4 +208,27 @@ test("workflow-level quota classification requires an explicit Actions billing m
   });
   assert.equal(positive.classification, "ACTIONS_BILLING_QUOTA_EXHAUSTED");
   assert.equal(negative.classification, "UNKNOWN");
+});
+
+
+test("every repository workflow is covered by the trusted lifecycle observer and synthetic echo workflows are absent", async () => {
+  const directory = ".github/workflows";
+  const files = (await readdir(directory)).filter(name => /\.ya?ml$/i.test(name));
+  const observer = await readFile(directory + "/actions-run-diagnostics.yml", "utf8");
+  const block = observer.match(/workflows:\s*\n([\s\S]*?)\n\s+types:/);
+  assert.ok(block, "workflow_run workflow allowlist must exist");
+  const observedNames = [...block[1].matchAll(/^\s*-\s*(.+?)\s*$/gm)]
+    .map(match => match[1].replace(/^["']|["']$/g, ""));
+  for (const file of files) {
+    if (file === "actions-run-diagnostics.yml") continue;
+    const content = await readFile(directory + "/" + file, "utf8");
+    const match = content.match(/^name:\s*(.+)$/m);
+    assert.ok(match, "workflow must declare a stable name: " + file);
+    const name = match[1].trim().replace(/^["']|["']$/g, "");
+    assert.ok(observedNames.includes(name), "lifecycle observer is missing workflow: " + name);
+  }
+  assert.ok(!files.includes("annotation-cli-synthetic-failure.yml"));
+  assert.ok(!files.includes("annotation-cli-synthetic-failure-observer.yml"));
+  assert.ok(!files.includes("no-runner-annotation-observer.yml"));
+  assert.ok(!files.includes("no-runner-annotation-readback.yml"));
 });
