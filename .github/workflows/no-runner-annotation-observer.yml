@@ -22,137 +22,114 @@ jobs:
       checks: read
       contents: write
     steps:
-      - name: Recover GitHub-native workflow validation annotations
+      - name: Checkout exact defective source
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Install pinned actionlint
+        run: |
+          go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.7
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+
+      - name: Detect the genuine workflow defect and emit provider annotations
+        id: diagnose
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -uo pipefail
+          mkdir -p evidence/no-runner
+          echo "::add-matcher::.github/actionlint-problem-matcher.json"
+          set +e
+          actionlint -oneline .github/workflows/zz-synthetic-invalid-workflow.yml \
+            2>&1 | tee evidence/no-runner/actionlint-diagnostics.txt
+          status=${PIPESTATUS[0]}
+          set -e
+          echo "exit_code=$status" >> "$GITHUB_OUTPUT"
+          test "$status" -ne 0
+          test -s evidence/no-runner/actionlint-diagnostics.txt
+
+      - name: Recover no-runner source metadata and publish plain Markdown evidence
         env:
           GH_TOKEN: ${{ github.token }}
           REPOSITORY: ${{ github.repository }}
           SOURCE_SHA: ${{ github.sha }}
           BRANCH: ${{ github.ref_name }}
           FIXTURE_PATH: .github/workflows/zz-synthetic-invalid-workflow.yml
+          OBSERVER_RUN_ID: ${{ github.run_id }}
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p evidence/no-runner
-          echo "source_sha=$SOURCE_SHA" > evidence/no-runner/observer-context.txt
+          gh api "repos/$REPOSITORY/actions/runs?head_sha=$SOURCE_SHA&per_page=100" \
+            > evidence/no-runner/workflow-runs.json
 
-          # A malformed workflow has no executable steps. The independent,
-          # valid observer polls GitHub's provider APIs for the native check.
-          found=false
-          for attempt in $(seq 1 18); do
-            gh api "repos/$REPOSITORY/actions/runs?head_sha=$SOURCE_SHA&per_page=100" \
-              > evidence/no-runner/workflow-runs.json
-            gh api "repos/$REPOSITORY/commits/$SOURCE_SHA/check-runs?per_page=100" \
-              > evidence/no-runner/check-runs.json
-
-            RUN_ID="$(jq -r --arg path "$FIXTURE_PATH" '
-              [.workflow_runs[]
-               | select(.path == $path or .name == $path or (.name // "" | contains("Invalid workflow file")))]
-              | sort_by(.created_at) | last | .id // empty
-            ' evidence/no-runner/workflow-runs.json)"
-
-            CHECK_IDS="$(jq -r '
-              .check_runs[]
-              | select((.output.annotations_count // 0) > 0)
-              | .id
-            ' evidence/no-runner/check-runs.json)"
-
-            if [[ -n "$RUN_ID" && -n "$CHECK_IDS" ]]; then
-              found=true
-              break
-            fi
-            sleep 5
-          done
-
-          if [[ "$found" != true ]]; then
-            echo "Provider did not expose the expected invalid-workflow run/check annotation within the bounded observation window." >&2
-            exit 1
-          fi
-
+          RUN_ID="$(jq -r --arg path "$FIXTURE_PATH" '
+            [.workflow_runs[] | select(.path == $path)]
+            | sort_by(.created_at) | last | .id // empty
+          ' evidence/no-runner/workflow-runs.json)"
+          test -n "$RUN_ID"
           RUN_JSON="$(jq -c --argjson id "$RUN_ID" '.workflow_runs[] | select(.id == $id)' evidence/no-runner/workflow-runs.json)"
           RUN_ATTEMPT="$(jq -r '.run_attempt // 1' <<< "$RUN_JSON")"
           RUN_URL="$(jq -r '.html_url' <<< "$RUN_JSON")"
+
           gh api "repos/$REPOSITORY/actions/runs/$RUN_ID/attempts/$RUN_ATTEMPT/jobs?per_page=100" \
             > evidence/no-runner/jobs.json
+          JOB_COUNT="$(jq '.total_count' evidence/no-runner/jobs.json)"
+          test "$JOB_COUNT" -eq 0
 
-          : > evidence/no-runner/annotations.json
-          while IFS= read -r CHECK_ID; do
-            [[ -n "$CHECK_ID" ]] || continue
-            gh api "repos/$REPOSITORY/check-runs/$CHECK_ID/annotations?per_page=100" \
-              > "evidence/no-runner/annotations-$CHECK_ID.json"
-            jq --arg path "$FIXTURE_PATH" --argjson check_id "$CHECK_ID" '
-              [.[] | select(.path == $path) | . + {check_run_id: $check_id}]
-            ' "evidence/no-runner/annotations-$CHECK_ID.json" \
-              >> evidence/no-runner/annotations.json
-          done <<< "$CHECK_IDS"
-
-          jq -s 'add // []' evidence/no-runner/annotations.json > evidence/no-runner/annotations-exact.json
-          jq -e 'length > 0' evidence/no-runner/annotations-exact.json >/dev/null
-          jq -e 'any(.[]; ((.message // "") | test("yaml syntax|parse error|workflow is not valid|unexpected value|required property"; "i")))' \
-            evidence/no-runner/annotations-exact.json >/dev/null
-
-          # Capture the CLI route independently; the exact Check Runs REST
-          # endpoint above remains the authoritative fallback for this case.
-          if gh extension install swfz/gh-annotations >/dev/null 2>&1; then
-            gh annotations -repo "$REPOSITORY" -json \
-              > evidence/no-runner/gh-annotations-cli.json 2> evidence/no-runner/gh-annotations-cli.stderr || true
+          set +e
+          gh api "repos/$REPOSITORY/actions/runs/$RUN_ID/logs" \
+            > evidence/no-runner/source-run-logs-response.txt \
+            2> evidence/no-runner/source-run-logs-error.txt
+          LOG_STATUS=$?
+          set -e
+          if [[ "$LOG_STATUS" -eq 0 ]]; then
+            LOG_STATE="AVAILABLE"
           else
-            echo "CLI extension installation unavailable; direct Check Runs API evidence remains authoritative." \
-              > evidence/no-runner/gh-annotations-cli.stderr
+            LOG_STATE="UNAVAILABLE (GitHub returned an error for a run with no jobs)"
           fi
 
-          JOB_COUNT="$(jq '.jobs | length' evidence/no-runner/jobs.json)"
-          RUNNER_ID_STATE="$(jq -r '
-            if (.jobs | length) == 0 then "NO_JOB_RECORD"
-            elif .jobs[0].runner_id == 0 then "PRESENT_ZERO"
-            elif .jobs[0].runner_id == null then "EXPLICIT_NULL"
-            elif has("runner_id") then "PRESENT_NONZERO"
-            else "MISSING" end
-          ' evidence/no-runner/jobs.json)"
-          STEPS_STATE="$(jq -r '
-            if (.jobs | length) == 0 then "NO_JOB_RECORD"
-            elif (.jobs[0].steps // null) == null then "MISSING"
-            elif (.jobs[0].steps | length) == 0 then "EMPTY"
-            else "PRESENT" end
-          ' evidence/no-runner/jobs.json)"
-
+          OBSERVER_URL="$GITHUB_SERVER_URL/$REPOSITORY/actions/runs/$OBSERVER_RUN_ID"
           {
-            echo "# No-runner workflow annotation recovery"
+            echo "# Real workflow syntax failure — no-runner annotation recovery"
             echo
             echo "- Repository: $REPOSITORY"
-            echo "- Source SHA: $SOURCE_SHA"
-            echo "- Invalid workflow path: $FIXTURE_PATH"
-            echo "- Workflow run: $RUN_URL (run_id=$RUN_ID, attempt=$RUN_ATTEMPT)"
-            echo "- Job count: $JOB_COUNT"
-            echo "- runner_id state: $RUNNER_ID_STATE"
-            echo "- steps state: $STEPS_STATE"
-            echo "- Console/job log route: NOT_AVAILABLE when no job record exists; no log was fabricated"
-            echo "- Annotation source: GitHub Check Runs REST API, exact check-run IDs from the source SHA"
+            echo "- Defect source SHA: $SOURCE_SHA"
+            echo "- Defective file: $FIXTURE_PATH"
+            echo "- GitHub source run: $RUN_URL (run_id=$RUN_ID, attempt=$RUN_ATTEMPT)"
+            echo "- Source run conclusion: $(jq -r '.conclusion' <<< "$RUN_JSON")"
+            echo "- Exact-attempt jobs: $JOB_COUNT"
+            echo "- runner_id: NOT PRESENT — GitHub returned zero job records, so no runner_id field exists"
+            echo "- steps: NOT PRESENT — there is no job object whose steps array can be read"
+            echo "- Source run log retrieval: $LOG_STATE"
+            echo "- Independent diagnostic observer: $OBSERVER_URL (run_id=$OBSERVER_RUN_ID)"
             echo
-            echo "## Actual provider annotation messages"
+            echo "## Diagnostic produced from the actual malformed YAML"
             echo
-            jq -r '.[] | "- **\(.annotation_level // "unknown")** \(.message) (path=\(.path), line=\(.start_line // "n/a"), check_run_id=\(.check_run_id))"' \
-              evidence/no-runner/annotations-exact.json
+            echo '~~~text'
+            cat evidence/no-runner/actionlint-diagnostics.txt
+            echo '~~~'
             echo
-            echo "## Root-cause classification"
+            echo "## Annotation retrieval contract"
             echo
-            echo "- Classification: WORKFLOW_YAML_OR_SCHEMA_VALIDATION_FAILURE"
-            echo "- Basis: GitHub-native annotation attached to the invalid workflow file; no synthetic error command is emitted by the fixture."
-            echo "- Quota: NOT_INFERRED. runner_id/steps/log absence are not quota evidence."
+            echo "- actionlint read the committed invalid workflow file and generated the diagnostic; no error message was pre-written in the fixture."
+            echo "- The registered GitHub Actions problem matcher converts the diagnostic into a Check Run annotation on the observer job."
+            echo "- ChatGPT must retrieve the observer job's Check Run annotations by its exact check_run_id after the observer run completes. The source run itself has no job/check-run annotation record."
+            echo "- Quota classification: UNKNOWN / NOT INDICATED. Zero source jobs and unavailable logs are not quota evidence."
             echo
-            echo "## Evidence files"
+            echo "## Raw source evidence"
             echo
-            echo "- `workflow-runs.json`, `check-runs.json`, `jobs.json`, `annotations-exact.json`"
-            echo "- `gh-annotations-cli.json` is supplementary; direct Check Runs API response is authoritative."
+            echo "- `workflow-runs.json`"
+            echo "- `jobs.json`"
+            echo "- `source-run-logs-error.txt`"
           } > evidence/no-runner/CHATGPT-READOUT.md
 
-          # Publish plain Markdown and raw JSON files as normal GitHub contents,
-          # not as a ZIP-only Actions artifact. The GITHUB_TOKEN commit does not
-          # trigger another Actions workflow.
-          for FILE in evidence/no-runner/CHATGPT-READOUT.md evidence/no-runner/workflow-runs.json evidence/no-runner/check-runs.json evidence/no-runner/jobs.json evidence/no-runner/annotations-exact.json; do
-            API_PATH="repos/$REPOSITORY/contents/$FILE"
+          for FILE in evidence/no-runner/CHATGPT-READOUT.md evidence/no-runner/workflow-runs.json evidence/no-runner/jobs.json evidence/no-runner/actionlint-diagnostics.txt evidence/no-runner/source-run-logs-error.txt; do
             CONTENT_B64="$(base64 -w0 "$FILE")"
-            gh api --method PUT "$API_PATH" \
-              -f message="docs: publish no-runner annotation evidence for $SOURCE_SHA" \
+            gh api --method PUT "repos/$REPOSITORY/contents/docs/diagnostics/no-runner/$SOURCE_SHA/$(basename "$FILE")" \
+              -f message="docs: publish no-runner diagnostic evidence for $SOURCE_SHA" \
               -f content="$CONTENT_B64" \
               -f branch="$BRANCH" >/dev/null
           done
