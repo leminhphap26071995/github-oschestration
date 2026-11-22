@@ -98,6 +98,7 @@ function summarizeAnnotation(annotation) {
     annotation_level: sanitizeText(annotation.annotation_level),
     title: sanitizeText(annotation.title),
     message: sanitizeText(annotation.message),
+    raw_details: sanitizeText(annotation.raw_details),
   };
 }
 
@@ -130,7 +131,7 @@ async function collectCheckSuite({ api, source }) {
     return { status: "NOT_AVAILABLE", check_suite_id: source.check_suite_id, page_count: 0, check_runs: [] };
   }
   try {
-    const url = "/repos/" + api.repositoryPath + "/check-suites/" + source.check_suite_id.value + "/check-runs?per_page=100";
+    const url = "/repos/" + source.repository + "/check-suites/" + source.check_suite_id.value + "/check-runs?per_page=100";
     const page = await api.paginate(url, "check_runs");
     const checkRuns = [];
     for (const item of page.items) {
