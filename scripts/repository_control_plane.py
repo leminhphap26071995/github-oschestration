@@ -18,9 +18,13 @@ WORK_PACKAGE_STATES = {
 }
 ROLE_ARTIFACTS = ("SKILL.md", "mindset.md", "knowledge.md", "workflow.md")
 REPO_USAGE_STATES = {
-    "AVAILABLE_VERIFIED", "NEAR_LIMIT", "QUOTA_EXHAUSTED",
-    "REPORTED_QUOTA_EXHAUSTED", "WITHIN_BUDGET_VERIFIED", "OVER_BUDGET_NO_HARD_CAP", "UNKNOWN", "API_RATE_LIMITED",
-    "PERMISSION_DENIED", "NOT_CONFIGURED", "NOT_EXPOSED", "STALE"
+    "NEAR_LIMIT", "QUOTA_EXHAUSTED", "REPORTED_QUOTA_EXHAUSTED",
+    "WITHIN_BUDGET_VERIFIED", "OVER_BUDGET_NO_HARD_CAP", "UNKNOWN",
+    "API_RATE_LIMITED", "PERMISSION_DENIED", "NOT_CONFIGURED", "NOT_EXPOSED", "STALE"
+}
+RUNNER_AVAILABILITY_STATES = {
+    "AVAILABLE_VERIFIED", "RUNNER_UNAVAILABLE", "UNKNOWN",
+    "PERMISSION_DENIED", "NOT_CONFIGURED", "STALE"
 }
 
 
@@ -55,6 +59,9 @@ def validate_repository_catalog(repositories: list[dict[str, Any]]) -> list[str]
         usage = repo.get("actions_usage") or {}
         if usage.get("state") and usage["state"] not in REPO_USAGE_STATES:
             errors.append(f"INVALID_ACTIONS_USAGE_STATE:{full_name}")
+        runner = repo.get("runner_availability") or {}
+        if runner.get("state") and runner["state"] not in RUNNER_AVAILABILITY_STATES:
+            errors.append(f"INVALID_RUNNER_AVAILABILITY_STATE:{full_name}")
     return errors
 
 
@@ -136,6 +143,7 @@ def normalize_repository_inventory(
                 "installation_account_type": installation.get("account_type"),
                 "repository_selection": installation.get("repository_selection"),
                 "actions_usage": {"state": "UNKNOWN"},
+                "runner_availability": {"state": "UNKNOWN"},
                 "inventory_source": "GITHUB_APP_INSTALLATION",
             })
 
@@ -342,8 +350,8 @@ def resolve_task_repositories(
             if repo["visibility"] == "internal" and classification == "PRIVATE":
                 continue
             if ci_required:
-                usage = repo.get("actions_usage") or {}
-                if usage.get("state") != "AVAILABLE_VERIFIED":
+                runner = repo.get("runner_availability") or {}
+                if runner.get("state") != "AVAILABLE_VERIFIED":
                     continue
             candidates.append({**binding, "_repo": repo})
 
@@ -378,6 +386,7 @@ def resolve_task_repositories(
             "visibility": repo["visibility"],
             "billing_owner": (repo.get("actions_usage") or {}).get("billing_owner"),
             "actions_usage": repo.get("actions_usage") or {"state": "UNKNOWN"},
+            "runner_availability": repo.get("runner_availability") or {"state": "UNKNOWN"},
         },
         "requirement_repository_map": mapped,
         "repository_roles": sorted({

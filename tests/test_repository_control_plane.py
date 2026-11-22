@@ -15,11 +15,13 @@ class RepositoryControlPlaneTests(unittest.TestCase):
             {"full_name": "org/private-core", "owner": "org", "visibility": "private",
              "archived": False, "default_branch": "main",
              "permissions": {"push": True},
-             "actions_usage": {"state": "REPORTED_QUOTA_EXHAUSTED", "billing_owner": "org"}},
+             "actions_usage": {"state": "REPORTED_QUOTA_EXHAUSTED", "billing_owner": "org"},
+             "runner_availability": {"state": "UNKNOWN"}},
             {"full_name": "user/public-runner", "owner": "user", "visibility": "public",
              "archived": False, "default_branch": "main",
              "permissions": {"push": True},
-             "actions_usage": {"state": "AVAILABLE_VERIFIED", "billing_owner": "user"}},
+             "actions_usage": {"state": "UNKNOWN", "billing_owner": "user"},
+             "runner_availability": {"state": "AVAILABLE_VERIFIED", "evidence_ref": "run:45049088239"}},
         ]
         self.requirements = [{"requirement_id": "R1"}, {"requirement_id": "R2"}]
         self.route = {"requirement_repositories": [
@@ -56,11 +58,13 @@ class RepositoryControlPlaneTests(unittest.TestCase):
         result = resolve_task_repositories(self.requirements, self.repos, route)
         self.assertEqual("NO_ELIGIBLE_EXECUTION_REPOSITORY", result["state"])
 
-    def test_ci_requires_provider_verified_available_usage(self):
+    def test_ci_requires_verified_runner_availability_not_billing_usage(self):
         result = resolve_task_repositories(self.requirements, self.repos, self.route, ci_required=True)
         self.assertEqual("RESOLVED", result["state"])
         self.assertEqual("user/public-runner",
                          result["active_execution_repository"]["full_name"])
+        self.assertEqual("UNKNOWN", result["active_execution_repository"]["actions_usage"]["state"])
+        self.assertEqual("AVAILABLE_VERIFIED", result["active_execution_repository"]["runner_availability"]["state"])
 
     def test_unmapped_requirement_is_not_silently_dropped(self):
         route = {"requirement_repositories": [
@@ -341,6 +345,17 @@ class RepositoryControlPlaneTests(unittest.TestCase):
                          result["repository_inventory"]["state"])
         self.assertEqual("user/public-runner",
                          result["repository_resolution"]["active_execution_repository"]["full_name"])
+
+
+    def test_billing_usage_does_not_imply_runner_availability(self):
+        repos = [dict(repo) for repo in self.repos]
+        repos[1] = dict(repos[1])
+        repos[1]["actions_usage"] = {"state": "WITHIN_BUDGET_VERIFIED"}
+        repos[1]["runner_availability"] = {"state": "UNKNOWN"}
+        result = resolve_task_repositories(
+            self.requirements, repos, self.route, ci_required=True
+        )
+        self.assertEqual("NO_ELIGIBLE_EXECUTION_REPOSITORY", result["state"])
 
 
 if __name__ == "__main__":
