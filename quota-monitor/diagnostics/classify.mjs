@@ -12,6 +12,19 @@ const PERMISSION_PATTERNS = [
   /environment protection rule.{0,100}(?:approval|required reviewers|denied)/i,
   /required reviewers? (?:have not|has not) approved/i,
 ];
+const ADMISSION_PATTERNS = [
+  /github actions (?:is )?disabled for this repository/i,
+  /actions (?:are|is) disabled by (?:the )?(?:repository|organization|enterprise) policy/i,
+  /workflow execution is disabled for this repository/i,
+  /this repository is not permitted to use github actions/i,
+];
+const ACTION_RUNTIME_PATTERNS = [
+  /node\.js\s+(?:16|20)\s+(?:actions|runtime).{0,100}(?:deprecated|retired|no longer supported)/i,
+  /node\.js\s+(?:16|20)\s+actions? (?:are|is) deprecated/i,
+  /unsupported node\.js runtime/i,
+  /action requires a newer runner version/i,
+  /runner version is below the minimum required version/i,
+];
 const RUNNER_PATTERNS = [
   /no hosted runner available for this job/i,
   /no runner matching the specified labels was found/i,
@@ -125,6 +138,20 @@ export function classifyJob({ job = {}, annotations = [], logs = { status: "NOT_
       ...evidenceLines("job_log", logText, PERMISSION_PATTERNS, "PERMISSION_OR_POLICY_DENIED"),
     );
   }
+  if (textMatches(ADMISSION_PATTERNS, allText)) {
+    classifications.push("ACTIONS_ADMISSION_BLOCKED");
+    evidence.push(
+      ...evidenceLines("annotation", annotationTextValue, ADMISSION_PATTERNS, "ACTIONS_ADMISSION_BLOCKED"),
+      ...evidenceLines("job_log", logText, ADMISSION_PATTERNS, "ACTIONS_ADMISSION_BLOCKED"),
+    );
+  }
+  if (textMatches(ACTION_RUNTIME_PATTERNS, allText)) {
+    classifications.push("ACTION_RUNTIME_RETIRED_OR_UNSUPPORTED");
+    evidence.push(
+      ...evidenceLines("annotation", annotationTextValue, ACTION_RUNTIME_PATTERNS, "ACTION_RUNTIME_RETIRED_OR_UNSUPPORTED"),
+      ...evidenceLines("job_log", logText, ACTION_RUNTIME_PATTERNS, "ACTION_RUNTIME_RETIRED_OR_UNSUPPORTED"),
+    );
+  }
   if (textMatches(RUNNER_PATTERNS, allText)) {
     classifications.push("RUNNER_UNAVAILABLE");
     evidence.push(
@@ -203,6 +230,8 @@ export function classifyJob({ job = {}, annotations = [], logs = { status: "NOT_
   const legacy = {
     ACTIONS_BILLING_QUOTA_EXHAUSTED: "QUOTA_EXHAUSTED",
     PERMISSION_OR_POLICY_DENIED: "PERMISSION_DENIED",
+    ACTIONS_ADMISSION_BLOCKED: "ACTIONS_ADMISSION_BLOCKED",
+    ACTION_RUNTIME_RETIRED_OR_UNSUPPORTED: "ACTION_RUNTIME_RETIRED_OR_UNSUPPORTED",
     RUNNER_UNAVAILABLE: "RUNNER_UNAVAILABLE",
     STEP_IMPLEMENTATION_FAILURE: "STEP_FAILURE",
     STEP_FAILURE: "STEP_FAILURE",
@@ -254,6 +283,14 @@ export function classifyRun({
   if (textMatches(QUOTA_PATTERNS, suiteText)) {
     classifications.push("ACTIONS_BILLING_QUOTA_EXHAUSTED");
     evidence.push(...evidenceLines("check_suite", suiteText, QUOTA_PATTERNS, "ACTIONS_BILLING_QUOTA_EXHAUSTED"));
+  }
+  if (textMatches(ADMISSION_PATTERNS, suiteText)) {
+    classifications.push("ACTIONS_ADMISSION_BLOCKED");
+    evidence.push(...evidenceLines("check_suite", suiteText, ADMISSION_PATTERNS, "ACTIONS_ADMISSION_BLOCKED"));
+  }
+  if (textMatches(ACTION_RUNTIME_PATTERNS, suiteText)) {
+    classifications.push("ACTION_RUNTIME_RETIRED_OR_UNSUPPORTED");
+    evidence.push(...evidenceLines("check_suite", suiteText, ACTION_RUNTIME_PATTERNS, "ACTION_RUNTIME_RETIRED_OR_UNSUPPORTED"));
   }
   if (textMatches(PERMISSION_PATTERNS, suiteText)) {
     classifications.push("PERMISSION_OR_POLICY_DENIED");
@@ -315,6 +352,8 @@ export function classifyRun({
     "WORKFLOW_YAML_SYNTAX_ERROR",
     "WORKFLOW_SCHEMA_OR_EXPRESSION_ERROR",
     "ACTIONS_BILLING_QUOTA_EXHAUSTED",
+    "ACTIONS_ADMISSION_BLOCKED",
+    "ACTION_RUNTIME_RETIRED_OR_UNSUPPORTED",
     "ARTIFACT_STORAGE_QUOTA_EXHAUSTED",
     "PERMISSION_OR_POLICY_DENIED",
     "RUNNER_UNAVAILABLE",
