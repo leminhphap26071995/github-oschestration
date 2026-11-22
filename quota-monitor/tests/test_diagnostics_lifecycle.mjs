@@ -232,3 +232,20 @@ test("every repository workflow is covered by the trusted lifecycle observer and
   assert.ok(!files.includes("no-runner-annotation-observer.yml"));
   assert.ok(!files.includes("no-runner-annotation-readback.yml"));
 });
+
+
+test("retired action runtime and Actions admission policy are separate from quota", () => {
+  const runtime = classifyJob({
+    job: { id: 21, status: "completed", conclusion: "failure", steps: [{ name: "Workflow quality gate", conclusion: "failure" }] },
+    annotations: [],
+    logs: { status: "RETRIEVED", text: "The following actions use Node.js 20 runtime which is deprecated and no longer supported." },
+  });
+  const admission = classifyJob({
+    job: { id: 22, status: "completed", conclusion: "failure", steps: [] },
+    annotations: [{ title: "Policy", message: "GitHub Actions is disabled for this repository by organization policy." }],
+    logs: { status: "NOT_REQUESTED", text: "" },
+  });
+  assert.ok(runtime.classifications.includes("ACTION_RUNTIME_RETIRED_OR_UNSUPPORTED"));
+  assert.ok(admission.classifications.includes("ACTIONS_ADMISSION_BLOCKED"));
+  assert.ok(!admission.classifications.includes("ACTIONS_BILLING_QUOTA_EXHAUSTED"));
+});
