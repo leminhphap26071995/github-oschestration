@@ -1,0 +1,21 @@
+name: Annotation CLI Synthetic Failure
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/annotation-cli-synthetic-failure.yml"
+
+permissions: {}
+
+jobs:
+  synthetic-failure:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    permissions: {}
+    steps:
+      - name: Emit deterministic synthetic error annotation
+        shell: bash
+        run: |
+          echo "::error file=annotation-cli-self-test.txt,line=7,title=ANNOTATION_CLI_SELF_TEST::SYNTHETIC_ANNOTATION_MESSAGE: annotation CLI retrieval proof"
+          exit 1
