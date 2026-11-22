@@ -22,6 +22,16 @@ const config = {
   }],
 };
 
+const runtimeAuditStub = async () => ({
+  status: "SUPPORTED",
+  classification: "UNKNOWN",
+  evidence_types: [],
+});
+
+async function monitor(options) {
+  return monitorPrivateTargets({ runtimeAuditImpl: runtimeAuditStub, ...options });
+}
+
 function jsonResponse(value, status = 200) {
   return new Response(JSON.stringify(value), {
     status,
@@ -67,7 +77,7 @@ function runDetails(overrides = {}) {
 }
 
 test("missing external credentials report BLOCKED, never a healthy zero", async () => {
-  const record = await monitorPrivateTargets({
+  const record = await monitor({
     targetsJson: JSON.stringify(config),
     token: "",
     now,
@@ -77,7 +87,7 @@ test("missing external credentials report BLOCKED, never a healthy zero", async 
 });
 
 test("missing target configuration reports BLOCKED without exposing repository details", async () => {
-  const record = await monitorPrivateTargets({ token, targetsJson: "", now });
+  const record = await monitor({ token, targetsJson: "", now });
   assert.equal(record.coverage_status, "BLOCKED");
   assert.equal(record.blocker, "PRIVATE_TARGETS_JSON_NOT_CONFIGURED");
   assert.ok(!JSON.stringify(record).includes(repository));
@@ -93,7 +103,7 @@ test("no observed run plus an actual parser diagnostic classifies workflow synta
     }
     throw new Error("Unexpected URL: " + target);
   };
-  const record = await monitorPrivateTargets({
+  const record = await monitor({
     targetsJson: JSON.stringify(config),
     token,
     fetchImpl,
@@ -119,7 +129,7 @@ test("no observed run with a valid workflow remains UNKNOWN, not quota", async (
     }
     throw new Error("Unexpected URL: " + target);
   };
-  const record = await monitorPrivateTargets({
+  const record = await monitor({
     targetsJson: JSON.stringify(config),
     token,
     fetchImpl,
@@ -159,7 +169,7 @@ test("an explicit provider billing message from a private workflow check suite i
     if (target.endsWith("/check-runs/901/annotations?per_page=100")) return jsonResponse([]);
     throw new Error("Unexpected URL: " + target);
   };
-  const record = await monitorPrivateTargets({
+  const record = await monitor({
     targetsJson: JSON.stringify(config),
     token,
     fetchImpl,
@@ -203,7 +213,7 @@ test("runner_id zero and missing logs from a private run remain unknown, not quo
     if (target.endsWith("/check-suites/88/check-runs?per_page=100")) return jsonResponse({ check_runs: [] });
     throw new Error("Unexpected URL: " + target);
   };
-  const record = await monitorPrivateTargets({
+  const record = await monitor({
     targetsJson: JSON.stringify(config),
     token,
     fetchImpl,
@@ -222,7 +232,7 @@ test("generic private API 403 is a collector access error, not source permission
     if (target.endsWith("/branches/main")) return jsonResponse({ message: "Resource not accessible by integration" }, 403);
     throw new Error("Unexpected URL: " + target);
   };
-  const record = await monitorPrivateTargets({
+  const record = await monitor({
     targetsJson: JSON.stringify(config),
     token,
     fetchImpl,
@@ -237,7 +247,7 @@ test("generic private API 403 is a collector access error, not source permission
 test("push expectation must be explicitly every_push to avoid false missing-run alerts", async () => {
   const invalid = structuredClone(config);
   invalid.targets[0].expected_workflows[0].expectation = "path_filtered";
-  const record = await monitorPrivateTargets({
+  const record = await monitor({
     targetsJson: JSON.stringify(invalid),
     token,
     now,
@@ -368,7 +378,7 @@ test("no run plus a fresh matching organization hard cap classifies quota; synta
     }
     throw new Error("Unexpected URL: " + targetUrl);
   };
-  const record = await monitorPrivateTargets({
+  const record = await monitor({
     targetsJson: JSON.stringify(billingConfig),
     token,
     fetchImpl,
