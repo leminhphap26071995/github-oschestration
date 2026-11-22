@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { collectDiagnostics, renderSummary } from "../diagnostics/collect.mjs";
 import { createGitHubApi } from "../diagnostics/github-api.mjs";
-import { classifyJob } from "../diagnostics/classify.mjs";
+import { classifyJob, sanitizeText } from "../diagnostics/classify.mjs";
 
 const repository = "owner/repository";
 const token = "temporary-test-token-must-never-appear";
@@ -396,6 +396,22 @@ test("collector annotation 404/429 and log 403 remain retrieval errors, not sour
     assert.notEqual(item.classification, "PERMISSION_DENIED");
     assert.notEqual(item.classification, "QUOTA_EXHAUSTED");
   }
+});
+
+
+test("escapes GitHub workflow commands embedded in untrusted source evidence", () => {
+  const raw = "##[error]Process completed with exit code 1. ::add-mask::secret-value";
+  const safe = sanitizeText(raw);
+  assert.ok(!safe.includes("##[error]"));
+  assert.ok(!safe.includes("::add-mask::"));
+  assert.ok(safe.includes("[GH_ACTION_COMMAND_ESCAPED:error]"));
+  const classified = classifyJob({
+    job: job(77, 88, { steps: [] }),
+    annotations: [],
+    logs: { status: "RETRIEVED", text: raw },
+  });
+  assert.equal(classified.classification, "STEP_FAILURE");
+  assert.ok(!classified.evidence.some(item => item.message.includes("##[error]")));
 });
 
 test("unknown job conclusion remains UNKNOWN when no source evidence exists", () => {
