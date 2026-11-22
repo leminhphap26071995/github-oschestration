@@ -2,7 +2,7 @@ name: GitHub Actions Run Diagnostics Observer
 
 on:
   schedule:
-    - cron: "55 * * * *"
+    - cron: "8,23,38,53 * * * *"
   workflow_run:
     workflows:
       - GitHub Actions Credential Read Audit
