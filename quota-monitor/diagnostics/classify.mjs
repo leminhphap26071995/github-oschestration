@@ -208,7 +208,7 @@ export function classifyJob({ job = {}, annotations = [], logs = { status: "NOT_
   };
 
   return {
-    classification: legacy[classification] || classification,
+    classification: legacy[classification] || (classification === "UNKNOWN" && job.conclusion === "failure" ? "EXECUTION_EVIDENCE_MISSING" : classification),
     primary_classification: classification,
     classifications: distinct.length ? distinct : [classification],
     evidence,
