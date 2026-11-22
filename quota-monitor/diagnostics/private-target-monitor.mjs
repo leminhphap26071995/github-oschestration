@@ -413,6 +413,7 @@ export async function monitorPrivateTargets({
             sha: run.head_sha,
             workflowId: expected.id,
             lintImpl,
+            runtimeAuditImpl,
             actionlintPath,
           });
           const diagnostics = await collectDiagnostics({
@@ -437,6 +438,7 @@ export async function monitorPrivateTargets({
               !safeRecord.classifications.includes(definition.classification)) {
             safeRecord.classifications.push(definition.classification);
           }
+          safeRecord.evidence_types = [...new Set([...safeRecord.evidence_types, ...definition.evidence_types])];
           const executionObserved = diagnostics.jobs.some(job =>
             (job.runner_id?.state === "PRESENT" && Number.isSafeInteger(job.runner_id.value) && job.runner_id.value > 0) ||
             (Array.isArray(job.steps) && job.steps.length > 0)
