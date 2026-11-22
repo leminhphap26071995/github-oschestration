@@ -2,23 +2,27 @@
 
 This directory contains the read-only collector and report enrichment used by the existing private monitoring workflow. It reads GitHub billing REST APIs; it does not modify monitored organizations or repositories.
 
+## First-stage workflow credential audit
+
+The separate \`.github/workflows/quota-token-permission-audit.yml\` workflow verifies the built-in, short-lived \`GITHUB_TOKEN\` available to a GitHub Actions job. It is deliberately limited to read access:
+
+- \`actions: read\` — inspect workflow runs and jobs.
+- \`checks: read\` — inspect check runs and annotations.
+- \`contents: read\` — read workflow/source files and receipts.
+- \`metadata: read\` is implicit; all other permission keys are \`none\`.
+
+The workflow prints the declared permission contract and read-only API probe results to the job log and step summary. It never prints the token, uses no PAT or GitHub App private key, and performs no write, billing, cleanup, cancellation, or deletion operation. It is triggered automatically only by changes to its own workflow, script, tests, README, or the conformance workflow on \`main\`; it has no manual dispatch path.
+
+Important distinction: GitHub's \`X-Accepted-GitHub-Permissions\` response header identifies what an endpoint requires, not what the token was granted. \`GITHUB_TOKEN\` is a GitHub App installation token, so absence of the classic OAuth \`X-OAuth-Scopes\` header is not evidence of zero permissions. The explicit job-level \`permissions\` block is the grant contract for this workflow; API probes verify the read paths used by the next quota-monitor stage. Public-repository read success is not a complete token-permission inventory.
+
+This first-stage audit does not inspect billing usage or decide whether Actions quota is exhausted. Those are separate later steps.
+
 ## Official source of truth
 
 - Billing usage REST API: https://docs.github.com/en/rest/billing/usage
 - Automating billing usage reports and account-level authorization: https://docs.github.com/en/billing/tutorials/automate-usage-reporting
 - Product and SKU identifiers: https://docs.github.com/en/billing/reference/product-and-sku-names
 - Actions billing, runner rates and storage accounting: https://docs.github.com/en/billing/concepts/product-billing/github-actions
-
-The collector retains the billing API's SKU, unit type, quantity and cost. The enrichment step separates:
-
-- Linux runner SKUs: actions_linux*
-- Windows runner SKUs: actions_windows*
-- macOS runner SKUs: actions_macos*
-- Actions storage: actions_storage
-- Actions cache storage: actions_cache_storage
-- Custom runner image storage: actions_custom_image_storage
-
-Unknown Actions SKUs remain visible in the original usage rows. Storage quantities keep the API-returned unit (for example GB-hours); storage is never added to runner minutes. netAmount is the API-reported billed amount. Discounted usage is not a remaining balance.
 
 ## API endpoints and attribution
 
@@ -31,8 +35,6 @@ The enhanced billing usage-report endpoints (.../settings/billing/usage) can ret
 The usage summary is public preview and only exposes the previous 24 months. GitHub can change this contract.
 
 ## Authorization: personal account plus one GitHub App for organizations
-
-A repository admin/owner role alone does not grant billing access. User billing requires the account holder; organization billing requires an organization owner or billing manager.
 
 The private CI workflow uses these secrets:
 
@@ -73,3 +75,4 @@ No billing data is written to this public repository or printed in workflow logs
 Run:
   python -m unittest discover -s quota-monitor/tests -p 'test_*.py' -v
   node --test quota-monitor/tests/test_app_tokens.mjs
+  node --test quota-monitor/tests/test_token_permissions.mjs
