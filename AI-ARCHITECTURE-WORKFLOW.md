@@ -35,3 +35,7 @@ RECOVER -> ROUTE -> PREFLIGHT -> INSPECT -> IMPLEMENT -> EXECUTE -> OBSERVE -> D
 A failed method is not a failed investigation. Recover the exact execution cursor, inspect alternative evidence routes, repair the earliest mismatch and continue all runnable AI-owned work.
 
 Keep source/static, hosted CI, artifact, runtime/consumer and owner acceptance as separate gates. Never claim completion while an in-scope criterion remains pending, failed, unknown or blocked.
+
+## Notion-first repository and role continuity
+
+Project Introduction routes into Notion and is not repository authority. Notion supplies requirement-scoped repository access and work-package state; GitHub supplies the visible repository inventory and source evidence. Visibility is a data-placement attribute, not a blanket gate: use public repositories for generic/sanitized work and private storage for private payloads. Select one task-scoped execution repository, continue the same unfinished specialist role across owner-created sessions, and require implementation plus consumer evidence before completion. See `docs/NOTION-FIRST-REPO-ROLE-CONTROL-PLANE.md` and `scripts/repository_control_plane.py`.
