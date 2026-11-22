@@ -105,6 +105,11 @@ export function collectActionReferences(workflowText) {
   return [...String(workflowText).matchAll(/^\s*(?:-\s*)?uses:\s*([^\s#]+)/gm)].map(match => match[1]);
 }
 
+export function inspectWorkflowText(workflowText, root = process.cwd()) {
+  const references = [...new Set(collectActionReferences(workflowText))];
+  return references.map(reference => inspectReference(reference, root));
+}
+
 export function main(root = process.cwd()) {
   const workflowFiles = walk(join(root, ".github/workflows")).filter(path => /\.ya?ml$/i.test(path));
   if (workflowFiles.length === 0) throw new Error("No workflow YAML files found.");
