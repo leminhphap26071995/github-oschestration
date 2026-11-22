@@ -180,6 +180,11 @@ export function classifyJob({ job = {}, annotations = [], logs = { status: "NOT_
     classification = "EXECUTION_IN_PROGRESS";
   } else if (logs.status === "LOG_PUBLICATION_PENDING") {
     classification = "LOG_PUBLICATION_PENDING";
+    evidence.push({
+      source: "job_logs_api",
+      type: "EVIDENCE_GAP",
+      message: "The failed job log is not available from the provider yet; the underlying cause remains unknown.",
+    });
   } else if (job.conclusion === "success" || job.conclusion === "skipped") {
     classification = "NOT_FAILED";
   } else if (job.conclusion === null || job.conclusion === undefined || job.conclusion === "failure") {
@@ -295,7 +300,9 @@ export function classifyRun({
   if (jobs.length > 0) {
     for (const job of jobs) {
       for (const item of job.classifications || [job.primary_classification || job.classification]) {
-        if (item && item !== "NOT_FAILED" && item !== "RUNNER_NOT_ASSIGNED_YET" && item !== "EXECUTION_IN_PROGRESS") {
+        if (item === "LOG_PUBLICATION_PENDING") {
+          classifications.push(item, "UNKNOWN");
+        } else if (item && item !== "NOT_FAILED" && item !== "RUNNER_NOT_ASSIGNED_YET" && item !== "EXECUTION_IN_PROGRESS") {
           classifications.push(item);
         }
       }
@@ -316,6 +323,7 @@ export function classifyRun({
     "API_RATE_LIMITED",
     "OBSERVATION_WINDOW_IN_PROGRESS",
     "UNKNOWN",
+    "LOG_PUBLICATION_PENDING",
     "NOT_FAILED",
   ];
   const ordered = priority.filter(item => uniqueClasses.includes(item));
@@ -323,7 +331,7 @@ export function classifyRun({
     classification: ordered[0] || "UNKNOWN",
     classifications: ordered.length ? ordered : ["UNKNOWN"],
     evidence,
-    evidence_gap: ordered.includes("UNKNOWN") || ordered.includes("OBSERVATION_WINDOW_IN_PROGRESS"),
+    evidence_gap: ordered.includes("UNKNOWN") || ordered.includes("OBSERVATION_WINDOW_IN_PROGRESS") || ordered.includes("LOG_PUBLICATION_PENDING"),
     workflow_diagnostic_status: workflowDiagnosticStatus,
   };
 }
