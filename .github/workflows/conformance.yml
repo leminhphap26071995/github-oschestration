@@ -25,3 +25,4 @@ jobs:
       - run: node --test quota-monitor/tests/test_token_permissions.mjs
       - run: node --test quota-monitor/tests/test_diagnostics.mjs
       - run: node --test quota-monitor/tests/test_diagnostics_lifecycle.mjs
+      - run: node --test quota-monitor/tests/test_private_target_monitor.mjs
