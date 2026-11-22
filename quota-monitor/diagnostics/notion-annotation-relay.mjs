@@ -84,7 +84,8 @@ function classifyCheckRun(checkRun, annotations) {
   const workflowAnnotation = annotations.some(item => /^\.github\/workflows\/.+\.ya?ml$/i.test(item.path || ""));
   if (workflowAnnotation && parserPattern.test(annotationText)) return "WORKFLOW_YAML_OR_SCHEMA_ERROR";
   // Only the provider-owned top-level GitHub Actions check can establish quota from its output.
-  if (app === "github-actions" && checkRun.name === "GitHub Actions" && quotaPattern.test(output)) {
+  if (app === "github-actions" && checkRun.name === "GitHub Actions" &&
+      (quotaPattern.test(output) || quotaPattern.test(annotationText))) {
     return "ACTIONS_BILLING_QUOTA_EXHAUSTED";
   }
   if (annotations.length > 0) return "ANNOTATION_PRESENT_CAUSE_REQUIRES_INTERPRETATION";
@@ -228,16 +229,16 @@ export async function publishAnnotationReceipts({
   let published = 0;
   let skipped = 0;
   for (const receipt of receipts) {
-    if (knownText.includes(receipt.dedupe_key)) {
-      skipped++;
-      continue;
-    }
     const serialized = JSON.stringify(receipt, null, 2);
     const chunks = chunkText(serialized);
     const groups = [];
     for (let i = 0; i < chunks.length; i += 80) groups.push(chunks.slice(i, i + 80));
     for (let index = 0; index < groups.length; index++) {
       const marker = receipt.dedupe_key + ":part:" + (index + 1) + "/" + groups.length;
+      if (knownText.includes(marker)) {
+        skipped++;
+        continue;
+      }
       const content = [marker, ...groups[index]].join("\n");
       const richText = chunkText(content).map(part => ({ type: "text", text: { content: part } }));
       const { data } = await requestJson(base + "/comments", {
