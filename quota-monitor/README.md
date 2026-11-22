@@ -58,7 +58,7 @@ The scheduled private-target job reads PRIVATE_MONITOR_TOKEN and PRIVATE_TARGETS
 - every_push only when the workflow truly runs on every push to the configured branch.
 - schedule with an explicit expected interval for scheduled workflows.
 
-Path-filtered or conditional triggers are not inferred. When an expected run is absent after the grace window, the monitor fetches the exact workflow file at the branch SHA and runs actionlint. A parser diagnostic can prove malformed YAML; otherwise the result is NO_RUN_OBSERVED with UNKNOWN cause. A missing run is never converted into quota exhaustion.
+Path-filtered or conditional triggers are not inferred. For each observed or missing run, the monitor fetches the exact workflow file at the source/branch SHA and runs actionlint plus the reusable workflow-quality-gate action-runtime metadata audit. It can identify malformed YAML/schema and retired/unsupported remote action runtimes. Unavailable action metadata remains UNKNOWN. If no run is observed and neither parser nor runtime audit proves a configuration fault, the result is NO_RUN_OBSERVED with UNKNOWN cause. A missing run is never converted into quota exhaustion.
 
 The private-target report deliberately redacts repository names, workflow paths, branch names, SHAs, run IDs, raw logs, and provider messages before uploading to this public repository. It emits only opaque target/workflow aliases, lifecycle status, classification, and evidence types. Missing credentials produce BLOCKED, not a healthy zero.
 
