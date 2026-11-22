@@ -1,6 +1,8 @@
 name: GitHub Actions Run Diagnostics Observer
 
 on:
+  schedule:
+    - cron: "7,22,37,52 * * * *"
   workflow_run:
     workflows:
       - GitHub Actions Credential Read Audit
@@ -17,10 +19,48 @@ on:
 permissions: {}
 
 concurrency:
-  group: actions-diagnostics-${{ github.event.workflow_run.id }}-${{ github.event.workflow_run.run_attempt }}-${{ github.event.action }}
+  group: actions-diagnostics-${{ github.event.workflow_run.id || github.run_id }}-${{ github.event.workflow_run.run_attempt || 'scheduled' }}-${{ github.event.action || 'schedule' }}
   cancel-in-progress: false
 
 jobs:
+  private_targets:
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    permissions:
+      actions: read
+      checks: read
+      contents: read
+    steps:
+      - name: Checkout trusted observer source
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Set up pinned actionlint toolchain
+        uses: actions/setup-go@v6
+        with:
+          go-version: "1.24.3"
+          cache: false
+      - name: Install pinned actionlint
+        continue-on-error: true
+        run: |
+          go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.7
+          echo "$HOME/go/bin" >> "$GITHUB_PATH"
+      - name: Observe configured private repositories
+        env:
+          PRIVATE_MONITOR_TOKEN: ${{ secrets.PRIVATE_MONITOR_TOKEN }}
+          PRIVATE_TARGETS_JSON: ${{ secrets.PRIVATE_TARGETS_JSON }}
+        run: node quota-monitor/diagnostics/private-target-monitor.mjs
+      - name: Upload redacted private target evidence
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: private-target-diagnostics-${{ github.run_id }}
+          path: private-target-diagnostics.json
+          if-no-files-found: warn
+          retention-days: 14
+
   diagnose:
     if: github.event.workflow_run.head_repository.full_name == github.repository
     runs-on: ubuntu-latest
