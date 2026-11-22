@@ -121,9 +121,9 @@ jobs:
             echo
             echo "## Raw source evidence"
             echo
-            echo "- `workflow-runs.json`"
-            echo "- `jobs.json`"
-            echo "- `source-run-logs-error.txt`"
+            echo "- workflow-runs.json"
+            echo "- jobs.json"
+            echo "- source-run-logs-error.txt"
           } > evidence/no-runner/CHATGPT-READOUT.md
 
           for FILE in evidence/no-runner/CHATGPT-READOUT.md evidence/no-runner/workflow-runs.json evidence/no-runner/jobs.json evidence/no-runner/actionlint-diagnostics.txt evidence/no-runner/source-run-logs-error.txt; do
