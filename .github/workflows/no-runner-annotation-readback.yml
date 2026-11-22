@@ -6,7 +6,7 @@ on:
       - "No-Runner Annotation Recovery Observer"
     types: [completed]
     branches:
-      - test/annotation-no-runner-20261122
+      - 'test/annotation-no-runner-*'
 
 permissions: {}
 
