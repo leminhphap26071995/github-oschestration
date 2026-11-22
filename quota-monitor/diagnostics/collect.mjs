@@ -2,30 +2,23 @@
 import { appendFile, readFile } from "node:fs/promises";
 import { pathToFileURL } from "node:url";
 import { createGitHubApi, GitHubApiError } from "./github-api.mjs";
-import { classifyJob, fieldState, sanitizeText } from "./classify.mjs";
-
-const SOURCES = {
-  "GitHub Actions Credential Read Audit": ".github/workflows/quota-token-permission-audit.yml",
-  "Portable AI Workflow Conformance": ".github/workflows/conformance.yml",
-};
+import { classifyJob, classifyRun, fieldState, sanitizeText } from "./classify.mjs";
 
 function assert(condition, code) {
   if (!condition) throw new Error(code);
 }
 
 function validateEvent(event, repository) {
-  assert(event?.action === "completed", "INVALID_EVENT_ACTION");
+  assert(["requested", "in_progress", "completed"].includes(event?.action), "INVALID_EVENT_ACTION");
   assert(event?.repository?.full_name === repository, "EVENT_REPOSITORY_MISMATCH");
 
   const source = event.workflow_run;
   assert(source && typeof source === "object", "MISSING_WORKFLOW_RUN");
-  assert(Object.hasOwn(SOURCES, event.workflow?.name), "UNSUPPORTED_SOURCE_WORKFLOW");
-
-  const expectedPath = SOURCES[event.workflow.name];
-  assert(event.workflow.path === expectedPath, "EVENT_WORKFLOW_PATH_MISMATCH");
-  assert(source.path === expectedPath, "EVENT_RUN_PATH_MISMATCH");
-  assert(source.head_branch === "main", "SOURCE_BRANCH_MISMATCH");
-  assert(source.conclusion && source.conclusion !== "success", "SOURCE_RUN_NOT_FAILED");
+  assert(event.workflow && typeof event.workflow === "object", "MISSING_WORKFLOW_METADATA");
+  assert(typeof event.workflow.name === "string" && event.workflow.name.length > 0, "MISSING_WORKFLOW_NAME");
+  assert(typeof event.workflow.path === "string" && /^\.github\/workflows\/[A-Za-z0-9._/-]+\.ya?ml$/i.test(event.workflow.path), "INVALID_WORKFLOW_PATH");
+  assert(!event.workflow.path.includes(".."), "INVALID_WORKFLOW_PATH");
+  assert(source.path === event.workflow.path, "EVENT_RUN_PATH_MISMATCH");
 
   const runId = source.id;
   const attempt = source.run_attempt;
@@ -34,18 +27,29 @@ function validateEvent(event, repository) {
   assert(Number.isSafeInteger(attempt) && attempt > 0, "INVALID_RUN_ATTEMPT");
   assert(Number.isSafeInteger(workflowId) && workflowId > 0, "INVALID_WORKFLOW_ID");
   assert(typeof source.head_sha === "string" && /^[a-f0-9]{40}$/i.test(source.head_sha), "INVALID_HEAD_SHA");
+  assert(typeof source.head_branch === "string" && source.head_branch.length > 0, "MISSING_HEAD_BRANCH");
+
+  const checkSuiteId = fieldState(source, "check_suite_id");
+  if (checkSuiteId.state === "PRESENT") {
+    assert(Number.isSafeInteger(checkSuiteId.value) && checkSuiteId.value > 0, "INVALID_CHECK_SUITE_ID");
+  }
 
   return {
     repository,
-    workflow: { id: workflowId, name: event.workflow.name, path: expectedPath },
+    workflow: { id: workflowId, name: event.workflow.name, path: event.workflow.path },
     run_id: runId,
     run_attempt: attempt,
+    check_suite_id: checkSuiteId,
     head_sha: source.head_sha,
-    event: source.event,
+    event: source.event ?? null,
+    event_action: event.action,
     head_branch: source.head_branch,
-    conclusion: source.conclusion,
-    status: source.status,
-    html_url: source.html_url,
+    conclusion: source.conclusion ?? null,
+    status: source.status ?? null,
+    html_url: source.html_url ?? null,
+    created_at: source.created_at ?? null,
+    run_started_at: source.run_started_at ?? null,
+    updated_at: source.updated_at ?? null,
   };
 }
 
@@ -58,10 +62,13 @@ function validateRunDetails(run, source) {
     [run?.head_sha === source.head_sha, "HEAD_SHA_MISMATCH"],
     [run?.head_branch === source.head_branch, "HEAD_BRANCH_MISMATCH"],
     [run?.event === source.event, "EVENT_TYPE_MISMATCH"],
-    [run?.conclusion === source.conclusion, "RUN_CONCLUSION_MISMATCH"],
     [run?.repository?.full_name === source.repository, "RUN_REPOSITORY_MISMATCH"],
   ];
   for (const [valid, code] of checks) assert(valid, code);
+  if (source.conclusion !== null) assert(run?.conclusion === source.conclusion, "RUN_CONCLUSION_MISMATCH");
+  if (source.check_suite_id.state === "PRESENT") {
+    assert(run?.check_suite_id === source.check_suite_id.value, "CHECK_SUITE_ID_MISMATCH");
+  }
 }
 
 function parseCheckRunUrl(value, repository, apiOrigin) {
@@ -69,7 +76,7 @@ function parseCheckRunUrl(value, repository, apiOrigin) {
   try {
     const url = new URL(value);
     const [owner, repo] = repository.split("/");
-    const prefix = `/repos/${owner}/${repo}/check-runs/`;
+    const prefix = "/repos/" + owner + "/" + repo + "/check-runs/";
     if (url.origin !== apiOrigin || !url.pathname.startsWith(prefix)) return null;
     const idText = url.pathname.slice(prefix.length);
     if (!/^\d+$/.test(idText) || Number(idText) <= 0) return null;
@@ -106,7 +113,59 @@ function errorRecord(error) {
   if (error instanceof GitHubApiError) {
     return { status: "API_ERROR", http_status: error.status, retry_after: error.retryAfter, code: error.code };
   }
-  return { status: "API_ERROR", http_status: null, retry_after: null, code: "UNEXPECTED_API_ERROR" };
+  return { status: "API_ERROR", http_status: null, retry_after: null, code: sanitizeText(error?.message || "UNEXPECTED_API_ERROR") };
+}
+
+async function collectAnnotations(api, checkRunId) {
+  const url = "/repos/" + api.repositoryPath + "/check-runs/" + checkRunId + "/annotations?per_page=100";
+  const page = await api.paginate(url, null);
+  return { status: "RETRIEVED", annotation_count: page.items.length, page_count: page.pageCount, annotations: page.items.map(summarizeAnnotation), raw: page.items };
+}
+
+async function collectCheckSuite({ api, source }) {
+  if (source.check_suite_id.state !== "PRESENT") {
+    return { status: "NOT_AVAILABLE", check_suite_id: source.check_suite_id, page_count: 0, check_runs: [] };
+  }
+  try {
+    const url = "/repos/" + api.repositoryPath + "/check-suites/" + source.check_suite_id.value + "/check-runs?per_page=100";
+    const page = await api.paginate(url, "check_runs");
+    const checkRuns = [];
+    for (const item of page.items) {
+      const record = {
+        id: fieldState(item, "id"),
+        name: sanitizeText(item.name),
+        status: item.status ?? null,
+        conclusion: item.conclusion ?? null,
+        started_at: item.started_at ?? null,
+        completed_at: item.completed_at ?? null,
+        app_slug: sanitizeText(item.app?.slug),
+        output: {
+          title: sanitizeText(item.output?.title),
+          summary: sanitizeText(item.output?.summary),
+          text: sanitizeText(item.output?.text),
+        },
+        annotations_status: "NOT_REQUESTED",
+        annotation_count: 0,
+        annotation_page_count: 0,
+        annotations: [],
+      };
+      if (record.id.state === "PRESENT" && Number.isSafeInteger(record.id.value) && record.id.value > 0) {
+        try {
+          const annotations = await collectAnnotations(api, record.id.value);
+          record.annotations_status = annotations.status;
+          record.annotation_count = annotations.annotation_count;
+          record.annotation_page_count = annotations.page_count;
+          record.annotations = annotations.annotations;
+        } catch (error) {
+          Object.assign(record, { annotations_status: "API_ERROR", annotations_error: errorRecord(error) });
+        }
+      }
+      checkRuns.push(record);
+    }
+    return { status: "RETRIEVED", check_suite_id: source.check_suite_id, page_count: page.pageCount, check_runs: checkRuns };
+  } catch (error) {
+    return { status: "API_ERROR", check_suite_id: source.check_suite_id, page_count: 0, check_runs: [], error: errorRecord(error) };
+  }
 }
 
 async function collectJob({ api, job, source }) {
@@ -134,17 +193,21 @@ async function collectJob({ api, job, source }) {
     head_sha: correlation.head_sha,
     runner_id: fieldState(job, "runner_id"),
     runner_name: fieldState(job, "runner_name"),
+    steps_state: fieldState(job, "steps"),
     name: sanitizeText(job.name),
     status: job.status ?? null,
     conclusion: job.conclusion ?? null,
     started_at: job.started_at ?? null,
     completed_at: job.completed_at ?? null,
-    steps: (job.steps || []).map(summarizeStep),
+    steps: (Array.isArray(job.steps) ? job.steps : []).map(summarizeStep),
     correlation_status: mismatch ? "MISMATCH" : incompleteIdentity ? "INCOMPLETE" : "MATCHED",
     check_run: { status: "NOT_RESOLVED", id: null, url: null, annotation_count: 0, page_count: 0, annotations: [] },
     logs: { status: "NOT_REQUESTED", attempts: 0, http_status: null, retry_after: null },
-    classification: "EXECUTION_EVIDENCE_MISSING",
+    classification: "UNKNOWN",
+    primary_classification: "UNKNOWN",
+    classifications: ["UNKNOWN"],
     evidence: [],
+    evidence_gap: true,
   };
 
   if (mismatch || incompleteIdentity) {
@@ -174,23 +237,21 @@ async function collectJob({ api, job, source }) {
       annotations: [],
     };
     try {
-      const annotationsUrl = new URL(checkRun.url);
-      annotationsUrl.pathname += "/annotations";
-      annotationsUrl.searchParams.set("per_page", "100");
-      const page = await api.paginate(annotationsUrl.toString(), null);
-      rawAnnotations = page.items;
-      result.check_run.status = "RETRIEVED";
-      result.check_run.annotation_count = page.items.length;
-      result.check_run.page_count = page.pageCount;
-      result.check_run.annotations = page.items.map(summarizeAnnotation);
+      const annotations = await collectAnnotations(api, checkRun.id);
+      rawAnnotations = annotations.raw;
+      result.check_run.status = annotations.status;
+      result.check_run.annotation_count = annotations.annotation_count;
+      result.check_run.page_count = annotations.page_count;
+      result.check_run.annotations = annotations.annotations;
     } catch (error) {
       Object.assign(result.check_run, errorRecord(error));
     }
   }
 
-  const isFailedJob = job.conclusion !== "success" && job.conclusion !== "skipped";
+  const isTerminalFailure = job.status === "completed" &&
+    job.conclusion !== "success" && job.conclusion !== "skipped";
   let rawLogs = "";
-  if (isFailedJob && Number.isSafeInteger(job.id) && job.id > 0) {
+  if (isTerminalFailure) {
     const logs = await api.downloadJobLogs(job.id);
     rawLogs = logs.text;
     result.logs = {
@@ -207,7 +268,10 @@ async function collectJob({ api, job, source }) {
     logs: { status: result.logs.status, text: rawLogs },
   });
   result.classification = classification.classification;
+  result.primary_classification = classification.primary_classification;
+  result.classifications = classification.classifications;
   result.evidence = classification.evidence;
+  result.evidence_gap = classification.evidence_gap;
   return result;
 }
 
@@ -220,28 +284,60 @@ export async function collectDiagnostics({
   sleepImpl,
   observerSha = null,
   recordedAt = new Date().toISOString(),
+  workflowDiagnostic = "",
+  workflowDiagnosticStatus = "NOT_PROVIDED",
 } = {}) {
   const source = validateEvent(event, repository);
   const api = createGitHubApi({ token, apiUrl, fetchImpl, sleepImpl });
   const [owner, repo] = repository.split("/");
   api.setRepository(owner, repo);
 
-  const runUrl = `/repos/${owner}/${repo}/actions/runs/${source.run_id}`;
+  const runUrl = "/repos/" + owner + "/" + repo + "/actions/runs/" + source.run_id;
   const { data: run } = await api.getJson(runUrl);
   validateRunDetails(run, source);
 
-  const jobsUrl = `/repos/${owner}/${repo}/actions/runs/${source.run_id}/attempts/${source.run_attempt}/jobs?per_page=100`;
-  const jobsPage = await api.paginate(jobsUrl, "jobs");
+  let jobsPage;
+  let jobsStatus = "RETRIEVED";
+  try {
+    const jobsUrl = "/repos/" + owner + "/" + repo + "/actions/runs/" + source.run_id +
+      "/attempts/" + source.run_attempt + "/jobs?per_page=100";
+    jobsPage = await api.paginate(jobsUrl, "jobs");
+  } catch (error) {
+    jobsStatus = "API_ERROR";
+    jobsPage = { items: [], pageCount: 0, error: errorRecord(error) };
+  }
+
   const jobs = [];
   for (const job of jobsPage.items) jobs.push(await collectJob({ api, job, source }));
+  const checkSuite = await collectCheckSuite({ api, source });
+  const runClassification = classifyRun({
+    source: { ...source, status: run.status, conclusion: run.conclusion },
+    jobs,
+    jobsStatus,
+    checkSuite,
+    workflowDiagnostic,
+    workflowDiagnosticStatus,
+  });
 
   return {
-    schema_version: 1,
+    schema_version: 2,
     recorded_at: recordedAt,
     source: {
       ...source,
+      status: run.status ?? source.status,
+      conclusion: run.conclusion ?? source.conclusion,
+      check_suite_id: source.check_suite_id,
+      jobs_status: jobsStatus,
       jobs_page_count: jobsPage.pageCount,
+      job_count: jobsStatus === "RETRIEVED" ? jobsPage.items.length : null,
+      jobs_error: jobsPage.error ?? null,
     },
+    workflow_definition: {
+      status: workflowDiagnosticStatus,
+      diagnostic: sanitizeText(workflowDiagnostic),
+    },
+    check_suite: checkSuite,
+    run_classification: runClassification,
     collector: {
       workflow_sha: observerSha,
       api_version: "2026-03-10",
@@ -257,27 +353,44 @@ export function renderSummary(record) {
   const lines = [
     "# GitHub Actions run diagnostics",
     "",
-    `- Source workflow: ${record.source.workflow.name}`,
-    `- Source run: [${record.source.run_id}](${record.source.html_url})`,
-    `- Attempt: ${record.source.run_attempt}`,
-    `- Source SHA: \`${record.source.head_sha}\``,
-    `- Conclusion: ${record.source.conclusion}`,
-    `- Jobs pages: ${record.source.jobs_page_count}`,
+    "- Source workflow: " + record.source.workflow.name,
+    "- Source path: " + record.source.workflow.path,
+    "- Source run: [" + record.source.run_id + "](" + (record.source.html_url || "") + ")",
+    "- Event action: " + record.source.event_action,
+    "- Attempt: " + record.source.run_attempt,
+    "- Source SHA: " + record.source.head_sha,
+    "- Status / conclusion: " + (record.source.status || "UNKNOWN") + " / " + (record.source.conclusion || "UNKNOWN"),
+    "- Check suite: " + (record.source.check_suite_id.value ?? record.source.check_suite_id.state),
+    "- Jobs collection: " + record.source.jobs_status + " (" + (record.source.job_count ?? "UNKNOWN") + " jobs)",
+    "- Run classification: " + record.run_classification.classification,
+    "- All classifications: " + record.run_classification.classifications.join(", "),
+    "- Workflow definition evidence: " + record.workflow_definition.status,
+    "- Check suite evidence: " + record.check_suite.status,
     "",
-    "| Job ID | Runner ID | Check Run ID | Job conclusion | Annotations | Logs | Classification |",
-    "| ---: | ---: | ---: | --- | ---: | --- | --- |",
+    "| Job ID | Runner ID | Steps field | Check Run ID | Conclusion | Annotations | Logs | Classification |",
+    "| ---: | ---: | --- | ---: | --- | ---: | --- | --- |",
   ];
   for (const job of record.jobs) {
     const runner = job.runner_id.state === "PRESENT" ? job.runner_id.value : job.runner_id.state;
     const check = job.check_run.id ?? job.check_run.status;
-    lines.push(`| ${job.job_id.value ?? job.job_id.state} | ${runner} | ${check} | ${job.conclusion ?? "UNKNOWN"} | ${job.check_run.annotation_count} | ${job.logs.status} | ${job.classification} |`);
+    const steps = job.steps_state.state === "PRESENT"
+      ? (Array.isArray(job.steps_state.value) ? job.steps_state.value.length : "NOT_ARRAY")
+      : job.steps_state.state;
+    lines.push("| " + (job.job_id.value ?? job.job_id.state) + " | " + runner + " | " + steps +
+      " | " + check + " | " + (job.conclusion ?? "UNKNOWN") + " | " +
+      job.check_run.annotation_count + " | " + job.logs.status + " | " +
+      job.primary_classification + " |");
   }
-  lines.push("", "Raw job logs are not persisted or uploaded. Evidence snippets are sanitized.");
+  lines.push("", "Raw job logs are not persisted. Only sanitized evidence snippets and provider metadata are retained.");
+  for (const item of record.run_classification.evidence) {
+    lines.push("- Run evidence (" + item.type + ", " + item.source + "): " + item.message);
+  }
   for (const job of record.jobs) {
     for (const item of job.evidence) {
-      lines.push(`- Job ${job.job_id.value ?? "unknown"} (${item.type}, ${item.source}): ${item.message}`);
+      lines.push("- Job " + (job.job_id.value ?? "unknown") + " (" + item.type + ", " + item.source + "): " + item.message);
     }
   }
+  lines.push("", "A missing job, runner_id=0, empty steps, unavailable logs, or API error is not quota proof.");
   return lines.join("\n") + "\n";
 }
 
@@ -287,12 +400,24 @@ async function main() {
   const eventPath = process.env.GITHUB_EVENT_PATH;
   if (!eventPath) throw new Error("MISSING_GITHUB_EVENT_PATH");
   const event = JSON.parse(await readFile(eventPath, "utf8"));
+  let workflowDiagnostic = "";
+  let workflowDiagnosticStatus = process.env.WORKFLOW_DIAGNOSTIC_STATUS || "NOT_PROVIDED";
+  if (process.env.WORKFLOW_DIAGNOSTIC_PATH) {
+    try {
+      workflowDiagnostic = await readFile(process.env.WORKFLOW_DIAGNOSTIC_PATH, "utf8");
+      if (workflowDiagnosticStatus === "NOT_PROVIDED") workflowDiagnosticStatus = "RETRIEVED";
+    } catch {
+      workflowDiagnosticStatus = "UNAVAILABLE";
+    }
+  }
   const record = await collectDiagnostics({
     event,
     repository,
     token,
     apiUrl: process.env.GITHUB_API_URL || "https://api.github.com",
     observerSha: process.env.OBSERVER_SHA || null,
+    workflowDiagnostic,
+    workflowDiagnosticStatus,
   });
   process.stdout.write(JSON.stringify(record) + "\n");
   if (process.env.GITHUB_STEP_SUMMARY) {
