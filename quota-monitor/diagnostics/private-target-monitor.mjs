@@ -43,12 +43,107 @@ function validateTargets(config) {
       }
     }
   }
+  if (config.billing_snapshot) {
+    validateBillingSnapshot(config.billing_snapshot);
+    for (const target of config.targets) {
+      assert(target.billing_scope === "user" || target.billing_scope === "organization", "BILLING_SCOPE_REQUIRED");
+    }
+  }
   return config.targets;
+}
+
+function validateBillingSnapshot(snapshot) {
+  assert(/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(snapshot.repository || ""), "INVALID_BILLING_SNAPSHOT_REPOSITORY");
+  assert(/^[A-Za-z0-9._/-]+$/.test(snapshot.branch || ""), "INVALID_BILLING_SNAPSHOT_BRANCH");
+  assert(!snapshot.branch.includes(".."), "INVALID_BILLING_SNAPSHOT_BRANCH");
+  assert(/^[A-Za-z0-9._/-]+\.json$/i.test(snapshot.path || ""), "INVALID_BILLING_SNAPSHOT_PATH");
+  assert(!snapshot.path.includes(".."), "INVALID_BILLING_SNAPSHOT_PATH");
+  assert(Number.isSafeInteger(snapshot.max_age_minutes) &&
+    snapshot.max_age_minutes >= 5 && snapshot.max_age_minutes <= 10080,
+    "INVALID_BILLING_SNAPSHOT_MAX_AGE");
 }
 
 function apiError(error) {
   if (error instanceof GitHubApiError) return { http_status: error.status, code: error.code };
   return { http_status: null, code: sanitizeText(error?.message || "UNEXPECTED_API_ERROR") };
+}
+
+async function fetchBillingSnapshot({ config, token, apiUrl, fetchImpl }) {
+  if (!config) return { status: "NOT_CONFIGURED", snapshot: null };
+  const api = createGitHubApi({ token, apiUrl, fetchImpl });
+  const [owner, repo] = config.repository.split("/");
+  api.setRepository(owner, repo);
+  try {
+    const url = "/repos/" + config.repository + "/contents/" + config.path +
+      "?ref=" + encodeURIComponent(config.branch);
+    const { data } = await api.getJson(url);
+    if (data?.encoding !== "base64" || typeof data.content !== "string") {
+      return { status: "CONTENT_UNAVAILABLE", snapshot: null };
+    }
+    const snapshot = JSON.parse(Buffer.from(data.content.replace(/\s/g, ""), "base64").toString("utf8"));
+    return { status: "RETRIEVED", snapshot };
+  } catch (error) {
+    return { status: "API_ERROR", snapshot: null, api_error: apiError(error) };
+  }
+}
+
+export function evaluateBillingEvidence({ snapshotState, target, now, maxAgeMinutes }) {
+  if (!snapshotState || snapshotState.status !== "RETRIEVED") {
+    return { status: snapshotState?.status || "NOT_CONFIGURED", classification: null };
+  }
+  const snapshot = snapshotState.snapshot;
+  const collectedAt = Date.parse(snapshot?.collected_at_utc || "");
+  if (!Number.isFinite(collectedAt)) return { status: "SNAPSHOT_TIMESTAMP_INVALID", classification: null };
+  const ageMinutes = Math.max(0, Math.floor((now.getTime() - collectedAt) / 60000));
+  if (ageMinutes > maxAgeMinutes) return { status: "STALE_SNAPSHOT", classification: null, age_minutes: ageMinutes };
+
+  const [targetOwner, targetRepo] = target.repository.split("/");
+  const account = (snapshot.accounts || []).find(item =>
+    String(item.owner || "").toLowerCase() === targetOwner.toLowerCase() &&
+    item.scope === target.billing_scope
+  );
+  if (!account) return { status: "BILLING_OWNER_NOT_IN_SNAPSHOT", classification: null, age_minutes: ageMinutes };
+  if (account.summary_error || account.status === "UNKNOWN") {
+    return { status: "BILLING_SNAPSHOT_UNKNOWN", classification: null, age_minutes: ageMinutes };
+  }
+  if (target.billing_scope === "user") {
+    return {
+      status: "PERSONAL_REMAINING_QUOTA_NOT_EXPOSED",
+      classification: null,
+      age_minutes: ageMinutes,
+    };
+  }
+
+  const budgets = account.budget?.items || [];
+  const matchesTarget = budget => {
+    const productSkus = budget.product_skus || [];
+    const isActions = productSkus.some(value =>
+      typeof value === "string" && (value.toLowerCase() === "actions" || value.toLowerCase().startsWith("actions_"))
+    );
+    if (!isActions || budget.prevent_further_usage !== true) return false;
+    const scope = String(budget.scope || "").toLowerCase();
+    const entity = String(budget.entity || "").trim().toLowerCase();
+    if (scope === "organization") return !entity || entity === targetOwner.toLowerCase();
+    if (scope === "repository") return entity === target.repository.toLowerCase() || entity === targetRepo.toLowerCase();
+    return false;
+  };
+  const matchingBudgets = budgets.filter(matchesTarget);
+  const hardCap = matchingBudgets.find(item => item.status === "HARD_CAP_REACHED");
+  if (hardCap) {
+    return {
+      status: "HARD_CAP_REACHED",
+      classification: "ACTIONS_BILLING_QUOTA_EXHAUSTED",
+      evidence_type: "BILLING_HARD_CAP_SNAPSHOT",
+      age_minutes: ageMinutes,
+    };
+  }
+  if (matchingBudgets.some(item => item.status === "HARD_CAP_NOT_REACHED")) {
+    return { status: "HARD_CAP_NOT_REACHED", classification: null, age_minutes: ageMinutes };
+  }
+  if (matchingBudgets.some(item => item.status === "UNKNOWN_SPEND")) {
+    return { status: "BILLING_BUDGET_SPEND_UNKNOWN", classification: null, age_minutes: ageMinutes };
+  }
+  return { status: "NO_MATCHING_ACTIONS_HARD_CAP", classification: null, age_minutes: ageMinutes };
 }
 
 function evidenceTypes(record) {
@@ -191,8 +286,10 @@ export async function monitorPrivateTargets({
   }
 
   let targets;
+  let billingSnapshotConfig;
   try {
     targets = validateTargets(config);
+    billingSnapshotConfig = config.billing_snapshot || null;
   } catch (error) {
     return {
       schema_version: 1,
@@ -203,8 +300,20 @@ export async function monitorPrivateTargets({
     };
   }
 
+  const billingSnapshotState = await fetchBillingSnapshot({
+    config: billingSnapshotConfig,
+    token,
+    apiUrl,
+    fetchImpl,
+  });
   const results = [];
   for (const target of targets) {
+    const billingEvidence = evaluateBillingEvidence({
+      snapshotState: billingSnapshotState,
+      target,
+      now,
+      maxAgeMinutes: billingSnapshotConfig?.max_age_minutes,
+    });
     const api = createGitHubApi({ token, apiUrl, fetchImpl });
     const [owner, repo] = target.repository.split("/");
     api.setRepository(owner, repo);
@@ -288,6 +397,23 @@ export async function monitorPrivateTargets({
             safeRecord.classifications.push(definition.classification);
             safeRecord.classification = definition.classification;
           }
+          const executionObserved = diagnostics.jobs.some(job =>
+            (job.runner_id?.state === "PRESENT" && Number.isSafeInteger(job.runner_id.value) && job.runner_id.value > 0) ||
+            (Array.isArray(job.steps) && job.steps.length > 0)
+          );
+          const admissionClasses = new Set([
+            "UNKNOWN", "RUNNER_NOT_ASSIGNED_YET", "OBSERVATION_WINDOW_IN_PROGRESS",
+            "LOG_PUBLICATION_PENDING", "EXECUTION_EVIDENCE_MISSING",
+          ]);
+          if (billingEvidence.classification === "ACTIONS_BILLING_QUOTA_EXHAUSTED" &&
+              !executionObserved && admissionClasses.has(safeRecord.classification)) {
+            safeRecord.classification = "ACTIONS_BILLING_QUOTA_EXHAUSTED";
+            if (!safeRecord.classifications.includes("ACTIONS_BILLING_QUOTA_EXHAUSTED")) {
+              safeRecord.classifications.push("ACTIONS_BILLING_QUOTA_EXHAUSTED");
+            }
+            safeRecord.evidence_types = [...new Set([...safeRecord.evidence_types, "BILLING_HARD_CAP_SNAPSHOT"])];
+          }
+          safeRecord.billing_evidence_status = billingEvidence.status;
           results.push(safeRecord);
         } catch (error) {
           results.push({
@@ -337,8 +463,16 @@ export async function monitorPrivateTargets({
         run_observed: false,
         commit_age_minutes: ageMinutes,
         workflow_definition_status: definition.status,
-        classification: definition.classification,
-        evidence_types: definition.evidence_types,
+        classification: definition.classification === "UNKNOWN" &&
+          billingEvidence.classification === "ACTIONS_BILLING_QUOTA_EXHAUSTED"
+          ? "ACTIONS_BILLING_QUOTA_EXHAUSTED" : definition.classification,
+        evidence_types: [...new Set([
+          ...definition.evidence_types,
+          ...(definition.classification === "UNKNOWN" &&
+            billingEvidence.classification === "ACTIONS_BILLING_QUOTA_EXHAUSTED"
+            ? ["BILLING_HARD_CAP_SNAPSHOT"] : []),
+        ])],
+        billing_evidence_status: billingEvidence.status,
         api_error: definition.api_error ?? null,
       });
     }
@@ -352,6 +486,7 @@ export async function monitorPrivateTargets({
     schema_version: 1,
     recorded_at: now.toISOString(),
     coverage_status: blocked ? "PARTIAL" : "OBSERVED",
+    billing_snapshot_status: billingSnapshotState.status,
     private_details_redacted: true,
     targets: results,
   };
@@ -364,12 +499,13 @@ export function renderPrivateTargetSummary(record) {
     "- Coverage: " + record.coverage_status,
     "- Private target details: redacted from this public repository artifact",
     "",
-    "| Target | Workflow | Status | Run observed | Classification | Evidence |",
-    "| --- | --- | --- | --- | --- | --- |",
+    "| Target | Workflow | Status | Run observed | Classification | Billing evidence | Evidence |",
+    "| --- | --- | --- | --- | --- | --- | --- |",
   ];
   for (const item of record.targets || []) {
     lines.push("| " + item.target_id + " | " + (item.workflow_id || "—") + " | " + item.status +
       " | " + (item.run_observed ? "yes" : "no") + " | " + item.classification +
+      " | " + (item.billing_evidence_status || "NOT_CONFIGURED") +
       " | " + (item.evidence_types || []).join(", ") + " |");
   }
   if (record.blocker) lines.push("", "Coverage blocker: " + record.blocker);
