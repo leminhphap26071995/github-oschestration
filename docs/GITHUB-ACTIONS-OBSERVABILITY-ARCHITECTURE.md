@@ -48,7 +48,7 @@ The source workflow's own annotations are collected from its job Check Runs. Whe
 
 The same public repository schedules private-target-monitor.mjs every 15 minutes. It also starts a private-target probe from the requested event of Workflow Quality Gate on the trusted main branch, then waits for that exact source run to complete successfully before reading private targets. This provides an automatic probe after workflow configuration changes without exposing private credentials to untrusted branch runs. Standard GitHub-hosted runners in public repositories are free of included private-repository Actions minutes, so this is an independent compute path for private repositories whose included minutes are exhausted. It is not independent of a GitHub account suspension, GitHub-wide outage, or all possible billing restrictions.
 
-The observer jobs also run the pinned hesreallyhim/github-api-usage-monitor action with diagnostics enabled. Workflow-run and annotation-readback jobs measure the observer GITHUB_TOKEN; the scheduled/trusted-quality-gate private-target job measures its public observer token and, only when configured, the private read-only token. Each token gets a separately named state/poll-log artifact. This is REST API bucket telemetry only; it is not evidence of included Actions minutes or billing exhaustion.
+The observer jobs also run the pinned hesreallyhim/github-api-usage-monitor action with diagnostics enabled. Workflow-run, annotation-readback, and scheduled/trusted-quality-gate private-target jobs measure only the observer GITHUB_TOKEN. A real private-target run showed that the action's pre hook receives an empty optional PRIVATE_MONITOR_TOKEN before a step-level if can protect its main step; the secret-backed action was removed. The private collector handles missing credentials and emits BLOCKED. Private-token API-rate telemetry is not currently a separate signal. The monitor artifacts are REST API bucket telemetry only; they are not evidence of included Actions minutes or billing exhaustion.
 
 The monitor reads its target list and read-only access token only from repository Secrets:
 
@@ -90,7 +90,7 @@ Canonical classes currently supported by the collector include:
 - UNKNOWN
 - NOT_FAILED
 
-Quota requires an explicit Actions billing/spending/included-usage provider message in a workflow Check Run, annotation, or trusted job log, or a separately verified provider budget hard-cap state. Generic "quota", "usage", "403", "billing", or "resource not accessible" strings are insufficient.
+ACTIONS_BILLING_QUOTA_EXHAUSTED requires either (1) explicit Actions billing/spending/included-usage wording in the output title/summary/text of the provider-owned workflow-level Check Run (`app_slug=github-actions`, `name=GitHub Actions`), or (2) a fresh matching billing snapshot with `prevent_further_usage=true` and `status=HARD_CAP_REACHED`. Job-level annotations and arbitrary step logs are not quota proof: workflow code can emit those strings itself. Generic "quota", "usage", "403", "billing", or "resource not accessible" strings are insufficient.
 
 Permission denial is not inferred from any generic HTTP 403. A 403 from the collector's own API request is an evidence-retrieval failure, not proof that the source workflow token lacked permission.
 
@@ -201,3 +201,39 @@ The fault-injection branch is isolated and intentionally not merged. The former 
 - No live Actions quota was deliberately exhausted. This remains NOT VERIFIED; do not treat a private run with no steps/logs as quota without explicit provider evidence or a fresh matching hard-cap snapshot.
 
 The system does not promise universal 100% root-cause classification when GitHub withholds evidence. It guarantees conservative, evidence-bound output: specific class only when proven; otherwise UNKNOWN/BLOCKED with the missing evidence named.
+
+
+## 8. Live reconciliation — 2026-11-22
+
+The previous verification checkpoint at HEAD 461e40a1fd596879efe06ca01069ff82a7e529d0 is superseded by main HEAD 991769f1a1e75190a360ef0c3277362de9b13aff.
+
+### Real defects found and corrected
+
+- Observer run [45035470652](https://github.com/leminhphap26071995/github-oschestration/actions/runs/45035470652), job 137248128354, failed in the optional private-token Usage Monitor pre-hook with `No token provided`. The main step's conditional did not prevent the action lifecycle hook from running. The optional action and its dead credential-check step were removed. The public observer GITHUB_TOKEN monitor remains.
+- Workflow Quality Gate caught ShellCheck SC2034 in the trusted-quality-gate wait loop; the poll counter is now used in the wait message. The corrected branch Workflow Quality Gate passed in [45036738785](https://github.com/leminhphap26071995/github-oschestration/actions/runs/45036738785).
+- The classifier no longer accepts quota-like text from job annotations or arbitrary step logs. It accepts Actions billing exhaustion only from provider-owned workflow-level Check Run output (`app_slug=github-actions`, `name=GitHub Actions`) or a fresh matching billing hard-cap snapshot. Regression tests cover synthetic annotation/log text and third-party Check Run output.
+
+### Exact-main verification
+
+- Squash merge: [PR #2](https://github.com/leminhphap26071995/github-oschestration/pull/2), merge commit `991769f1a1e75190a360ef0c3277362de9b13aff`.
+- Workflow Quality Gate: [45036803190](https://github.com/leminhphap26071995/github-oschestration/actions/runs/45036803190) — SUCCESS on the exact main SHA.
+- Portable AI Workflow Conformance: [45036803128](https://github.com/leminhphap26071995/github-oschestration/actions/runs/45036803128) — SUCCESS on the exact main SHA.
+- Credential Read Audit: [45036803369](https://github.com/leminhphap26071995/github-oschestration/actions/runs/45036803369) — SUCCESS on the exact main SHA.
+- Trusted observer: [45036807251](https://github.com/leminhphap26071995/github-oschestration/actions/runs/45036807251) — SUCCESS. Its private-target job completed successfully without the pre-hook failure and uploaded a redacted private-target receipt.
+
+### Private-target coverage result
+
+The actual private-target collector output was:
+
+`{"schema_version":1,"recorded_at":"2026-11-22T15:11:00.593Z","coverage_status":"BLOCKED","blocker":"PRIVATE_MONITOR_TOKEN_NOT_CONFIGURED","targets":[]}`
+
+The job log showed both `PRIVATE_MONITOR_TOKEN` and `PRIVATE_TARGETS_JSON` were empty. The redacted receipt artifact is [14759953414](https://github.com/leminhphap26071995/github-oschestration/actions/runs/45036807251/artifacts/14759953414), SHA-256 `8c6f002258691e49c40ee0effc91c32298a550f4df5a70e67401a04073bdbcc2`. This is a verified BLOCKED result, not private-target coverage and not quota exhaustion.
+
+The same job's public observer token telemetry recorded 64 REST API requests in 34 seconds across four polls, with 2,462 remaining in the API-reported core bucket. This does not represent Actions compute/minute quota or private-token usage.
+
+### Remaining acceptance boundary
+
+- Real malformed-YAML zero-job and real executed-step failure E2E remain verified on the isolated fault-injection branch; the synthetic echo branch is not acceptance evidence.
+- Live Actions quota exhaustion was not forced and remains NOT VERIFIED. Personal included Actions minutes are not exposed by the usage-summary API; no fresh private billing snapshot is available.
+- Cross-repository private polling remains BLOCKED until the owner provisions `PRIVATE_MONITOR_TOKEN` and `PRIVATE_TARGETS_JSON` as repository Secrets. Do not paste the token into chat.
+- Actual permission-denied, artifact-storage/retention, and secondary API-throttle E2E remain outstanding. Unknown or unavailable evidence must remain UNKNOWN/BLOCKED, never be relabelled as quota.

@@ -63,14 +63,14 @@ Path-filtered or conditional triggers are not inferred. For each observed or mis
 The private-target report deliberately redacts repository names, workflow paths, branch names, SHAs, run IDs, raw logs, and provider messages before uploading to this public repository. It emits only opaque target/workflow aliases, lifecycle status, classification, and evidence types. Missing credentials produce BLOCKED, not a healthy zero.
 
 The pinned API usage monitor action runs at the beginning of observer jobs:
-- GITHUB_TOKEN telemetry for workflow-run collection, annotation readback, and the public scheduled observer.
-- PRIVATE_MONITOR_TOKEN telemetry only when that secret is configured in the scheduled private-target job.
+- GITHUB_TOKEN telemetry for workflow-run collection, annotation readback, and the public scheduled observer, including the private-target job's public observer token.
+- It does not monitor PRIVATE_MONITOR_TOKEN. A real run showed that the action's pre hook executes with an empty optional token before a step-level condition can protect its main step. That conditional action was removed; the private-target collector now emits a redacted BLOCKED receipt when credentials are unavailable. Private-token API-rate telemetry is not currently a separate signal.
 
 These state/poll-log artifacts measure REST API rate-limit buckets. They do not measure included Actions minutes, runner billing, artifact-storage quota, or organization spending caps.
 
 ### Evidence classification rules
 
-- ACTIONS_BILLING_QUOTA_EXHAUSTED requires an explicit provider billing/spending/included-usage message in a Check Suite, annotation, or trusted log, or a separately verified hard-cap state.
+- ACTIONS_BILLING_QUOTA_EXHAUSTED is accepted only from (a) the output title/summary/text of the workflow-level Check Run whose app_slug is `github-actions` and name is `GitHub Actions`, with explicit Actions billing/spending/included-usage wording, or (b) a fresh, matching billing snapshot with `prevent_further_usage=true` and `HARD_CAP_REACHED`. Job-level annotations and arbitrary step logs are not quota proof because workflow code can emit them.
 - ACTIONS_ADMISSION_BLOCKED requires explicit repository/organization policy evidence.
 - ACTION_RUNTIME_RETIRED_OR_UNSUPPORTED identifies deprecated/unsupported action runtimes and runner compatibility.
 - WORKFLOW_YAML_SYNTAX_ERROR and WORKFLOW_SCHEMA_OR_EXPRESSION_ERROR require parser/provider evidence tied to the exact workflow source or a real parser Check Run annotation.
