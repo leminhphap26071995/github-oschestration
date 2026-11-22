@@ -7,6 +7,7 @@ import { pathToFileURL } from "node:url";
 import { createGitHubApi, GitHubApiError } from "./github-api.mjs";
 import { collectDiagnostics } from "./collect.mjs";
 import { classifyRun, sanitizeText } from "./classify.mjs";
+import { inspectWorkflowText } from "../../scripts/workflow-quality-gate.mjs";
 
 function assert(condition, code) {
   if (!condition) throw new Error(code);
@@ -180,7 +181,35 @@ async function lintWorkflow({ actionlintPath = "actionlint", sourceText, workflo
   }
 }
 
-async function getWorkflowDefinition({ api, repository, path, sha, workflowId, lintImpl }) {
+async function auditWorkflowRuntimes({ sourceText, workflowId, runtimeAuditImpl }) {
+  if (typeof runtimeAuditImpl === "function") return runtimeAuditImpl({ sourceText, workflowId });
+  const root = await mkdtemp(join(tmpdir(), "private-runtime-audit-"));
+  try {
+    const results = inspectWorkflowText(sourceText, root);
+    const retired = results.some(item => item.status === "RETIRED" || item.status === "UNSUPPORTED");
+    const unknown = results.some(item => item.status === "UNKNOWN");
+    const evidenceTypes = [];
+    if (retired) evidenceTypes.push("ACTION_RUNTIME_RETIRED_OR_UNSUPPORTED");
+    if (unknown) evidenceTypes.push("ACTION_RUNTIME_METADATA_UNAVAILABLE");
+    return {
+      status: retired ? "DIAGNOSTIC" : unknown ? "PARTIAL" : "SUPPORTED",
+      classification: retired ? "ACTION_RUNTIME_RETIRED_OR_UNSUPPORTED" : "UNKNOWN",
+      evidence_types: evidenceTypes,
+      action_count: results.length,
+    };
+  } catch {
+    return {
+      status: "ERROR",
+      classification: "UNKNOWN",
+      evidence_types: ["ACTION_RUNTIME_AUDIT_UNAVAILABLE"],
+      action_count: null,
+    };
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+}
+
+async function getWorkflowDefinition({ api, repository, path, sha, workflowId, lintImpl, runtimeAuditImpl }) {
   const [owner, repo] = repository.split("/");
   const url = "/repos/" + owner + "/" + repo + "/contents/" + path + "?ref=" + sha;
   try {
@@ -190,6 +219,7 @@ async function getWorkflowDefinition({ api, repository, path, sha, workflowId, l
     }
     const sourceText = Buffer.from(data.content.replace(/\s/g, ""), "base64").toString("utf8");
     const lint = await lintWorkflow({ sourceText, workflowId, lintImpl });
+    const runtimeAudit = await auditWorkflowRuntimes({ sourceText, workflowId, runtimeAuditImpl });
     const result = classifyRun({
       source: { status: "completed", conclusion: "failure" },
       jobs: [],
@@ -198,10 +228,18 @@ async function getWorkflowDefinition({ api, repository, path, sha, workflowId, l
       workflowDiagnostic: lint.diagnostic,
       workflowDiagnosticStatus: lint.status,
     });
+    const parserClassification = result.classification;
+    const classification = parserClassification !== "UNKNOWN"
+      ? parserClassification
+      : runtimeAudit.classification;
     return {
       status: lint.status,
-      classification: result.classification,
-      evidence_types: [...new Set(result.evidence.map(item => item.type))],
+      runtime_audit_status: runtimeAudit.status,
+      classification,
+      evidence_types: [...new Set([
+        ...result.evidence.map(item => item.type),
+        ...runtimeAudit.evidence_types,
+      ])],
       diagnostic: lint.diagnostic,
     };
   } catch (error) {
@@ -254,6 +292,7 @@ export async function monitorPrivateTargets({
   fetchImpl = globalThis.fetch,
   now = new Date(),
   lintImpl,
+  runtimeAuditImpl,
   sleepImpl,
   actionlintPath = "actionlint",
 } = {}) {
@@ -393,10 +432,10 @@ export async function monitorPrivateTargets({
             run,
             diagnostics,
           });
+          const sourceClassification = safeRecord.classification;
           if (definition.classification && definition.classification !== "UNKNOWN" &&
               !safeRecord.classifications.includes(definition.classification)) {
             safeRecord.classifications.push(definition.classification);
-            safeRecord.classification = definition.classification;
           }
           const executionObserved = diagnostics.jobs.some(job =>
             (job.runner_id?.state === "PRESENT" && Number.isSafeInteger(job.runner_id.value) && job.runner_id.value > 0) ||
@@ -406,14 +445,28 @@ export async function monitorPrivateTargets({
             "UNKNOWN", "RUNNER_NOT_ASSIGNED_YET", "OBSERVATION_WINDOW_IN_PROGRESS",
             "LOG_PUBLICATION_PENDING", "EXECUTION_EVIDENCE_MISSING",
           ]);
-          if (billingEvidence.classification === "ACTIONS_BILLING_QUOTA_EXHAUSTED" &&
-              !executionObserved && admissionClasses.has(safeRecord.classification)) {
+          const parserClasses = new Set(["WORKFLOW_YAML_SYNTAX_ERROR", "WORKFLOW_SCHEMA_OR_EXPRESSION_ERROR"]);
+          const billingQuotaApplies = billingEvidence.classification === "ACTIONS_BILLING_QUOTA_EXHAUSTED" &&
+            !executionObserved && admissionClasses.has(sourceClassification);
+          const runtimeIssueApplies = definition.classification === "ACTION_RUNTIME_RETIRED_OR_UNSUPPORTED" &&
+            !executionObserved && admissionClasses.has(sourceClassification);
+          if (parserClasses.has(definition.classification)) {
+            safeRecord.classification = definition.classification;
+          } else if (billingQuotaApplies) {
             safeRecord.classification = "ACTIONS_BILLING_QUOTA_EXHAUSTED";
+          } else if (runtimeIssueApplies) {
+            safeRecord.classification = "ACTION_RUNTIME_RETIRED_OR_UNSUPPORTED";
+          } else {
+            safeRecord.classification = sourceClassification;
+          }
+          if (billingQuotaApplies) {
             if (!safeRecord.classifications.includes("ACTIONS_BILLING_QUOTA_EXHAUSTED")) {
               safeRecord.classifications.push("ACTIONS_BILLING_QUOTA_EXHAUSTED");
             }
             safeRecord.evidence_types = [...new Set([...safeRecord.evidence_types, "BILLING_HARD_CAP_SNAPSHOT"])];
           }
+          safeRecord.actionlint_status = definition.status;
+          safeRecord.runtime_audit_status = definition.runtime_audit_status;
           safeRecord.billing_evidence_status = billingEvidence.status;
           results.push(safeRecord);
         } catch (error) {
@@ -456,6 +509,7 @@ export async function monitorPrivateTargets({
         sha: headSha,
         workflowId: expected.id,
         lintImpl,
+        runtimeAuditImpl,
         actionlintPath,
       });
       results.push({
@@ -465,13 +519,14 @@ export async function monitorPrivateTargets({
         run_observed: false,
         commit_age_minutes: ageMinutes,
         workflow_definition_status: definition.status,
-        classification: definition.classification === "UNKNOWN" &&
-          billingEvidence.classification === "ACTIONS_BILLING_QUOTA_EXHAUSTED"
-          ? "ACTIONS_BILLING_QUOTA_EXHAUSTED" : definition.classification,
+        runtime_audit_status: definition.runtime_audit_status,
+        classification: ["WORKFLOW_YAML_SYNTAX_ERROR", "WORKFLOW_SCHEMA_OR_EXPRESSION_ERROR"].includes(definition.classification)
+          ? definition.classification
+          : billingEvidence.classification === "ACTIONS_BILLING_QUOTA_EXHAUSTED"
+            ? "ACTIONS_BILLING_QUOTA_EXHAUSTED" : definition.classification,
         evidence_types: [...new Set([
           ...definition.evidence_types,
-          ...(definition.classification === "UNKNOWN" &&
-            billingEvidence.classification === "ACTIONS_BILLING_QUOTA_EXHAUSTED"
+          ...(billingEvidence.classification === "ACTIONS_BILLING_QUOTA_EXHAUSTED"
             ? ["BILLING_HARD_CAP_SNAPSHOT"] : []),
         ])],
         billing_evidence_status: billingEvidence.status,
