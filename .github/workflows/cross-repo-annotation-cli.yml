@@ -1,0 +1,151 @@
+name: Cross-Repository GitHub Annotation CLI
+
+on:
+  push:
+    branches:
+      - tests/exhausted-github-quota
+    paths:
+      - ".ai-workflow/diagnostics/requests/GM-48-annotations.json"
+
+permissions:
+  contents: read
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Install the validated GitHub annotations extension
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh extension install swfz/gh-annotations
+
+      - name: Mint least-privilege installation token for target private repository
+        env:
+          GITHUB_APP_ID: ${{ secrets.GITHUB_APP_ID }}
+          GITHUB_APP_PRIVATE_KEY: ${{ secrets.GITHUB_APP_PRIVATE_KEY }}
+          TARGET_REPOSITORY: ${{ fromJSON(file('.ai-workflow/diagnostics/requests/GM-48-annotations.json')).repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import { appendFile } from "node:fs/promises";
+          import { createAppJwt } from "./quota-monitor/prepare_app_tokens.mjs";
+
+          const api = process.env.GITHUB_API_URL || "https://api.github.com";
+          const appId = process.env.GITHUB_APP_ID;
+          const privateKey = process.env.GITHUB_APP_PRIVATE_KEY;
+          const target = process.env.TARGET_REPOSITORY;
+          if (!appId || !privateKey) throw new Error("GITHUB_APP_CREDENTIALS_NOT_CONFIGURED");
+          if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(target || "")) throw new Error("INVALID_TARGET_REPOSITORY");
+
+          const [owner, repo] = target.split("/");
+          const jwt = createAppJwt(appId, privateKey);
+          const headers = {
+            Accept: "application/vnd.github+json",
+            Authorization: "Bearer " + jwt,
+            "X-GitHub-Api-Version": "2022-11-28",
+            "User-Agent": "cross-repository-annotation-cli",
+          };
+
+          let installation = null;
+          for (let page = 1; page <= 100; page += 1) {
+            const response = await fetch(`${api}/app/installations?per_page=100&page=${page}`, { headers });
+            if (!response.ok) throw new Error("INSTALLATION_DISCOVERY_HTTP_" + response.status);
+            const rows = await response.json();
+            installation = rows.find(item => item.account?.login?.toLowerCase() === owner.toLowerCase()) || installation;
+            if (installation || rows.length < 100) break;
+          }
+          if (!installation) throw new Error("APP_NOT_INSTALLED_FOR_TARGET_OWNER:" + owner);
+
+          const tokenResponse = await fetch(`${api}/app/installations/${installation.id}/access_tokens`, {
+            method: "POST",
+            headers: { ...headers, "Content-Type": "application/json" },
+            body: JSON.stringify({
+              repositories: [repo],
+              permissions: { actions: "read", checks: "read", contents: "read" },
+            }),
+          });
+          if (!tokenResponse.ok) {
+            const payload = await tokenResponse.json().catch(() => ({}));
+            throw new Error("APP_TOKEN_MINT_HTTP_" + tokenResponse.status + ":" + String(payload.message || "permission or repository selection denied").slice(0, 180));
+          }
+          const tokenData = await tokenResponse.json();
+          if (!tokenData.token) throw new Error("APP_TOKEN_MISSING");
+          const permissions = tokenData.permissions || {};
+          for (const [key, value] of Object.entries({ actions: "read", checks: "read", contents: "read" })) {
+            if (permissions[key] !== value) throw new Error("APP_TOKEN_PERMISSION_MISMATCH:" + key);
+          }
+          process.stdout.write("::add-mask::" + tokenData.token + "\n");
+          await appendFile(process.env.GITHUB_ENV, "TARGET_GH_TOKEN=" + tokenData.token + "\n");
+          console.log("APP_TOKEN_READY owner=" + owner + " repo=" + repo +
+            " permissions=actions:read,checks:read,contents:read expires_at=" + tokenData.expires_at);
+          NODE
+
+      - name: Verify exact source runs and collect annotations
+        env:
+          GH_TOKEN: ${{ env.TARGET_GH_TOKEN }}
+          TARGET_REPOSITORY: ${{ fromJSON(file('.ai-workflow/diagnostics/requests/GM-48-annotations.json')).repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          request=".ai-workflow/diagnostics/requests/GM-48-annotations.json"
+          mkdir -p evidence
+          jq -c '.runs[]' "$request" | while IFS= read -r target; do
+            run_id="$(jq -r '.run_id' <<<"$target")"
+            attempt="$(jq -r '.run_attempt' <<<"$target")"
+            sha="$(jq -r '.head_sha' <<<"$target")"
+            check_run_id="$(jq -r '.check_run_id' <<<"$target")"
+            expected_count="$(jq -r '.expected_annotation_count' <<<"$target")"
+
+            gh api "repos/$TARGET_REPOSITORY/actions/runs/$run_id" > "evidence/run-$run_id.json"
+            jq -e --argjson id "$run_id" --argjson attempt "$attempt" --arg sha "$sha" '
+              .id == $id and .run_attempt == $attempt and .head_sha == $sha
+            ' "evidence/run-$run_id.json" >/dev/null
+
+            python -B scripts/collect_github_annotations.py \
+              --repository "$TARGET_REPOSITORY" --run-id "$run_id" \
+              --check-run-id "$check_run_id" --output "evidence/exact-run-$run_id.json"
+
+            jq -e --argjson id "$run_id" --argjson check "$check_run_id" --argjson count "$expected_count" '
+              .run_id == $id and .check_runs[0].check_run_id == $check
+              and .annotation_count == $count
+            ' "evidence/exact-run-$run_id.json" >/dev/null
+          done
+
+          latest_run_id="$(jq -r '.runs[] | select(.latest_for_workflow == true) | .run_id' "$request")"
+          latest_run_url="https://github.com/$TARGET_REPOSITORY/actions/runs/$latest_run_id"
+          gh annotations -repo "$TARGET_REPOSITORY" -json > evidence/gh-annotations-latest.json
+          jq --arg url "$latest_run_url" '[.[] | select(.workflow_url == $url)]' \
+            evidence/gh-annotations-latest.json > evidence/gh-annotations-exact-latest.json
+
+          expected="$(jq -r '.runs[] | select(.latest_for_workflow == true) | .expected_annotation_count' "$request")"
+          actual="$(jq 'length' evidence/gh-annotations-exact-latest.json)"
+          test "$actual" -eq "$expected"
+
+          {
+            echo "# Cross-repository GitHub annotation evidence"
+            echo
+            echo "- Target repository: `$TARGET_REPOSITORY`"
+            echo "- CLI: `gh extension install swfz/gh-annotations` + `gh annotations -repo TARGET -json`"
+            echo "- Exact-run collector: `scripts/collect_github_annotations.py`"
+            echo
+            for file in evidence/exact-run-*.json; do
+              echo "## Run $(jq -r '.run_id' "$file") / attempt $(jq -r '.run_attempt' "$file")"
+              jq -r '.annotations[] | "- Check Run (.check_run_id), job (.job_name), level (.annotation_level): (.message)"' "$file"
+              echo
+            done
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload annotation evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: GM-48-github-annotations-${{ github.sha }}
+          path: evidence/
+          if-no-files-found: error
+          retention-days: 14

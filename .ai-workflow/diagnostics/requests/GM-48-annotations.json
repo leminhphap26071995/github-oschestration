@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "purpose": "Retrieve exact GitHub Actions annotation messages for GM-48 using the previously validated gh-annotations CLI and exact-run collector.",
+  "repository": "leminhphap-improvement/ai-workflow-archtiecture",
+  "runs": [
+    {
+      "run_id": 44992960523,
+      "run_attempt": 1,
+      "head_sha": "f74bc270096f5c2131d48ba74ad55edea8b78e20",
+      "check_run_id": 137117829172,
+      "expected_annotation_count": 1,
+      "latest_for_workflow": false
+    },
+    {
+      "run_id": 44994344565,
+      "run_attempt": 1,
+      "head_sha": "532e0fcf046f08ce1f39f4e19b97f005b37479eb",
+      "check_run_id": 137122036772,
+      "expected_annotation_count": 1,
+      "latest_for_workflow": true
+    }
+  ]
+}
