@@ -1,0 +1,27 @@
+name: GitHub API Usage Monitor Smoke Test
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/github-api-usage-monitor-smoke.yml'
+
+permissions: {}
+
+concurrency:
+  group: github-api-usage-monitor-smoke-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions: {}
+    steps:
+      - name: Monitor GitHub API rate-limit usage
+        # v2.1.0, pinned to its immutable signed release commit.
+        uses: hesreallyhim/github-api-usage-monitor@52198b2c0a112e8647664f4042ae301e718ad7df
+        with:
+          token: ${{ github.token }}
+          diagnostics: true
+          artifact_name: github-api-usage-monitor-${{ github.run_id }}-${{ github.run_attempt }}

@@ -2,6 +2,24 @@
 
 This directory contains the read-only collector and report enrichment used by the existing private monitoring workflow. It reads GitHub billing REST APIs; it does not modify monitored organizations or repositories.
 
+## Separate signal: per-workflow GitHub REST API rate-limit telemetry
+
+The public repository's `.github/workflows/github-api-usage-monitor-smoke.yml` is a narrow, automatic-only integration of [hesreallyhim/github-api-usage-monitor](https://github.com/hesreallyhim/github-api-usage-monitor) v2.1.0, pinned to release commit `52198b2c0a112e8647664f4042ae301e718ad7df`.
+
+- It monitors the authenticated token's REST API rate-limit buckets during one workflow job and writes a per-job Step Summary.
+- Diagnostics are enabled; the action uploads `state.json` and `poll-log.json` as a run-scoped artifact for inspection.
+- It uses only the job's built-in `GITHUB_TOKEN`, with no additional repository permissions, PAT, App private key, or secret.
+- The action supports Linux and macOS runners; this smoke workflow uses Ubuntu.
+- The action's poller queries `GET /rate_limit`; it measures API request-rate-limit usage, not Actions runner minutes, artifact storage billing, or organization spending budgets.
+- The action's polling data is sampled and may include other concurrent jobs sharing the same token's rate-limit pool. It is telemetry, not an exact per-step accounting ledger.
+
+### Candidate decision
+
+- **Selected for telemetry:** `hesreallyhim/github-api-usage-monitor` because it reports per-bucket usage over the job lifecycle and can retain poll diagnostics for review.
+- **Not adopted:** `Coderrob/github-rate-limit-check`. It provides a one-shot threshold gate rather than usage-over-time telemetry; its current composite action interpolates the token into a shell command argument, and its script uses `curl -s` without `--fail`/HTTP-status validation. That is weaker for a least-privilege, secret-conscious diagnostic path and duplicates only a simple snapshot that the selected monitor already reports.
+
+This integration supplements the private billing collector below. It must never be used to classify Actions quota exhaustion or replace billing API evidence.
+
 ## First-stage workflow credential audit
 
 The separate `.github/workflows/quota-token-permission-audit.yml` workflow verifies the built-in, short-lived `GITHUB_TOKEN` available to a GitHub Actions job. It is deliberately limited to read access:
