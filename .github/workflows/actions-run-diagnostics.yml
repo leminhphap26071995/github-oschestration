@@ -5,20 +5,26 @@ on:
     workflows:
       - GitHub Actions Credential Read Audit
       - Portable AI Workflow Conformance
-    types: [completed]
-    branches: [main]
+      - GitHub API Usage Monitor Smoke Test
+      - UPW Plugin Manual Release
+      - Workflow Cleanup
+      - Workflow Quality Gate
+      - ".github/workflows/zz-synthetic-invalid-workflow.yml"
+      - ".github/workflows/zz-real-invalid-workflow.yml"
+      - Real Step Failure Fault Injection
+    types: [requested, in_progress, completed]
 
 permissions: {}
 
 concurrency:
-  group: actions-diagnostics-${{ github.event.workflow_run.id }}-${{ github.event.workflow_run.run_attempt }}
+  group: actions-diagnostics-${{ github.event.workflow_run.id }}-${{ github.event.workflow_run.run_attempt }}-${{ github.event.action }}
   cancel-in-progress: false
 
 jobs:
   diagnose:
-    if: github.event.workflow_run.conclusion != 'success'
+    if: github.event.workflow_run.head_repository.full_name == github.repository
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 12
     permissions:
       actions: read
       checks: read
@@ -29,9 +35,120 @@ jobs:
         with:
           ref: ${{ github.sha }}
           persist-credentials: false
-      - name: Collect source-run diagnostics
+      - name: Set up pinned actionlint toolchain
+        uses: actions/setup-go@v6
+        with:
+          go-version: "1.24.3"
+      - name: Install pinned actionlint
+        continue-on-error: true
+        run: |
+          go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.7
+          echo "$HOME/go/bin" >> "$GITHUB_PATH"
+      - name: Register actionlint problem matcher
+        run: echo "::add-matcher::.github/actionlint-problem-matcher.json"
+      - name: Fetch and parse the exact source workflow definition
+        id: source_workflow
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_PATH: ${{ github.event.workflow_run.path }}
+          SOURCE_SHA: ${{ github.event.workflow_run.head_sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p evidence
+          case "$SOURCE_PATH" in
+            .github/workflows/*.yml|.github/workflows/*.yaml) ;;
+            *)
+              echo "SOURCE_WORKFLOW_PATH_UNSUPPORTED" > evidence/actionlint.txt
+              echo "status=UNAVAILABLE" >> "$GITHUB_OUTPUT"
+              exit 0
+              ;;
+          esac
+          if [[ "$SOURCE_PATH" == *".."* || ! "$SOURCE_SHA" =~ ^[a-f0-9]{40}$ ]]; then
+            echo "SOURCE_WORKFLOW_IDENTITY_INVALID" > evidence/actionlint.txt
+            echo "status=UNAVAILABLE" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          mkdir -p "$(dirname "$SOURCE_PATH")"
+          if ! gh api "repos/$GITHUB_REPOSITORY/contents/$SOURCE_PATH?ref=$SOURCE_SHA" --jq .content > evidence/source-workflow.base64 2> evidence/source-workflow-fetch-error.txt; then
+            echo "SOURCE_WORKFLOW_FETCH_FAILED" > evidence/actionlint.txt
+            echo "status=UNAVAILABLE" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if ! base64 --decode evidence/source-workflow.base64 > "$SOURCE_PATH"; then
+            echo "SOURCE_WORKFLOW_BASE64_DECODE_FAILED" > evidence/actionlint.txt
+            echo "status=UNAVAILABLE" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if ! command -v actionlint >/dev/null 2>&1; then
+            echo "ACTIONLINT_TOOL_UNAVAILABLE" > evidence/actionlint.txt
+            echo "status=TOOL_UNAVAILABLE" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          set +e
+          actionlint -oneline "$SOURCE_PATH" > evidence/actionlint.txt 2>&1
+          actionlint_status=$?
+          set -e
+          cat evidence/actionlint.txt
+          if [ "$actionlint_status" -eq 0 ]; then
+            echo "status=VALID" >> "$GITHUB_OUTPUT"
+          else
+            echo "status=DIAGNOSTIC" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Collect exact run, attempt, jobs, check-suite and log evidence
+        id: collect
+        continue-on-error: true
         env:
           GITHUB_TOKEN: ${{ github.token }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           OBSERVER_SHA: ${{ github.sha }}
-        run: node quota-monitor/diagnostics/collect.mjs
+          WORKFLOW_DIAGNOSTIC_PATH: evidence/actionlint.txt
+          WORKFLOW_DIAGNOSTIC_STATUS: ${{ steps.source_workflow.outputs.status || 'UNAVAILABLE' }}
+        run: |
+          mkdir -p evidence
+          node quota-monitor/diagnostics/collect.mjs > evidence/diagnostics.json
+      - name: Upload raw sanitized diagnostic receipt
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: actions-diagnostics-raw-${{ github.run_id }}
+          path: evidence/
+          if-no-files-found: warn
+          retention-days: 14
+
+  readback:
+    if: always() && github.event.workflow_run.head_repository.full_name == github.repository
+    needs: diagnose
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: read
+      checks: read
+      contents: read
+    steps:
+      - name: Checkout trusted observer source
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Download sanitized diagnostic receipt
+        uses: actions/download-artifact@v6
+        continue-on-error: true
+        with:
+          name: actions-diagnostics-raw-${{ github.run_id }}
+          path: evidence
+      - name: Read back actual observer Check Run annotations
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: node quota-monitor/diagnostics/readback.mjs
+      - name: Upload final evidence receipt
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: actions-diagnostics-receipt-${{ github.run_id }}
+          path: evidence/
+          if-no-files-found: warn
+          retention-days: 14
