@@ -11,31 +11,35 @@ function assert(condition, code) {
 
 export function sanitizeEvidence(value) {
   return String(value ?? "")
-    .replace(/Authorization:\\s*Bearer\\s+\\S+/gi, "Authorization: Bearer [REDACTED]")
-    .replace(/Bearer\\s+[A-Za-z0-9_./+=-]{12,}/g, "Bearer [REDACTED]")
-    .replace(/\\b(?:gh[pousr]_[A-Za-z0-9_]{20,}|github_pat_[A-Za-z0-9_]{20,})\\b/g, "[REDACTED_TOKEN]")
-    .replace(/(token|secret|password|api[_-]?key|private[_-]?key)\\s*[:=]\\s*[^,\\s;]+/gi, "$1=[REDACTED]")
-    .replace(/[\\u0000-\\u0008\\u000B\\u000C\\u000E-\\u001F]/g, " ")
+    .replace(/Authorization:\s*Bearer\s+\S+/gi, "Authorization: Bearer [REDACTED]")
+    .replace(/Bearer\s+[A-Za-z0-9_./+=-]{12,}/g, "Bearer [REDACTED]")
+    .replace(/\b(?:gh[pousr]_[A-Za-z0-9_]{20,}|github_pat_[A-Za-z0-9_]{20,})\b/g, "[REDACTED_TOKEN]")
+    .replace(/(token|secret|password|api[_-]?key|private[_-]?key)\s*[:=]\s*[^,\s;]+/gi, "$1=[REDACTED]")
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, " ")
     .trim()
-    .slice(0, 12000);
+    .slice(0, 60000);
 }
 
 function validateTargets(raw) {
   const config = JSON.parse(raw);
   assert(config && config.schema_version === 1 && Array.isArray(config.targets), "INVALID_TARGETS_SCHEMA");
   for (const target of config.targets) {
-    assert(/^[A-Za-z0-9_.-]+\\/[A-Za-z0-9_.-]+$/.test(target.repository || ""), "INVALID_TARGET_REPOSITORY");
+    assert(/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(target.repository || ""), "INVALID_TARGET_REPOSITORY");
     assert(/^[A-Za-z0-9._/-]+$/.test(target.branch || "") && !target.branch.includes(".."), "INVALID_TARGET_BRANCH");
     assert(Array.isArray(target.expected_workflows), "INVALID_EXPECTED_WORKFLOWS");
   }
   return config.targets;
 }
 
-async function requestJson(url, { token, notion = false, fetchImpl = globalThis.fetch } = {}) {
+async function requestJson(url, { token, notion = false, method = "GET", body, fetchImpl = globalThis.fetch } = {}) {
   const headers = notion
     ? { Authorization: "Bearer " + token, "Notion-Version": NOTION_VERSION, "Content-Type": "application/json" }
     : { Authorization: "Bearer " + token, Accept: "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28" };
-  const response = await fetchImpl(url, { method: "GET", headers });
+  const response = await fetchImpl(url, {
+    method,
+    headers,
+    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+  });
   if (!response.ok) {
     const error = new Error((notion ? "NOTION" : "GITHUB") + "_HTTP_" + response.status);
     error.status = response.status;
@@ -56,7 +60,7 @@ async function paginate(url, { token, notion = false, collection, fetchImpl = gl
     assert(Array.isArray(pageItems), "INVALID_PAGINATION_RESPONSE");
     items.push(...pageItems);
     const link = response.headers.get("link") || "";
-    const match = link.match(/<([^>]+)>;\\s*rel="next"/);
+    const match = link.match(/<([^>]+)>;\s*rel="next"/);
     if (!match) {
       if (notion && data.has_more && data.next_cursor) {
         next = new URL(url);
@@ -73,12 +77,13 @@ async function paginate(url, { token, notion = false, collection, fetchImpl = gl
 
 function classifyCheckRun(checkRun, annotations) {
   const app = String(checkRun.app?.slug || "").toLowerCase();
-  const output = [checkRun.output?.title, checkRun.output?.summary, checkRun.output?.text].filter(Boolean).join("\\n");
-  const annotationText = annotations.map(item => [item.path, item.title, item.message, item.raw_details].filter(Boolean).join(" ")).join("\\n");
-  const parserPattern = /could not parse as yaml|yaml: line \\d+:|invalid workflow file|workflow is not valid|unexpected value|unrecognized function|required property/i;
+  const output = [checkRun.output?.title, checkRun.output?.summary, checkRun.output?.text].filter(Boolean).join("\n");
+  const annotationText = annotations.map(item => [item.path, item.title, item.message, item.raw_details].filter(Boolean).join(" ")).join("\n");
+  const parserPattern = /could not parse as yaml|yaml: line \d+:|invalid workflow file|workflow is not valid|unexpected value|unrecognized function|required property/i;
   const quotaPattern = /actions.{0,80}(?:billing|minutes|quota|spending limit)|(?:included minutes|spending limit).{0,80}(?:exhausted|reached|exceeded)|payment method.{0,80}(?:required|failed)|billing.{0,80}(?:hard cap|limit reached)/i;
-  const workflowAnnotation = annotations.some(item => /^\\.github\\/workflows\\/.+\\.ya?ml$/i.test(item.path || ""));
+  const workflowAnnotation = annotations.some(item => /^\.github\/workflows\/.+\.ya?ml$/i.test(item.path || ""));
   if (workflowAnnotation && parserPattern.test(annotationText)) return "WORKFLOW_YAML_OR_SCHEMA_ERROR";
+  // Only the provider-owned top-level GitHub Actions check can establish quota from its output.
   if (app === "github-actions" && checkRun.name === "GitHub Actions" && quotaPattern.test(output)) {
     return "ACTIONS_BILLING_QUOTA_EXHAUSTED";
   }
@@ -112,7 +117,7 @@ export async function collectAnnotationReceipts({
   const targets = validateTargets(targetsJson);
   const receipts = [];
   for (const target of targets) {
-    const base = githubApi.replace(/\\/$/, "");
+    const base = githubApi.replace(/\/$/, "");
     const branchUrl = base + "/repos/" + target.repository + "/branches/" + encodeURIComponent(target.branch);
     const { data: branch } = await requestJson(branchUrl, { token: githubToken, fetchImpl });
     const headSha = branch?.commit?.sha;
@@ -198,8 +203,9 @@ export async function collectAnnotationReceipts({
 }
 
 function chunkText(value, size = 1800) {
+  const chars = Array.from(value);
   const chunks = [];
-  for (let i = 0; i < value.length; i += size) chunks.push(value.slice(i, i + size));
+  for (let i = 0; i < chars.length; i += size) chunks.push(chars.slice(i, i + size).join(""));
   return chunks.length ? chunks : [""];
 }
 
@@ -211,14 +217,14 @@ export async function publishAnnotationReceipts({
   notionApi = NOTION_API,
 } = {}) {
   if (!notionToken || !notionPageId) return { status: "NOT_CONFIGURED", published: 0, skipped: 0 };
-  const base = notionApi.replace(/\\/$/, "");
+  const base = notionApi.replace(/\/$/, "");
   const commentsUrl = new URL(base + "/comments");
   commentsUrl.searchParams.set("block_id", notionPageId);
   commentsUrl.searchParams.set("page_size", "100");
   const existing = await paginate(commentsUrl, { token: notionToken, notion: true, collection: "results", fetchImpl });
   const knownText = existing.items.map(comment =>
     (comment.rich_text || []).map(item => item.plain_text || item.text?.content || "").join("")
-  ).join("\\n");
+  ).join("\n");
   let published = 0;
   let skipped = 0;
   for (const receipt of receipts) {
@@ -232,23 +238,16 @@ export async function publishAnnotationReceipts({
     for (let i = 0; i < chunks.length; i += 80) groups.push(chunks.slice(i, i + 80));
     for (let index = 0; index < groups.length; index++) {
       const marker = receipt.dedupe_key + ":part:" + (index + 1) + "/" + groups.length;
-      const content = [marker, ...groups[index]].join("\\n");
+      const content = [marker, ...groups[index]].join("\n");
       const richText = chunkText(content).map(part => ({ type: "text", text: { content: part } }));
-      const response = await fetchImpl(base + "/comments", {
+      const { data } = await requestJson(base + "/comments", {
+        token: notionToken,
+        notion: true,
         method: "POST",
-        headers: {
-          Authorization: "Bearer " + notionToken,
-          "Notion-Version": NOTION_VERSION,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ parent: { page_id: notionPageId }, rich_text: richText }),
+        body: { parent: { page_id: notionPageId }, rich_text: richText },
+        fetchImpl,
       });
-      if (!response.ok) {
-        const error = new Error("NOTION_CREATE_COMMENT_HTTP_" + response.status);
-        error.status = response.status;
-        throw error;
-      }
-      await response.json();
+      assert(data && data.id, "NOTION_COMMENT_CREATE_UNCONFIRMED");
       published++;
     }
   }
@@ -261,7 +260,7 @@ async function main() {
   const notionToken = process.env.NOTION_API_TOKEN;
   const notionPageId = process.env.NOTION_PAGE_ID;
   if (!notionToken || !notionPageId) {
-    process.stdout.write("NOTION_ANNOTATION_RELAY_NOT_CONFIGURED\\n");
+    process.stdout.write("NOTION_ANNOTATION_RELAY_NOT_CONFIGURED\n");
     return;
   }
   const receipts = await collectAnnotationReceipts({ targetsJson, githubToken });
@@ -271,12 +270,12 @@ async function main() {
     receipts_found: receipts.length,
     published: result.published,
     skipped_as_duplicate: result.skipped,
-  }) + "\\n");
+  }) + "\n");
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   main().catch(error => {
-    process.stderr.write("NOTION_ANNOTATION_RELAY_FAILED: " + sanitizeEvidence(error.message) + "\\n");
+    process.stderr.write("NOTION_ANNOTATION_RELAY_FAILED: " + sanitizeEvidence(error.message) + "\n");
     process.exitCode = 1;
   });
 }
