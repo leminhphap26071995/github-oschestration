@@ -43,3 +43,6 @@ The root .ai-workflow/CURRENT.json is an index only. Project and ticket checkpoi
 ## Notion-first repository and role continuity
 
 See [docs/NOTION-FIRST-REPO-ROLE-CONTROL-PLANE.md](docs/NOTION-FIRST-REPO-ROLE-CONTROL-PLANE.md). The sanitized decision module and regression tests are included under `scripts/repository_control_plane.py` and `tests/test_repository_control_plane.py`; the existing automatic conformance workflow executes them on push and pull request.
+
+
+The existing context resolver now composes with the repository/role control plane through `scripts.context_switching.route_message_with_repository_control()`. The host supplies Notion requirements/access and GitHub inventory; the wrapper preserves the existing session transition/readback rules before selecting a task-scoped execution repository.
