@@ -55,6 +55,13 @@ const WORKFLOW_SCHEMA_PATTERNS = [
   /property .* is not allowed/i,
   /unexpected key|unknown key|unknown property/i,
 ];
+const STATIC_ANALYSIS_PATTERNS = [
+  /shellcheck reported issue in this script/i,
+  /\bSC\d{4}\b.*(?:warning|error)/i,
+  /hadolint.{0,80}(?:warning|error)/i,
+  /eslint.{0,80}warning/i,
+  /ruff.{0,80}warning/i,
+];
 const IMPLEMENTATION_PATTERNS = [
   /\bassertionerror\b/i,
   /\bassertion failed\b/i,
@@ -146,6 +153,13 @@ export function classifyJob({ job = {}, annotations = [], logs = { status: "NOT_
     evidence.push(
       ...evidenceLines("annotation", annotationTextValue, QUOTA_PATTERNS, "ACTIONS_BILLING_QUOTA_EXHAUSTED"),
       ...evidenceLines("job_log", logText, QUOTA_PATTERNS, "ACTIONS_BILLING_QUOTA_EXHAUSTED"),
+    );
+  }
+  if (textMatches(STATIC_ANALYSIS_PATTERNS, allText)) {
+    classifications.push("STATIC_ANALYSIS_WARNING");
+    evidence.push(
+      ...evidenceLines("annotation", annotationTextValue, STATIC_ANALYSIS_PATTERNS, "STATIC_ANALYSIS_WARNING"),
+      ...evidenceLines("job_log", logText, STATIC_ANALYSIS_PATTERNS, "STATIC_ANALYSIS_WARNING"),
     );
   }
   if (textMatches(PERMISSION_PATTERNS, allText)) {
@@ -251,6 +265,7 @@ export function classifyJob({ job = {}, annotations = [], logs = { status: "NOT_
     PERMISSION_OR_POLICY_DENIED: "PERMISSION_DENIED",
     ACTIONS_ADMISSION_BLOCKED: "ACTIONS_ADMISSION_BLOCKED",
     ACTION_RUNTIME_RETIRED_OR_UNSUPPORTED: "ACTION_RUNTIME_RETIRED_OR_UNSUPPORTED",
+    STATIC_ANALYSIS_WARNING: "STATIC_ANALYSIS_WARNING",
     RUNNER_UNAVAILABLE: "RUNNER_UNAVAILABLE",
     STEP_IMPLEMENTATION_FAILURE: "STEP_FAILURE",
     STEP_FAILURE: "STEP_FAILURE",
@@ -311,6 +326,10 @@ export function classifyRun({
   if (textMatches(ACTION_RUNTIME_PATTERNS, suiteText)) {
     classifications.push("ACTION_RUNTIME_RETIRED_OR_UNSUPPORTED");
     evidence.push(...evidenceLines("check_suite", suiteText, ACTION_RUNTIME_PATTERNS, "ACTION_RUNTIME_RETIRED_OR_UNSUPPORTED"));
+  }
+  if (textMatches(STATIC_ANALYSIS_PATTERNS, suiteText)) {
+    classifications.push("STATIC_ANALYSIS_WARNING");
+    evidence.push(...evidenceLines("check_suite", suiteText, STATIC_ANALYSIS_PATTERNS, "STATIC_ANALYSIS_WARNING"));
   }
   if (textMatches(PERMISSION_PATTERNS, suiteText)) {
     classifications.push("PERMISSION_OR_POLICY_DENIED");
@@ -374,6 +393,7 @@ export function classifyRun({
     "ACTIONS_BILLING_QUOTA_EXHAUSTED",
     "ACTIONS_ADMISSION_BLOCKED",
     "ACTION_RUNTIME_RETIRED_OR_UNSUPPORTED",
+    "STATIC_ANALYSIS_WARNING",
     "ARTIFACT_STORAGE_QUOTA_EXHAUSTED",
     "PERMISSION_OR_POLICY_DENIED",
     "RUNNER_UNAVAILABLE",
