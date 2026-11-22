@@ -249,3 +249,78 @@ test("retired action runtime and Actions admission policy are separate from quot
   assert.ok(admission.classifications.includes("ACTIONS_ADMISSION_BLOCKED"));
   assert.ok(!admission.classifications.includes("ACTIONS_BILLING_QUOTA_EXHAUSTED"));
 });
+
+
+test("requested event polls admission until a runner is assigned and preserves the lifecycle state", async () => {
+  const requested = event({ status: "queued", conclusion: null });
+  requested.action = "requested";
+  let runReads = 0;
+  let jobReads = 0;
+  const fetchImpl = async url => {
+    const target = String(url);
+    if (target.endsWith("/actions/runs/700")) {
+      runReads += 1;
+      return jsonResponse(runReads === 1
+        ? runDetails({ status: "queued", conclusion: null })
+        : runDetails({ status: "in_progress", conclusion: null }));
+    }
+    if (target.endsWith("/attempts/2/jobs?per_page=100")) {
+      jobReads += 1;
+      return jsonResponse(jobReads === 1 ? { jobs: [] } : {
+        jobs: [{
+          id: 201,
+          run_id: 700,
+          run_attempt: 2,
+          head_sha: sha,
+          runner_id: 9001,
+          runner_name: "GitHub Actions runner",
+          name: "build",
+          status: "in_progress",
+          conclusion: null,
+          steps: [],
+          check_run_url: "https://api.github.com/repos/owner/repository/check-runs/901",
+        }],
+      });
+    }
+    if (target.endsWith("/check-runs/901/annotations?per_page=100")) return jsonResponse([]);
+    if (target.endsWith("/check-suites/88/check-runs?per_page=100")) return jsonResponse({ check_runs: [] });
+    throw new Error("Unexpected URL: " + target);
+  };
+  const record = await collectDiagnostics({
+    event: requested,
+    repository,
+    token,
+    fetchImpl,
+    sleepImpl: async () => {},
+    lifecyclePolls: 3,
+    lifecyclePollDelayMs: 1,
+  });
+  assert.equal(record.lifecycle_observation.requested_event_poll_count, 1);
+  assert.equal(record.lifecycle_observation.runner_or_steps_observed, true);
+  assert.equal(record.run_classification.classification, "RUNNER_ASSIGNED");
+  assert.equal(record.jobs[0].runner_id.value, 9001);
+});
+
+test("a queued run that never receives a runner remains an observation gap, not quota", async () => {
+  const requested = event({ status: "queued", conclusion: null });
+  requested.action = "requested";
+  const fetchImpl = async url => {
+    const target = String(url);
+    if (target.endsWith("/actions/runs/700")) return jsonResponse(runDetails({ status: "queued", conclusion: null }));
+    if (target.endsWith("/attempts/2/jobs?per_page=100")) return jsonResponse({ jobs: [] });
+    if (target.endsWith("/check-suites/88/check-runs?per_page=100")) return jsonResponse({ check_runs: [] });
+    throw new Error("Unexpected URL: " + target);
+  };
+  const record = await collectDiagnostics({
+    event: requested,
+    repository,
+    token,
+    fetchImpl,
+    sleepImpl: async () => {},
+    lifecyclePolls: 2,
+    lifecyclePollDelayMs: 1,
+  });
+  assert.equal(record.lifecycle_observation.requested_event_poll_count, 2);
+  assert.equal(record.run_classification.classification, "OBSERVATION_WINDOW_IN_PROGRESS");
+  assert.notEqual(record.run_classification.classification, "ACTIONS_BILLING_QUOTA_EXHAUSTED");
+});
