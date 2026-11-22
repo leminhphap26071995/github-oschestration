@@ -11,7 +11,6 @@ on:
       - UPW Plugin Manual Release
       - Workflow Cleanup
       - Workflow Quality Gate
-      - ".github/workflows/zz-synthetic-invalid-workflow.yml"
       - ".github/workflows/zz-real-invalid-workflow.yml"
       - Real Step Failure Fault Injection
     types: [requested, completed]
@@ -32,6 +31,12 @@ jobs:
       checks: read
       contents: read
     steps:
+      - name: Monitor observer GitHub API rate-limit usage
+        uses: hesreallyhim/github-api-usage-monitor@52198b2c0a112e8647664f4042ae301e718ad7df
+        with:
+          token: ${{ github.token }}
+          diagnostics: "true"
+          artifact_name: actions-api-usage-diagnose-${{ github.run_id }}
       - name: Checkout trusted observer source
         uses: actions/checkout@v7
         with:
@@ -70,6 +75,29 @@ jobs:
       checks: read
       contents: read
     steps:
+      - name: Monitor private-observer GitHub API rate-limit usage
+        uses: hesreallyhim/github-api-usage-monitor@52198b2c0a112e8647664f4042ae301e718ad7df
+        with:
+          token: ${{ github.token }}
+          diagnostics: "true"
+          artifact_name: actions-api-usage-private-targets-${{ github.run_id }}
+      - name: Check whether the private target token is configured
+        id: private_token
+        env:
+          PRIVATE_MONITOR_TOKEN: ${{ secrets.PRIVATE_MONITOR_TOKEN }}
+        run: |
+          if [ -n "$PRIVATE_MONITOR_TOKEN" ]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Monitor private target token rate-limit usage
+        if: steps.private_token.outputs.configured == 'true'
+        uses: hesreallyhim/github-api-usage-monitor@52198b2c0a112e8647664f4042ae301e718ad7df
+        with:
+          token: ${{ secrets.PRIVATE_MONITOR_TOKEN }}
+          diagnostics: "true"
+          artifact_name: private-api-usage-targets-${{ github.run_id }}
       - name: Checkout trusted observer source
         uses: actions/checkout@v7
         with:
@@ -172,6 +200,12 @@ jobs:
       checks: read
       contents: read
     steps:
+      - name: Monitor annotation-readback GitHub API rate-limit usage
+        uses: hesreallyhim/github-api-usage-monitor@52198b2c0a112e8647664f4042ae301e718ad7df
+        with:
+          token: ${{ github.token }}
+          diagnostics: "true"
+          artifact_name: actions-api-usage-readback-${{ github.run_id }}
       - name: Checkout trusted observer source
         uses: actions/checkout@v7
         with:
