@@ -27,9 +27,8 @@ jobs:
       github.event_name == 'schedule' ||
       (
         github.event_name == 'workflow_run' &&
-        github.event.action == 'completed' &&
+        github.event.action == 'requested' &&
         github.event.workflow_run.name == 'Workflow Quality Gate' &&
-        github.event.workflow_run.conclusion == 'success' &&
         github.event.workflow_run.head_repository.full_name == github.repository &&
         github.event.workflow_run.head_branch == 'main'
       )
@@ -46,6 +45,24 @@ jobs:
           token: ${{ github.token }}
           diagnostics: "true"
           artifact_name: actions-api-usage-private-targets-${{ github.run_id }}
+      - name: Wait for trusted quality gate completion
+        if: github.event_name == 'workflow_run'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_RUN_ID: ${{ github.event.workflow_run.id }}
+        run: |
+          for attempt in $(seq 1 20); do
+            status="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN_ID" --jq .status)"
+            conclusion="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN_ID" --jq .conclusion)"
+            if [ "$status" = "completed" ]; then
+              echo "Trusted quality gate conclusion: $conclusion"
+              test "$conclusion" = "success"
+              exit 0
+            fi
+            sleep 15
+          done
+          echo "Trusted quality gate completion was not observed within five minutes"
+          exit 1
       - name: Check whether the private target token is configured
         id: private_token
         env:
@@ -102,6 +119,14 @@ jobs:
       checks: read
       contents: read
     steps:
+      - name: Record safe workflow-run event context
+        run: |
+          echo "Observer event action: ${{ github.event.action || 'none' }}"
+          echo "Source workflow: ${{ github.event.workflow_run.name || 'none' }}"
+          echo "Source run ID: ${{ github.event.workflow_run.id || 'none' }}"
+          echo "Source branch: ${{ github.event.workflow_run.head_branch || 'none' }}"
+          echo "Source repository: ${{ github.event.workflow_run.head_repository.full_name || 'none' }}"
+          echo "Source conclusion: ${{ github.event.workflow_run.conclusion || 'none' }}"
       - name: Monitor workflow-run observer API rate-limit usage
         uses: hesreallyhim/github-api-usage-monitor@52198b2c0a112e8647664f4042ae301e718ad7df
         with:
