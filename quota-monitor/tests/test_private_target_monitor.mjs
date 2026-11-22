@@ -156,7 +156,7 @@ test("an explicit provider billing message from a private workflow check suite i
         check_runs: [{
           id: 901,
           name: "GitHub Actions",
-          app_slug: "github-actions",
+          app: { slug: "github-actions" },
           status: "completed",
           conclusion: "failure",
           output: {
