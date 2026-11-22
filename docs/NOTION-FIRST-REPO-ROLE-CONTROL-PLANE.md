@@ -42,3 +42,8 @@ Use the existing resolver for message intent; do not build a second context reso
 - `compute_actions_usage_projection()` calculates usage percentages only when billing owner, product, billing period, scope type, scope ID and currency match exactly between usage and budget rows. A mismatch returns UNKNOWN with no percentage.
 - Owner-reported exhaustion remains REPORTED and is not promoted to provider-verified quota exhaustion. An exhaustion timestamp is populated only from an explicit provider `exhausted_at` field; collection time is not substituted.
 - The host composition accepts either an already normalized repository catalog or installation-scoped raw pages, and can attach a separate usage projection. UNKNOWN usage telemetry does not block unrelated repository selection.
+## Runner availability is separate from billing usage
+
+Repository catalog entries carry two independent projections: `runner_availability` and `actions_usage`. A successful exact-SHA CI run may verify runner availability for that repository; it does not prove billing minutes, spending limits or quota state. Conversely, a billing budget below its limit does not prove that a runner is available.
+
+When CI is required, repository selection checks `runner_availability.state=AVAILABLE_VERIFIED`, not `actions_usage`. Unknown billing telemetry therefore cannot block an independently verified public runner, and a verified billing budget cannot stand in for a successful runner observation.
