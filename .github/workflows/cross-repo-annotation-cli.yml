@@ -126,6 +126,10 @@ jobs:
           expected="$(jq -r '.runs[] | select(.latest_for_workflow == true) | .expected_annotation_count' "$request")"
           actual="$(jq 'length' evidence/gh-annotations-exact-latest.json)"
           test "$actual" -eq "$expected"
+          latest_exact_file="evidence/exact-run-$latest_run_id.json"
+          jq -r '[.annotations[].message] | sort | join("\\n")' "$latest_exact_file" > evidence/exact-messages.txt
+          jq -r '[.[].message] | sort | join("\\n")' evidence/gh-annotations-exact-latest.json > evidence/cli-messages.txt
+          diff -u evidence/exact-messages.txt evidence/cli-messages.txt
 
           {
             echo "# Cross-repository GitHub annotation evidence"
@@ -136,7 +140,7 @@ jobs:
             echo
             for file in evidence/exact-run-*.json; do
               echo "## Run $(jq -r '.run_id' "$file") / attempt $(jq -r '.run_attempt' "$file")"
-              jq -r '.annotations[] | "- Check Run (.check_run_id), job (.job_name), level (.annotation_level): (.message)"' "$file"
+              jq -r '.annotations[] | [.check_run_id, .job_name, .annotation_level, .message] | @tsv' "$file"
               echo
             done
           } >> "$GITHUB_STEP_SUMMARY"

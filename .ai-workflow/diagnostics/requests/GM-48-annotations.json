@@ -19,5 +19,6 @@
       "expected_annotation_count": 1,
       "latest_for_workflow": true
     }
-  ]
+  ],
+  "request_revision": 2
 }
