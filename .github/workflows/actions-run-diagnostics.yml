@@ -39,6 +39,7 @@ jobs:
         uses: actions/setup-go@v6
         with:
           go-version: "1.24.3"
+          cache: false
       - name: Install pinned actionlint
         continue-on-error: true
         run: |
@@ -91,6 +92,8 @@ jobs:
           actionlint_status=$?
           set -e
           cat evidence/actionlint.txt
+          sha256sum "$SOURCE_PATH" > evidence/source-workflow.sha256
+          rm -f evidence/source-workflow.base64 evidence/source-workflow-fetch-error.txt
           if [ "$actionlint_status" -eq 0 ]; then
             echo "status=VALID" >> "$GITHUB_OUTPUT"
           else
