@@ -116,8 +116,8 @@ function errorRecord(error) {
   return { status: "API_ERROR", http_status: null, retry_after: null, code: sanitizeText(error?.message || "UNEXPECTED_API_ERROR") };
 }
 
-async function collectAnnotations(api, checkRunId) {
-  const url = "/repos/" + api.repositoryPath + "/check-runs/" + checkRunId + "/annotations?per_page=100";
+async function collectAnnotations({ api, repository, checkRunId }) {
+  const url = "/repos/" + repository + "/check-runs/" + checkRunId + "/annotations?per_page=100";
   const page = await api.paginate(url, null);
   return { status: "RETRIEVED", annotation_count: page.items.length, page_count: page.pageCount, annotations: page.items.map(summarizeAnnotation), raw: page.items };
 }
@@ -151,7 +151,7 @@ async function collectCheckSuite({ api, source }) {
       };
       if (record.id.state === "PRESENT" && Number.isSafeInteger(record.id.value) && record.id.value > 0) {
         try {
-          const annotations = await collectAnnotations(api, record.id.value);
+          const annotations = await collectAnnotations({ api, repository: source.repository, checkRunId: record.id.value });
           record.annotations_status = annotations.status;
           record.annotation_count = annotations.annotation_count;
           record.annotation_page_count = annotations.page_count;
@@ -237,7 +237,7 @@ async function collectJob({ api, job, source }) {
       annotations: [],
     };
     try {
-      const annotations = await collectAnnotations(api, checkRun.id);
+      const annotations = await collectAnnotations({ api, repository: source.repository, checkRunId: checkRun.id });
       rawAnnotations = annotations.raw;
       result.check_run.status = annotations.status;
       result.check_run.annotation_count = annotations.annotation_count;
@@ -309,6 +309,9 @@ export async function collectDiagnostics({
 
   const jobs = [];
   for (const job of jobsPage.items) jobs.push(await collectJob({ api, job, source }));
+  if (source.check_suite_id.state !== "PRESENT" && Number.isSafeInteger(run.check_suite_id) && run.check_suite_id > 0) {
+    source.check_suite_id = { state: "PRESENT", value: run.check_suite_id };
+  }
   const checkSuite = await collectCheckSuite({ api, source });
   const runClassification = classifyRun({
     source: { ...source, status: run.status, conclusion: run.conclusion },
