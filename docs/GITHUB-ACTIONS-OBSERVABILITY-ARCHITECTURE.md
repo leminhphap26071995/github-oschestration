@@ -22,13 +22,13 @@ workflow-quality-gate.yml runs on workflow-source changes and executes a real ac
 
 ### B. Provider lifecycle observer
 
-actions-run-diagnostics.yml is a trusted default-branch workflow observing configured workflow names through workflow_run events: requested, in_progress, and completed.
+actions-run-diagnostics.yml is a trusted default-branch workflow observing configured workflow names through workflow_run events: requested and completed. On requested, the observer polls for a bounded window until a runner/step is observed or the source run completes; the completed event then captures final annotations/logs.
 
 The observer checks out only its trusted default-branch SHA. It never checks out or executes code from the source branch. It uses the source event's exact repository, workflow path, source SHA, run ID, and attempt to fetch the source workflow blob as data and run actionlint against that exact version.
 
 The observer separately retrieves:
 
-- Workflow run metadata.
+- Workflow run metadata and bounded admission polling.
 - Attempt-scoped jobs.
 - Job metadata and runner assignment.
 - Job Check Run IDs and annotations.
