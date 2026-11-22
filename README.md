@@ -38,3 +38,8 @@ All workflows in this repository use automatic triggers only; no workflow_dispat
 ## Context model
 
 The root .ai-workflow/CURRENT.json is an index only. Project and ticket checkpoints are created in their own context when work begins. Never select context by latest modification time.
+
+
+## Notion-first repository and role continuity
+
+See [docs/NOTION-FIRST-REPO-ROLE-CONTROL-PLANE.md](docs/NOTION-FIRST-REPO-ROLE-CONTROL-PLANE.md). The sanitized decision module and regression tests are included under `scripts/repository_control_plane.py` and `tests/test_repository_control_plane.py`; the existing automatic conformance workflow executes them on push and pull request.
