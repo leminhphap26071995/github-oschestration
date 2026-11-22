@@ -28,3 +28,11 @@ Parallel packages are scheduled only when dependencies are met and their write p
 - `conformance.yml` runs the repository's automatic regression suite on push and pull request. No manual dispatch is added.
 
 The module consumes normalized provider data; it is not itself a Notion/GitHub client and does not prove host runtime invocation.
+
+## Integration with the existing context resolver
+
+The host-facing composition entry point is `scripts.context_switching.route_message_with_repository_control()`. It calls the existing message-level context resolver, uses Project Introduction only to derive a Notion project/goal route, waits for outgoing-cursor readback before binding a destination execution repository, then applies Notion requirement/access bindings, GitHub inventory and role work-package state.
+
+Required host inputs are normalized Notion domain registry, project/ticket checkpoints, MUST requirements, requirement-to-repository bindings, work-package records and connected GitHub repository metadata. The function returns the existing context transition plus the repository resolution, role continuation, dependency-ready parallel batches and orthogonal state projection.
+
+Use the existing resolver for message intent; do not build a second context resolver. The wrapper is a deterministic composition layer, not a Notion/GitHub client and not proof that a ChatGPT host invokes it.
