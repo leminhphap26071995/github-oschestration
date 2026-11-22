@@ -1,6 +1,6 @@
 # GitHub Actions Failure and Quota Detection Architecture
 
-Status: implementation in progress; same-repository observer E2E is being verified. Cross-repository private monitoring remains credential-gated.
+Status: same-repository real fault-injection E2E is VERIFIED. Cross-repository private observation and billing-snapshot ingestion are implemented but remain unverified until owner credentials and a scheduled target run are available.
 
 ## 1. Objective and correctness contract
 
@@ -125,7 +125,10 @@ No quota is deliberately exhausted for testing. A real quota-exhaustion E2E is o
 | --- | --- | --- |
 | Malformed workflow YAML | Exact committed source blob; actionlint parser output; actual observer Check Run annotation readback | WORKFLOW_YAML_SYNTAX_ERROR |
 | Valid workflow, failed test/build step | Actual runner, failed step, exact attempt log and Check Run annotation | STEP_IMPLEMENTATION_FAILURE or STEP_FAILURE |
-| Zero jobs / no runner | Exact source run and Check Suite output; no inference from runner_id=0 | Provider cause if explicit, otherwise UNKNOWN |
+| Zero jobs / no runner | Exact source run, Check Suite output, exact workflow blob and independent parser/runtime evidence | Specific parser/runtime/provider cause if proven, otherwise UNKNOWN |
+| Runner not assigned | Requested-event lifecycle polling plus explicit runner/job state | RUNNER_NOT_ASSIGNED_YET / OBSERVATION_WINDOW_IN_PROGRESS; never inferred quota |
+| Matching organization hard cap | Fresh private billing snapshot with matching Actions budget item, prevent_further_usage=true and HARD_CAP_REACHED | ACTIONS_BILLING_QUOTA_EXHAUSTED |
+| Personal included minutes | Usage summary API reports NOT_EXPOSED_BY_USAGE_SUMMARY_API | UNKNOWN; consumption totals are insufficient |
 | GitHub token permission denied | Source job annotation/log with explicit GitHub permission evidence | PERMISSION_OR_POLICY_DENIED |
 | Collector API 403/404/429 | Collector request status and endpoint | EVIDENCE_GAP / API retrieval status, not source cause |
 | Actions quota exhausted | Explicit provider billing/spending/included-usage message or verified hard cap | ACTIONS_BILLING_QUOTA_EXHAUSTED |
@@ -178,8 +181,23 @@ If these Secrets are absent, cross-repository private coverage remains BLOCKED. 
 
 ## 8. Current verification boundary
 
-The same-repository observer and annotation readback have executed on real GitHub-hosted runners and uploaded raw/final diagnostic artifacts. The latest implementation still requires green exact-HEAD Conformance and Workflow Quality Gate, plus a new real malformed-YAML and real failing-test fault-injection run.
+### Verified real executions
 
-Private target polling is implemented but cannot be considered live-verified until the two repository Secrets are provisioned and the scheduled job observes an authorized private target.
+- Exact current main HEAD: 461e40a1fd596879efe06ca01069ff82a7e529d0.
+- Portable AI Workflow Conformance: PASS on that exact HEAD (run 45034406856).
+- Workflow Quality Gate: PASS on workflow revision ac9b7a2768bbacb2d2a3832621dcd58cb5d8243d; the workflow definition did not change in later commits.
+- Real malformed YAML source run 45032875877: GitHub created a failed run with zero jobs. The trusted observer parsed the exact source blob and emitted a real Check Run annotation; annotation readback from observer run 45032878964 returned one annotation.
+- Real failing test source run 45032877234: GitHub-hosted runner 1000003298 executed Node.js 24 and failed on an actual AssertionError. The observer retrieved the attempt-scoped job log and classified STEP_IMPLEMENTATION_FAILURE (observer run 45032881650).
+- Real workflow-quality-gate source run 45032877218: actionlint emitted three actual annotations, including the malformed workflow parser diagnostic and a separate ShellCheck SC2034 warning. The observer retrieved and classified the annotations (observer run 45032880827).
+- The API usage monitor is integrated into the real diagnose and readback jobs. Observer run 45034410622 produced separate state.json/poll-log.json artifacts for both jobs; each recorded three polls and zero poll failures. The diagnose token's core REST bucket was 3,930 remaining of the API-reported 5,000 at the end of that short job; this is API telemetry, not Actions minutes or private-repository quota.
 
-Live Actions quota exhaustion has not been forced. A private run with no assigned runner and no logs is not classified as quota without its provider Check Suite evidence.
+The fault-injection branch is isolated and intentionally not merged. The former echo-based/synthetic annotation workflows were removed from the test branch before these real tests.
+
+### Not yet verified
+
+- The scheduled private-target job has not yet produced a live schedule-run receipt.
+- PRIVATE_MONITOR_TOKEN and PRIVATE_TARGETS_JSON must be explicitly provisioned by the owner. The optional billing_snapshot configuration must point to the private collector's usage-latest.json and include billing_scope for each target.
+- The currently inspected private collector snapshot is stale and reports BILLING_TOKEN_NOT_CONFIGURED; it cannot establish a billing hard cap. Its remaining included personal-account minutes are explicitly NOT_EXPOSED_BY_USAGE_SUMMARY_API.
+- No live Actions quota was deliberately exhausted. This remains NOT VERIFIED; do not treat a private run with no steps/logs as quota without explicit provider evidence or a fresh matching hard-cap snapshot.
+
+The system does not promise universal 100% root-cause classification when GitHub withholds evidence. It guarantees conservative, evidence-bound output: specific class only when proven; otherwise UNKNOWN/BLOCKED with the missing evidence named.
