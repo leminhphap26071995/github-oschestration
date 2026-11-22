@@ -26,6 +26,7 @@ jobs:
         run: gh extension install swfz/gh-annotations
 
       - name: Resolve an existing least-privilege credential for the target private repository
+        id: credentials
         env:
           GITHUB_APP_ID: ${{ secrets.GITHUB_APP_ID }}
           GITHUB_APP_PRIVATE_KEY: ${{ secrets.GITHUB_APP_PRIVATE_KEY }}
@@ -132,9 +133,15 @@ jobs:
           if (!selected) throw new Error("NO_CROSS_REPO_READ_CREDENTIAL:" + attempts.join(","));
           process.stdout.write("::add-mask::" + selected.token + "\n");
           await appendFile(process.env.GITHUB_ENV, "TARGET_GH_TOKEN=" + selected.token + "\n");
+          await appendFile(process.env.GITHUB_OUTPUT, "target_source_sha=" + request.test_source_sha + "\n");
           console.log("CROSS_REPO_CREDENTIAL_READY source=" + selected.name +
             " target=" + target + " permissions=verified-actions-read,checks-read");
           NODE
+
+      - name: Set up target test runtime
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
 
       - name: Verify exact source runs and collect annotations
         shell: bash
@@ -195,10 +202,35 @@ jobs:
             done
           } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Upload annotation evidence
+      - name: Checkout exact target repository source
+        uses: actions/checkout@v4
+        with:
+          repository: leminhphap-improvement/ai-workflow-archtiecture
+          ref: ${{ steps.credentials.outputs.target_source_sha }}
+          token: ${{ env.TARGET_GH_TOKEN }}
+          path: target
+          persist-credentials: false
+
+      - name: Run the target repository conformance commands
+        working-directory: target
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -B scripts/validate_workspace.py --root . | tee ../evidence/target-structure-validation.json
+          python -B -m unittest discover -s tests -v 2>&1 | tee ../evidence/target-unittest.log
+          test_count="$(sed -nE 's/^Ran ([0-9]+) tests?.*/\\1/p' ../evidence/target-unittest.log | tail -n 1)"
+          test -n "$test_count"
+          jq -n --arg repository "leminhphap-improvement/ai-workflow-archtiecture" \\
+            --arg source_sha "${{ steps.credentials.outputs.target_source_sha }}" \\
+            --argjson tests_run "$test_count" \\
+            '{repository:$repository, source_sha:$source_sha, tests_run:$tests_run, result:"PASS"}' \\
+            > ../evidence/target-test-receipt.json
+
+      - name: Upload annotation and conformance evidence
         uses: actions/upload-artifact@v4
         with:
           name: GM-48-github-annotations-${{ github.sha }}
           path: evidence/
-          if-no-files-found: error
+          if-no-files-found: warn
           retention-days: 14
+        if: always()

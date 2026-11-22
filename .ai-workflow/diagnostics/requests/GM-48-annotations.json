@@ -20,5 +20,10 @@
       "latest_for_workflow": true
     }
   ],
-  "request_revision": 3
+  "request_revision": 4,
+  "test_source_sha": "532e0fcf046f08ce1f39f4e19b97f005b37479eb",
+  "test_command": [
+    "python -B scripts/validate_workspace.py --root .",
+    "python -B -m unittest discover -s tests -v"
+  ]
 }
