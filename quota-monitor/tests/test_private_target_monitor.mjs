@@ -263,7 +263,7 @@ test("fresh organization Actions hard-cap evidence is authoritative for a matchi
     status: "RETRIEVED",
     snapshot: {
       collected_at_utc: "2026-11-22T00:50:00.000Z",
-      remaining_included_minutes: "NOT_EXPOSED_BY_USAGE_SUMMARY_API",
+      included_compute_balance_status: "NOT_EXPOSED_BY_USAGE_SUMMARY_API",
       accounts: [{
         scope: "organization",
         owner: "owner",
@@ -299,7 +299,7 @@ test("personal included Actions minutes remain UNKNOWN because the usage summary
       status: "RETRIEVED",
       snapshot: {
         collected_at_utc: "2026-11-22T00:50:00.000Z",
-        remaining_included_minutes: "NOT_EXPOSED_BY_USAGE_SUMMARY_API",
+        included_compute_balance_status: "NOT_EXPOSED_BY_USAGE_SUMMARY_API",
         accounts: [{
           scope: "user",
           owner: "owner",
@@ -313,7 +313,7 @@ test("personal included Actions minutes remain UNKNOWN because the usage summary
     now,
     maxAgeMinutes: 60,
   });
-  assert.equal(result.status, "PERSONAL_REMAINING_QUOTA_NOT_EXPOSED");
+  assert.equal(result.status, "PERSONAL_INCLUDED_COMPUTE_BALANCE_NOT_EXPOSED");
   assert.equal(result.classification, null);
 });
 

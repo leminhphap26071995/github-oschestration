@@ -25,7 +25,7 @@ class QuotaMonitorTests(unittest.TestCase):
         ]})
         self.assertEqual(
             {"gross_minutes": 120.0, "discounted_minutes": 20.0,
-             "billable_minutes": 100.0, "net_amount": 0.82},
+             "net_minutes": 100.0, "net_amount": 0.82},
             module.totals(rows),
         )
 
@@ -55,7 +55,19 @@ class QuotaMonitorTests(unittest.TestCase):
                 result = module.collect("user", "alice", "token", 2026, 11)
         self.assertEqual(["alice/private", "alice/public"],
                          [repo["full_name"] for repo in result["repositories"]])
-        self.assertEqual("OK", result["status"])
+        self.assertEqual("PARTIAL", result["status"])
+
+    def test_user_scope_does_not_infer_actions_usage_from_empty_user_billing_rows(self):
+        with patch.object(module, "get", side_effect=AssertionError("user Actions usage endpoint must not be called")):
+            with patch.object(module, "pages", return_value=([
+                {"full_name": "alice/private", "owner": {"type": "User", "login": "alice"},
+                 "private": True},
+            ], None)):
+                result = module.collect("user", "alice", "token", 2026, 11)
+        self.assertEqual("NOT_EXPOSED_BY_USER_BILLING_API", result["actions_usage_status"])
+        self.assertIsNone(result["totals"]["gross_minutes"])
+        self.assertEqual("NOT_EXPOSED", result["repositories"][0]["status"])
+        self.assertIsNone(result["repositories"][0]["totals"]["net_minutes"])
 
     def test_missing_tokens_are_unknown_not_zero(self):
         report = module.collect_all("", {}, "alice", ["example-org"])
@@ -123,20 +135,20 @@ class QuotaMonitorTests(unittest.TestCase):
             }],
         }
         dashboard = module.render(report, [])
-        self.assertIn("does not expose remaining included-minute allowance", dashboard)
+        self.assertIn("does not expose personal Actions usage or remaining included compute balance", dashboard)
         self.assertIn("UNKNOWN", dashboard)
         self.assertNotIn("0.00", dashboard)
 
     def test_report_files_are_written(self):
         report = {
-            "schema_version": 2, "collected_at_utc": "2026-11-09T00:00:00+00:00",
+            "schema_version": 3, "collected_at_utc": "2026-11-09T00:00:00+00:00",
             "billing_period": "2026-11",
             "accounts": [{
                 "scope": "user", "owner": "alice", "status": "OK",
                 "usage_items": [], "repositories": [], "repository_list_error": None,
                 "summary_error": None, "totals": {
                     "gross_minutes": 0, "discounted_minutes": 0,
-                    "billable_minutes": 0, "net_amount": 0,
+                    "net_minutes": 0, "net_amount": 0,
                 },
                 "budget": {"status": "NOT_APPLICABLE", "items": []},
             }],

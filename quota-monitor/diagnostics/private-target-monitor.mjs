@@ -109,7 +109,7 @@ export function evaluateBillingEvidence({ snapshotState, target, now, maxAgeMinu
   }
   if (target.billing_scope === "user") {
     return {
-      status: "PERSONAL_REMAINING_QUOTA_NOT_EXPOSED",
+      status: "PERSONAL_INCLUDED_COMPUTE_BALANCE_NOT_EXPOSED",
       classification: null,
       age_minutes: ageMinutes,
     };
