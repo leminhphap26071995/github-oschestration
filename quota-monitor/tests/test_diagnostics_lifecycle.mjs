@@ -94,6 +94,7 @@ test("an explicit provider billing message in a workflow-level check run classif
         check_runs: [{
           id: 901,
           name: "GitHub Actions",
+          app_slug: "github-actions",
           status: "completed",
           conclusion: "failure",
           output: {
@@ -153,7 +154,7 @@ test("generic 403, 429, runner_id zero and empty steps are not quota or source p
   assert.notEqual(result.classifications[0], "PERMISSION_OR_POLICY_DENIED");
 });
 
-test("independent causes are preserved rather than hidden by priority ordering", () => {
+test("step logs and workflow annotations cannot manufacture Actions billing quota evidence", () => {
   const result = classifyJob({
     job: {
       id: 12,
@@ -165,10 +166,45 @@ test("independent causes are preserved rather than hidden by priority ordering",
       title: "Billing gate",
       message: "Actions billing spending limit exceeded.",
     }],
-    logs: { status: "RETRIEVED", text: "AssertionError: expected 1 to equal 2\nProcess completed with exit code 1" },
+    logs: { status: "RETRIEVED", text: "Actions included minutes exhausted.\nAssertionError: expected 1 to equal 2\nProcess completed with exit code 1" },
   });
-  assert.ok(result.classifications.includes("ACTIONS_BILLING_QUOTA_EXHAUSTED"));
+  assert.ok(!result.classifications.includes("ACTIONS_BILLING_QUOTA_EXHAUSTED"));
   assert.ok(result.classifications.includes("STEP_IMPLEMENTATION_FAILURE"));
+});
+
+test("quota classification requires the trusted GitHub Actions provider check-run output, not annotations or third-party checks", () => {
+  const syntheticAnnotation = classifyRun({
+    source: { status: "completed", conclusion: "failure" },
+    jobs: [],
+    jobsStatus: "RETRIEVED",
+    checkSuite: {
+      status: "RETRIEVED",
+      check_runs: [{
+        id: 901,
+        name: "GitHub Actions",
+        app_slug: "github-actions",
+        output: { summary: "Workflow failed before any job could start." },
+        annotations: [{ title: "Billing gate", message: "Actions billing spending limit exceeded." }],
+      }],
+    },
+  });
+  const thirdPartyOutput = classifyRun({
+    source: { status: "completed", conclusion: "failure" },
+    jobs: [],
+    jobsStatus: "RETRIEVED",
+    checkSuite: {
+      status: "RETRIEVED",
+      check_runs: [{
+        id: 902,
+        name: "Billing diagnostic",
+        app_slug: "third-party-app",
+        output: { summary: "Actions billing spending limit exceeded." },
+        annotations: [],
+      }],
+    },
+  });
+  assert.equal(syntheticAnnotation.classification, "UNKNOWN");
+  assert.equal(thirdPartyOutput.classification, "UNKNOWN");
 });
 
 test("a queued job without a runner is lifecycle state, not quota exhaustion", () => {
@@ -189,6 +225,8 @@ test("workflow-level quota classification requires an explicit Actions billing m
     checkSuite: {
       status: "RETRIEVED",
       check_runs: [{
+        name: "GitHub Actions",
+        app_slug: "github-actions",
         output: { summary: "GitHub Actions included minutes exhausted; further usage is blocked." },
         annotations: [],
       }],
