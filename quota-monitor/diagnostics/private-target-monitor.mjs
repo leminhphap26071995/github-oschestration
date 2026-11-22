@@ -335,6 +335,7 @@ export async function monitorPrivateTargets({
         status: "TARGET_API_ERROR",
         classification: "UNKNOWN",
         evidence_types: ["TARGET_API_UNAVAILABLE"],
+        billing_evidence_status: billingEvidence.status,
         api_error: apiError(error),
       });
       continue;
@@ -442,6 +443,7 @@ export async function monitorPrivateTargets({
           run_observed: false,
           commit_age_minutes: ageMinutes,
           classification: "OBSERVATION_WINDOW_IN_PROGRESS",
+          billing_evidence_status: billingEvidence.status,
           evidence_types: ["RUN_DISCOVERY_PENDING"],
         });
         continue;
@@ -480,13 +482,18 @@ export async function monitorPrivateTargets({
 
   const blocked = results.some(item =>
     item.status === "TARGET_API_ERROR" || item.status === "DIAGNOSTICS_API_ERROR" ||
-    item.classification === "UNKNOWN" || item.classification === "NO_RUN_OBSERVED"
+    item.classification === "UNKNOWN" || item.status === "NO_RUN_OBSERVED"
   );
+  const billingCoverageStatus = !billingSnapshotConfig ? "NOT_CONFIGURED" :
+    billingSnapshotState.status !== "RETRIEVED" ? billingSnapshotState.status :
+    results.every(item => ["HARD_CAP_REACHED", "HARD_CAP_NOT_REACHED"].includes(item.billing_evidence_status))
+      ? "OBSERVED" : "PARTIAL";
   return {
     schema_version: 1,
     recorded_at: now.toISOString(),
     coverage_status: blocked ? "PARTIAL" : "OBSERVED",
     billing_snapshot_status: billingSnapshotState.status,
+    billing_coverage_status: billingCoverageStatus,
     private_details_redacted: true,
     targets: results,
   };
