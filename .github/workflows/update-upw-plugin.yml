@@ -5,7 +5,7 @@ name: UPW Plugin Manual Release
     paths:
       - ".github/upw-plugin-update-request.json"
 permissions:
-  contents: read
+  contents: write
 concurrency:
   group: upw-plugin-creator-update-${{ github.repository }}
   cancel-in-progress: false
@@ -115,7 +115,29 @@ jobs:
             dist/plugin-creator-handoff.json
           if-no-files-found: error
           retention-days: 14
+      - name: Create versioned GitHub Release with package assets
+        if: steps.request.outputs.present == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="$(python -c 'import json; print(json.load(open("plugin/overlay/plugin.json"))["version"])')"
+          tag="upw-v${version}"
+          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "RELEASE_TAG_ALREADY_EXISTS:$tag" >&2
+            exit 1
+          fi
+          gh release create "$tag" \
+            "dist/UPW-${version}-plugin-creator-overlay.zip" \
+            "dist/SHA256SUMS" \
+            "dist/plugin-creator-handoff.json" \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --title "UPW ${version} — Plugin Creator overlay" \
+            --notes "Validated Plugin Creator overlay built from source commit $GITHUB_SHA. This release packages the overlay only; the live ChatGPT plugin is unchanged until its owner-authorized Plugin Creator update is applied and read back."
+
       - name: Confirm native Plugin Creator handoff boundary
         if: steps.request.outputs.present == 'true'
         run: |
-          echo "PACKAGE_READY: ChatGPT must use the native Plugin Creator update action with the recorded plugin_id and expected_release_id; this Actions workflow does not mutate the live plugin."
+          echo "PACKAGE_READY: GitHub Release contains the validated overlay ZIP and provenance. ChatGPT must still apply the owner-authorized native Plugin Creator update with the recorded plugin_id and expected_release_id; this workflow does not mutate the live plugin."
