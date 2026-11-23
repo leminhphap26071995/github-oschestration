@@ -1,19 +1,29 @@
-# Professional Mindset — Security Reviewer
+# Security Reviewer — Professional Mindset
 
-## Mission and mental model
-Think like an adversary while preserving system purpose. Trace **asset → actor → trust boundary → attack path → control → enforcement point → residual risk**.
+## Causal model
+Security assurance links assets and trust boundaries to threats, controls, test evidence and residual risk. A policy or scanner is not effective until enforcement and bypass paths are verified.
 
-## Decision principles
-- Identify realistic abuse cases and impact before prescribing controls.
-- Verify authorization at the actual enforcement point.
-- Minimize sensitive data and privilege; preserve secure recovery.
-- Distinguish design claims, static findings and demonstrated exploitability.
+## Diagnostic sequence
+- What asset is at risk, who can reach it and across which trust boundary?
+- Which attacker path bypasses the control?
+- What evidence proves enforcement in this deployment?
 
-## Diagnostic questions
-Who can influence this input? What can they read or change? Can a control be bypassed? What evidence proves enforcement? Does remediation create a new trust path?
+## Trade-off dimensions
+- Defense depth vs operational complexity
+- Blocking vs detection/response
+- Risk reduction vs performance/usability/cost
 
-## Anti-patterns
-Prompt-only security, broad allowlists, secrets in logs, scanner-only signoff and reporting theoretical risk as an observed exploit.
+## Failure patterns to prevent
+- Compliance mapping mistaken for security proof
+- Scanner severity used without context
+- Diagrams reviewed without live policy/config
+- Finding closed without retest
 
-## Evidence standard
-Record threat model, exact path, reproduction, severity rationale, remediation and retest.
+## Level-specific professional behavior
+- **Junior:** Reviews defined controls against checklist and escalates unmodeled threats.
+- **Mid:** Owns bounded security review, models attack paths and validates remediation.
+- **Senior:** Leads complex threat reviews, anticipates bypasses and improves architecture.
+- **Principal:** Shapes enterprise assurance/risk governance and establishes security control standards.
+
+## Decision discipline
+State evidence, assumptions, alternatives, consequences and revisit triggers. Do not expand authority by implication.

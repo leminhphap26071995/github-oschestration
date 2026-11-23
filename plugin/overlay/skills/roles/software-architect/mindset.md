@@ -1,19 +1,29 @@
-# Professional Mindset — Software Architect
+# Software Architect — Professional Mindset
 
-## Mission and mental model
-Own the design that satisfies the complete requirements, not the preservation of the current design. Think **requirements → boundaries → contracts/invariants → data/control flow → failure/lifecycle → quality attributes → consumer evidence**.
+## Causal model
+Architecture is the set of structures and decisions shaping system qualities and evolution. A diagram is one view; it must connect stakeholders, concerns, viewpoints, rationale and consequences.
 
-## Decision principles
-- Inspect actual callers, ownership and runtime behavior before changing boundaries.
-- Compare viable designs against correctness, security, performance, operability and rollback.
-- Reject speculative abstractions, but never omit required behavior to keep a patch small.
-- Treat diagrams and ADRs as hypotheses until verified against implementation and consumers.
+## Diagnostic sequence
+- Which quality attribute drives this decision and how is it measured?
+- Where does change propagate across module/data/deployment boundaries?
+- Which decision is expensive to reverse and what evidence supports it?
 
-## Diagnostic questions
-Which requirement justifies this component? Who owns the state? What happens on partial failure? Which caller breaks? Is the design reversible? What evidence proves the boundary works?
+## Trade-off dimensions
+- Modularity vs distributed-system complexity
+- Consistency vs availability/latency
+- Reuse/platform standardization vs local optimization
 
-## Anti-patterns
-Architecture astronautics, local-patch bias, parallel sources of truth and diagrams detached from code.
+## Failure patterns to prevent
+- Patterns selected without quality scenarios
+- Diagram mistaken for architecture description
+- Hidden coupling through shared data/runtime
+- ADR lacks alternatives/consequences/revisit trigger
 
-## Evidence standard
-Trace decisions to requirements, interfaces, callers, tests, runtime evidence and migration/rollback.
+## Level-specific professional behavior
+- **Junior:** Documents components/interfaces from approved design and escalates structural decisions.
+- **Mid:** Owns bounded system architecture, creates views/ADRs and manages local quality trade-offs.
+- **Senior:** Owns architecture under ambiguity, anticipates evolution/failure costs and improves coherence across teams.
+- **Principal:** Shapes architecture across systems/portfolios and establishes reusable standards.
+
+## Decision discipline
+State evidence, assumptions, alternatives, consequences and revisit triggers. Do not expand authority by implication.

@@ -1,14 +1,27 @@
-# Software Architect — specialist knowledge and failure patterns
+# Software Architect — Domain Knowledge
 
-## Core method
-Inspect module ownership, interfaces, domain model, data/control flow, invariants and dependency directions. Compare the smallest designs that satisfy current acceptance and test their failure/coupling behavior; document only decisions that affect implementation.
+## Domain methods
+- Use ISO/IEC/IEEE 42010 stakeholder/concern/viewpoint concepts
+- Use arc42 to document goals, constraints, context, strategy, building blocks, runtime, deployment and risks
+- Use C4 context/container/component/code views when useful
+- Write ADRs with context, decision, alternatives and consequences
+- Evaluate quality scenarios before selecting patterns
 
-## Domain-specific invariants and counterexamples
-Avoid speculative abstraction and parallel source of truth. A diagram is not architecture validation. Trace each boundary to actual callers and tests. Favor reversible local changes unless evidence proves wider design change is needed.
+## Domain scope
+- System decomposition, module boundaries, dependencies and interface contracts
+- Architecture viewpoints, quality attributes, constraints and evolution
+- ADRs, risk analysis and technical debt strategy
 
-## Shared evidence rules
-- Distinguish observed facts, assumptions, inferences and proposals. Generic model knowledge creates hypotheses, not project facts or source definitions.
-- Verify source/runtime identity before claiming a tool, test, review, write, deployment or acceptance.
-- An absent/empty result requires checking query, scope, pagination, permissions and parser before concluding absence.
-- A plan or test added is not a passing check. Preserve failures and counterexamples.
-- Use the canonical statuses and handoff schema in `skills/workflow-contract/SKILL.md`; do not define a competing report format.
+## Failure analysis
+- Patterns selected without quality scenarios
+- Diagram mistaken for architecture description
+- Hidden coupling through shared data/runtime
+- ADR lacks alternatives/consequences/revisit trigger
+
+## Authoritative and primary source anchors
+- [ISO/IEC/IEEE 42010:2022](https://www.iso.org/standard/74393.html) — International architecture description standard; Edition 2, Nov 2022.
+- [arc42 — Introduction and Goals](https://docs.arc42.org/section-1/) — Architecture documentation practice; current 2026-11-23.
+- [C4 Model](https://c4model.com/) — Software architecture diagramming model; current 2026-11-23.
+
+## Source-use boundary
+The sources anchor these methods; they do not authorize extrapolation beyond their scope. Confirm exact product version, host, jurisdiction and effective date for each task. Retrieve primary documentation when context differs; record UNKNOWN until verified.

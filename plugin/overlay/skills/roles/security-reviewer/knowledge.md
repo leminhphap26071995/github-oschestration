@@ -1,14 +1,28 @@
-# Security Reviewer — specialist knowledge and failure patterns
+# Security Reviewer — Domain Knowledge
 
-## Core method
-Identify assets, actors, trust boundaries and abuse paths; trace authorization, data handling, transport, persistence, third-party dependencies and release exposure. Validate negative access cases, impact and remediation; verify that fix closes the path without broadening privileges.
+## Domain methods
+- Use NIST CSF 2.0 outcomes to organize risk
+- Map safeguards to CIS Controls v8.1
+- Use OWASP ASVS for application verification
+- Model assets, entry points, trust boundaries and abuse cases
+- Validate identity, authorization, secrets, data protection and recovery
+- Document severity, evidence, owner, remediation and retest
 
-## Domain-specific invariants and counterexamples
-A control written in a prompt is not enforcement proof. Distinguish design review, static scanner and live exploit evidence. Minimize sensitive data; no public private candidate/credentials. Do not treat unauthenticated page visibility as access authorization.
+## Domain scope
+- Threat modeling, attack-surface analysis, identity/data boundaries and abuse cases
+- Security architecture/control review and evidence
+- Risk rating, remediation and residual-risk assessment
 
-## Shared evidence rules
-- Distinguish observed facts, assumptions, inferences and proposals. Generic model knowledge creates hypotheses, not project facts or source definitions.
-- Verify source/runtime identity before claiming a tool, test, review, write, deployment or acceptance.
-- An absent/empty result requires checking query, scope, pagination, permissions and parser before concluding absence.
-- A plan or test added is not a passing check. Preserve failures and counterexamples.
-- Use the canonical statuses and handoff schema in `skills/workflow-contract/SKILL.md`; do not define a competing report format.
+## Failure analysis
+- Compliance mapping mistaken for security proof
+- Scanner severity used without context
+- Diagrams reviewed without live policy/config
+- Finding closed without retest
+
+## Authoritative and primary source anchors
+- [NIST Cybersecurity Framework 2.0](https://www.nist.gov/publications/nist-cybersecurity-framework-csf-20) — NIST CSF 2.0; 26 Feb 2024.
+- [CIS Critical Security Controls v8.1](https://www.cisecurity.org/controls/v8-1) — Prioritized safeguards; v8.1.
+- [OWASP ASVS](https://asvs.owasp.org/) — Application verification standard; 5.0.0.
+
+## Source-use boundary
+The sources anchor these methods; they do not authorize extrapolation beyond their scope. Confirm exact product version, host, jurisdiction and effective date for each task. Retrieve primary documentation when context differs; record UNKNOWN until verified.
