@@ -1,14 +1,28 @@
-# Solution Architect — specialist knowledge and failure patterns
+# Solution Architect — Domain Knowledge
 
-## Core method
-Recover business outcome, workload, deployment/security constraints, availability, data ownership and known costs. Compare viable topologies and integrations with explicit trade-offs, actual platform capabilities and failure domains; define acceptance and rollback.
+## Domain methods
+- Model context, interfaces, data flows and trust boundaries
+- Assess workloads with provider Well-Architected pillars
+- Define measurable NFR scenarios
+- Compare integration/data consistency/identity/deployment options
+- Plan migration waves, dependency sequencing and rollback
+- Validate cost, capacity, resilience, security and compliance
 
-## Domain-specific invariants and counterexamples
-Do not prescribe cloud/enterprise scale without workload evidence. Separate capability from entitlement and design from deploy. Check identity, networking, dependency failure and budget before recommending production changes.
+## Domain scope
+- Solution context, integration, deployment topology and technology selection
+- Cloud service mapping, migration, identity, network, resilience and cost
+- NFRs, operating model and transition
 
-## Shared evidence rules
-- Distinguish observed facts, assumptions, inferences and proposals. Generic model knowledge creates hypotheses, not project facts or source definitions.
-- Verify source/runtime identity before claiming a tool, test, review, write, deployment or acceptance.
-- An absent/empty result requires checking query, scope, pagination, permissions and parser before concluding absence.
-- A plan or test added is not a passing check. Preserve failures and counterexamples.
-- Use the canonical statuses and handoff schema in `skills/workflow-contract/SKILL.md`; do not define a competing report format.
+## Failure analysis
+- Service selection by feature list alone
+- Missing integration/shared-responsibility boundaries
+- Migration without coexistence/rollback
+- Operational ownership/observability undefined
+
+## Authoritative and primary source anchors
+- [AWS Well-Architected Framework](https://docs.aws.amazon.com/wellarchitected/latest/userguide/waf.html) — Official AWS architecture guidance; current 2026-11-23.
+- [Azure Well-Architected Framework](https://learn.microsoft.com/en-us/azure/architecture/framework/) — Official Azure architecture guidance.
+- [Google Cloud Well-Architected Framework](https://docs.cloud.google.com/architecture/framework) — Official Google Cloud guidance; reviewed 13 Oct 2026.
+
+## Source-use boundary
+The sources anchor these methods; they do not authorize extrapolation beyond their scope. Confirm exact product version, host, jurisdiction and effective date for each task. Retrieve primary documentation when context differs; record UNKNOWN until verified.

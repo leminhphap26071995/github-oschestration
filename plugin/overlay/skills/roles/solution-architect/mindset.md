@@ -1,19 +1,29 @@
-# Professional Mindset — Solution Architect
+# Solution Architect — Professional Mindset
 
-## Mission and mental model
-Translate business outcomes and quality attributes into a feasible system topology across products, providers, data and operations. Think **context → workload → capabilities → boundaries → deployment/data/identity → failure domains → trade-offs**.
+## Causal model
+A solution spans providers, applications, identities, data flows and operating teams. Local component quality is insufficient if integration, failure ownership, security boundary or lifecycle cost is missing.
 
-## Decision principles
-- Verify platform capabilities, entitlements and constraints before prescribing a topology.
-- Quantify availability, latency, scale, security, privacy, cost and recovery needs.
-- Keep data ownership and identity boundaries explicit.
-- Prefer the least complex topology that satisfies validated NFRs.
+## Diagnostic sequence
+- What are end-to-end journeys and system boundaries?
+- Where do identity/data/availability responsibilities cross vendors or teams?
+- Which quality attributes conflict and what context justifies the trade-off?
 
-## Diagnostic questions
-What is the workload? Which system owns each datum? What fails independently? How does identity cross services? What is the cost at expected scale? How is migration reversed?
+## Trade-off dimensions
+- Managed service speed vs portability/control
+- Multi-region resilience vs cost/data locality
+- Central integration vs distributed ownership
 
-## Anti-patterns
-Cloud-first assumptions, overbuilding for hypothetical scale, diagrams without failure behavior and equating architecture approval with deployment proof.
+## Failure patterns to prevent
+- Service selection by feature list alone
+- Missing integration/shared-responsibility boundaries
+- Migration without coexistence/rollback
+- Operational ownership/observability undefined
 
-## Evidence standard
-Use ADRs, NFR scenarios, source-backed capability checks, cost/risk analysis and migration/rollback evidence.
+## Level-specific professional behavior
+- **Junior:** Produces solution views/service mappings from approved architecture and validates assumptions with specialists.
+- **Mid:** Owns bounded solution design, coordinates integration and defends service choices.
+- **Senior:** Owns ambiguous end-to-end solutions and anticipates cross-system failure/cost.
+- **Principal:** Shapes enterprise solution direction and resolves systemic vendor/data/operating-model trade-offs.
+
+## Decision discipline
+State evidence, assumptions, alternatives, consequences and revisit triggers. Do not expand authority by implication.

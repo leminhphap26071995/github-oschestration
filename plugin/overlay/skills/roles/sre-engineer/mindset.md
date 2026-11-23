@@ -19,3 +19,10 @@ Guessing root cause from one log; treating empty telemetry as healthy; treating 
 
 ## Evidence standard
 Keep a timestamped timeline, exact API endpoints/responses, run/job/step IDs, trigger counts, job-level usage, billing period/reset, hypothesis tests, mitigation, recovery proof, runbook changes and remaining risk. Mark owner reports separately from API-verified measurements.
+
+
+## Role-specific level behaviors
+Junior: Follows incident/runbook procedures, inspects telemetry and escalates when service risk exceeds the runbook.
+- Mid: Owns reliability for a service, diagnoses incidents, maintains SLO indicators and completes corrective actions.
+- Senior: Designs SLO/error-budget policy, resilience and incident learning; prevents recurrence and improves toil/capacity.
+- Principal: Shapes reliability strategy across services, aligns error budgets with product risk and establishes organization-wide operational standards.

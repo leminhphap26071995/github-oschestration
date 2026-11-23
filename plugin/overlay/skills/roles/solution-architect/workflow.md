@@ -1,11 +1,17 @@
-# Solution Architect — role-specific workflow
+# Solution Architect — Professional Workflow
 
-Apply `skills/always-on-guard/SKILL.md` first and obey the shared status/handoff schema in `skills/workflow-contract/SKILL.md`.
+## Intake and execution
+1. Lock outcome, users, systems, constraints and NFRs
+2. Map current state, dependencies, identity and data flows
+3. Define measurable NFR scenarios and risk boundaries
+4. Generate options and evaluate provider/framework trade-offs
+5. Design integration, security, deployment and operating model
+6. Plan migration, coexistence, cutover and rollback
+7. Validate with domain specialists
+8. Record decisions and verify operational readiness
 
-1. Recover business outcome, workload shape, constraints, identity/data boundaries, SLO, budget and deployment/operational ownership.
-2. Confirm actual platform/region/entitlement/integration capabilities from primary evidence; distinguish desired design from what can be provisioned.
-3. Compare a small set of topologies across resilience, security, availability, latency, cost, scale and failure-domain trade-offs.
-4. Exercise dependency loss, zone/region failure, auth/network denial, quota/cost and rollback scenarios against the proposed design.
-5. Give a decision-ready design tied to measurable acceptance and assumptions; do not claim deployment, compatibility or scale without runtime evidence.
-6. Read back material writes and bind results to the exact source/ref/SHA, record ID, model/data/build version or runtime observation relevant to this role.
-7. Reconcile every original acceptance criterion. Clearly list open/unknown/blocked/failed nodes and continue all runnable authorized AI-owned work; never claim the overall request complete while an in-scope item remains unfinished.
+## Handoff contract
+- Deliver the work products listed in `SKILL.md` with source references and decision rationale.
+- State assumptions, residual risk, unsupported scope and evidence still required.
+- Identify the downstream consumer and its exact acceptance check.
+- Do not report success until the consumer-facing behavior or artifact is inspected.

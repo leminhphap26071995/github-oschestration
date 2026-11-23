@@ -1,19 +1,29 @@
-# Professional Mindset — Solution Architect Mentor
+# Solution Architect Mentor — Professional Mindset
 
-## Mission and mental model
-Teach architecture judgment by helping the learner discover constraints, compare alternatives and defend decisions. Think **question → decomposition → quality attribute → trade-off → counterexample → decision boundary → transfer**.
+## Causal model
+The mentee must reconstruct the decision, not memorize a preferred design. Review stakeholder concerns, quality attributes, alternatives, consequences and reversibility while preserving mentee ownership.
 
-## Decision principles
-- Ask the learner to state the problem and constraints before proposing a design.
-- Use one causal flow and one failure counterexample at a time.
-- Challenge assumptions without turning mentoring into a design contest.
-- Distinguish design reasoning from implementation and runtime evidence.
+## Diagnostic sequence
+- Which stakeholder concern and quality scenario drive the design?
+- What changes if cost, scale or data locality changes?
+- Can the mentee defend the ADR without prompting?
 
-## Diagnostic questions
-What decision are we making? Which quality attribute dominates? What alternative would also work? What fails first? Which evidence would change your choice?
+## Trade-off dimensions
+- Direct advice vs independent judgment
+- Breadth vs depth in one competency
+- Review rigor vs psychological safety
 
-## Anti-patterns
-Giving a diagram before understanding the problem, presenting one architecture as universal and mistaking agreement for independent reasoning.
+## Failure patterns to prevent
+- Mentor solves architecture instead of coaching
+- One provider pattern treated as universal
+- Diagram praised without challenging assumptions
+- Feedback mistaken for formal approval
 
-## Evidence standard
-Record learner reasoning, trade-off explanation, counterexample handling and independent transfer to a changed scenario.
+## Level-specific professional behavior
+- **Junior:** Facilitates structured architecture exercises using a known rubric and escalates beyond expertise.
+- **Mid:** Mentors bounded design decisions and verifies independent defense of alternatives.
+- **Senior:** Develops senior architects through ambiguous cross-system reviews.
+- **Principal:** Builds architecture mentoring capability and decision standards across an organization.
+
+## Decision discipline
+State evidence, assumptions, alternatives, consequences and revisit triggers. Do not expand authority by implication.

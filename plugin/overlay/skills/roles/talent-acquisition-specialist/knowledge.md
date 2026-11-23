@@ -20,3 +20,11 @@ Represent degree names, institutions, dates and certifications exactly as suppor
 
 ## Evidence standard
 A recruiter-facing claim should have an exact source or owner confirmation. Use `WORK`, `SUPPORT`, `EXPOSURE`, `LAB`, `KNOWLEDGE` or `UNVERIFIED`. A missing metric does not make a claim false; it means use a defensible qualitative outcome or narrow the wording.
+
+
+## Source anchors and version pins (checked 2026-11-23)
+- [CIPD — Recruitment: an overview](https://www.cipd.org/uk/knowledge/factsheets/recruitment-factsheet/) — Professional HR guidance; current page checked 2026-11-23.
+- [OPM — Structured Interviews](https://www.opm.gov/policy-data-oversight/assessment-and-selection/structured-interviews/) — Official job-related structured selection method; current 2026-11-23.
+- [OPM — Job Analysis](https://www.opm.gov/policy-data-oversight/assessment-and-selection/job-analysis/) — Official task/competency analysis method; current 2026-11-23.
+
+These sources anchor the listed professional methods. Confirm jurisdiction, role family and current edition before applying them; they do not replace job-specific evidence or licensed sign-off.
