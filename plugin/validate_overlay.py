@@ -48,7 +48,33 @@ def safe_file(root: Path, relative: str) -> bool:
 def validate(root: Path):
     errors = [f"MISSING:{p}" for p in REQUIRED if not (root / p).is_file()]
     if errors:
-        return errors
+    
+    cv_route = routing.get("domains", {}).get("cv_professional_review", {})
+    selection = cv_route.get("role_selection", {})
+    if selection.get("primary_roles") != ["talent-acquisition-specialist"]:
+        errors.append("CV_ROUTE_MUST_HAVE_ONE_TALENT_ACQUISITION_PRIMARY")
+    if selection.get("required_supporting_roles") != ["technical-hiring-manager"]:
+        errors.append("CV_ROUTE_TECHNICAL_HIRING_MANAGER_REQUIRED_SUPPORT_MISSING")
+    if "technical-hiring-manager" not in selection.get("required_supporting_role_conditions", {}):
+        errors.append("CV_ROUTE_TECHNICAL_SUPPORT_CONDITION_MISSING")
+    role_context_path = root / "skills/role-context-loading/SKILL.md"
+    if role_context_path.is_file():
+        role_context = role_context_path.read_text(encoding="utf-8")
+        if "ChatGPT-native role selection is not gated by GitHub Actions" not in role_context:
+            errors.append("CHATGPT_NATIVE_ROLE_LOADING_GATE_CONFLICT")
+        if "CI-generated execution path" not in role_context:
+            errors.append("CI_GENERATED_ROLE_PATH_NOT_DISTINGUISHED")
+    else:
+        errors.append("ROLE_CONTEXT_LOADING_SKILL_MISSING")
+    cv_skill = (root / "skills/cv-update-lifecycle/SKILL.md").read_text(encoding="utf-8")
+    if "Talent Acquisition Specialist — accountable primary" not in cv_skill:
+        errors.append("CV_LIFECYCLE_PRIMARY_ROLE_NOT_EXPLICIT")
+    if "Technical Hiring Manager — required supporting reviewer" not in cv_skill:
+        errors.append("CV_LIFECYCLE_TECHNICAL_SUPPORT_NOT_EXPLICIT")
+    if "SINGLE_SESSION_CROSSCHECK" not in cv_skill:
+        errors.append("CV_LIFECYCLE_CROSSCHECK_LABEL_MISSING")
+
+    return errors
     meta_path = root.parent / "source-sync.json"
     baseline_path = root.parent / "live-default-prompt.json"
     meta = read_json(meta_path, errors)
