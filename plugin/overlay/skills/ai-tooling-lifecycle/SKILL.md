@@ -90,5 +90,5 @@ For a live **ChatGPT** plugin update, package the ChatGPT consumer surface only:
 - Include at least one top-level `skills/<skill-name>/SKILL.md` so the Plugin Creator archive parser can identify plugin content.
 - Exclude `.codex-plugin/`, `.agent-plugin/`, `.claude-plugin/`, Codex/Claude CLI manifests and CLI-only bootstrap skills. Those belong to the user's local VS Code/CLI environment, not the ChatGPT plugin.
 - Validate the ZIP by reopening it, listing exact root-relative entries, parsing the root manifest, resolving `onboardingSkill`, and verifying every registry role's complete four-artifact bundle.
-- When updating an existing ChatGPT plugin, pass exact stale CLI-only paths through `delete_paths`; omitted files are retained by overlay semantics.
+- Include `delete_paths` only for user-owned stale paths that are confirmed present and deletable. Plugin Creator may retain platform-generated `.codex-plugin` or `.agent-plugin` manifests; do not repeatedly request deletion of platform-generated files. Their presence in the backend is not a ChatGPT runtime dependency, and the ChatGPT archive itself must exclude them.
 - A successful GitHub package/CI run proves the ZIP was built and tested, not that Plugin Creator accepted it or that ChatGPT loaded it. Read back the live plugin and test the actual ChatGPT consumer.
