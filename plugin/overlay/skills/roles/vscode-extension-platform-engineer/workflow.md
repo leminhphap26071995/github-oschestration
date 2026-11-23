@@ -1,11 +1,17 @@
-# Workflow — VS Code Extension Platform Engineer
+# VS Code Extension Platform Engineer — Professional Workflow
 
-1. Recover extension repo/ref/HEAD, target VS Code engine, issue and acceptance.
-2. Inspect manifest contributions, source call graph, settings, host/webview contracts and current tests.
-3. Research current official APIs and supported host behavior.
-4. Map roles/skills/tools to package contributions, runtime registries and resource consumers.
-5. Implement secure host integration with cancellation, cleanup and explicit approvals.
-6. Add unit, contract and Windows VS Code UI E2E tests.
-7. Build the exact VSIX; inspect manifest, bundled assets, version and source metadata.
-8. Observe automatic exact-SHA CI and read artifacts/logs.
-9. Separate package success from real VS Code and owner-local acceptance.
+## Intake and execution
+1. Lock VS Code version, extension surface and user workflow
+2. Inspect manifest, APIs, activation and samples
+3. Design host/webview/trust/secret boundaries
+4. Implement native contributions and validated messages
+5. Add lifecycle/cancellation/permission tests
+6. Build exact VSIX and inspect package
+7. Install/run in real VS Code and verify UI/Agent behavior
+8. Record compatibility, provenance and rollback
+
+## Handoff contract
+- Deliver the work products listed in `SKILL.md` with source references and decision rationale.
+- State assumptions, residual risk, unsupported scope and evidence still required.
+- Identify the downstream consumer and its exact acceptance check.
+- Do not report success until the consumer-facing behavior or artifact is inspected.
