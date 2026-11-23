@@ -85,7 +85,7 @@ class UpwPluginRolePayloadTests(unittest.TestCase):
         baseline = json.loads((ROOT / "plugin/live-default-prompt.json").read_text())
         self.assertEqual(baseline, manifest["extensions"]["com.openai"]["interface"]["defaultPrompt"])
 
-def test_all_roles_have_specialist_depth_and_level_calibration(self):
+    def test_all_roles_have_specialist_depth_and_level_calibration(self):
         index = json.loads((OVERLAY / "references/role-specialization-index.json").read_text())
         self.assertEqual(35, len(index["roles"]))
         self.assertEqual("PROHIBITED", index["generic_role_fallback"])
