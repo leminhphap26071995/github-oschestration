@@ -23,6 +23,3 @@
 - [NIST SP 800-218 — SSDF](https://csrc.nist.gov/pubs/sp/800/218/final) — NIST SSDF 1.1; Feb 2022.
 - [SLSA — Build Track Basics](https://slsa.dev/spec/build-track-basics) — Open supply-chain security specification; checked 2026-11-23.
 - [OWASP ASVS](https://asvs.owasp.org/) — Application security verification standard; ASVS 5.0.0.
-
-## Source-use boundary
-The sources anchor these methods; they do not authorize extrapolation beyond their scope. Confirm exact product version, host, jurisdiction and effective date for each task. Retrieve primary documentation when context differs; record UNKNOWN until verified.

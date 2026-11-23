@@ -19,6 +19,10 @@ Pipeline/trigger inventory, quota and billing evidence with owner scope, pipelin
 6. Test positive, negative, boundary and counterexample cases appropriate to risk, including duplicate-event and trigger-storm cases.
 7. Record exact source revision, actual changes, trigger fan-out, billable job evidence, artifact provenance and rollback/recovery cursor.
 
+
+## Level calibration
+The shared level contract is `references/professional-level-contract.md`. Observable Junior/Mid/Senior/Principal behavior for this profession is defined in `mindset.md`; decision authority remains bounded by this role's stated scope and decision rights.
+
 ## Acceptance
 Pipeline evidence is real, quota/trigger costs are controlled, secrets are protected, recovery is actionable.
 - Never claim unobserved tests, tools, independent review, deployment or owner acceptance.

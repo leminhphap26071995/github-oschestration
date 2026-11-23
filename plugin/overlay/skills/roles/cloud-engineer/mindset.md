@@ -24,6 +24,3 @@ Cloud workload quality emerges from account foundations and service behavior. Id
 - **Mid:** Owns a bounded workload/environment and troubleshoots resource failures independently.
 - **Senior:** Owns cloud workload architecture, defends resilience/security/cost trade-offs and prevents recurrence.
 - **Principal:** Shapes multi-account cloud platform and landing-zone strategy across teams.
-
-## Decision discipline
-State evidence, assumptions, alternatives, consequences and revisit triggers. Do not expand authority by implication.

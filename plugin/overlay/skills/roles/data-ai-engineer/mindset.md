@@ -24,6 +24,3 @@ A pipeline is a chain of source, ingestion, transformation, state, sink and cons
 - **Mid:** Owns a pipeline/data product and handles schema evolution, freshness and replay failures.
 - **Senior:** Designs cross-pipeline contracts and streaming semantics, prevents data-quality incidents and improves lineage/cost.
 - **Principal:** Shapes enterprise data-product architecture and reusable contract/governance standards.
-
-## Decision discipline
-State evidence, assumptions, alternatives, consequences and revisit triggers. Do not expand authority by implication.

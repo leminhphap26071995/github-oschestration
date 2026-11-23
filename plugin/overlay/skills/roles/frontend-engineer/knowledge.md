@@ -23,6 +23,3 @@
 - [W3C — WCAG 2.2](https://www.w3.org/TR/wcag/) — W3C Recommendation; 12 Dec 2024.
 - [React — Render and Commit](https://react.dev/learn/render-and-commit) — Official React docs; checked 2026-11-23.
 - [WHATWG — HTML Living Standard](https://html.spec.whatwg.org/multipage/) — Web platform living standard; checked 2026-11-23.
-
-## Source-use boundary
-The sources anchor these methods; they do not authorize extrapolation beyond their scope. Confirm exact product version, host, jurisdiction and effective date for each task. Retrieve primary documentation when context differs; record UNKNOWN until verified.

@@ -23,6 +23,3 @@
 - [dbt — Data Tests](https://docs.getdbt.com/docs/build/data-tests) — Official data transformation docs; checked 2026-11-23.
 - [dbt — Source Freshness](https://docs.getdbt.com/docs/deploy/source-freshness) — Official data freshness docs; checked 2026-11-23.
 - [Apache Spark — Structured Streaming](https://spark.apache.org/docs/latest/streaming/getting-started.html) — Official Apache Spark docs; checked 2026-11-23.
-
-## Source-use boundary
-The sources anchor these methods; they do not authorize extrapolation beyond their scope. Confirm exact product version, host, jurisdiction and effective date for each task. Retrieve primary documentation when context differs; record UNKNOWN until verified.

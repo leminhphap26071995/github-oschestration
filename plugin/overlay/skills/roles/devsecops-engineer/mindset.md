@@ -24,6 +24,3 @@ Supply-chain assurance follows the artifact backward: deployed package → trust
 - **Mid:** Owns pipeline security stages, tunes findings and verifies remediation/provenance.
 - **Senior:** Designs secure delivery controls, prevents supply-chain bypass and balances risk/throughput.
 - **Principal:** Defines organization-wide secure delivery architecture and supply-chain assurance.
-
-## Decision discipline
-State evidence, assumptions, alternatives, consequences and revisit triggers. Do not expand authority by implication.
