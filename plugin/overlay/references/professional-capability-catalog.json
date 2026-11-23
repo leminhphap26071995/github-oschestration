@@ -1,0 +1,244 @@
+{
+  "schema_version": 1,
+  "purpose": "Representative cross-industry capability discovery index; not an exhaustive list of professions or jurisdictions.",
+  "discovery_contract": "skills/professional-capability-discovery/SKILL.md",
+  "role_bundle": [
+    "SKILL.md",
+    "mindset.md",
+    "knowledge.md",
+    "workflow.md"
+  ],
+  "generic_role_fallback": "PROHIBITED",
+  "domains": [
+    {
+      "id": "software_cloud_it",
+      "families": [
+        "software engineer",
+        "platform engineer",
+        "cloud architect",
+        "DevOps",
+        "SRE",
+        "database engineer",
+        "network engineer",
+        "ITSM specialist"
+      ]
+    },
+    {
+      "id": "cybersecurity_trust",
+      "families": [
+        "security architect",
+        "AppSec engineer",
+        "penetration tester",
+        "DFIR specialist",
+        "threat hunter",
+        "IAM engineer",
+        "GRC specialist",
+        "privacy engineer"
+      ]
+    },
+    {
+      "id": "data_ai",
+      "families": [
+        "data architect",
+        "data engineer",
+        "statistician",
+        "ML researcher",
+        "ML engineer",
+        "MLOps engineer",
+        "AI evaluation engineer",
+        "AI safety engineer"
+      ]
+    },
+    {
+      "id": "game_interactive_media",
+      "families": [
+        "game director",
+        "game designer",
+        "art director",
+        "concept artist",
+        "character artist",
+        "environment artist",
+        "sprite/animation artist",
+        "UI/HUD artist",
+        "VFX artist",
+        "audio designer",
+        "gameplay engineer",
+        "engine/rendering engineer",
+        "asset-pipeline engineer",
+        "game reverse engineer",
+        "visual QA"
+      ]
+    },
+    {
+      "id": "creative_design_media",
+      "families": [
+        "creative director",
+        "brand strategist",
+        "UX researcher",
+        "UX/service designer",
+        "graphic designer",
+        "illustrator",
+        "3D artist",
+        "motion designer",
+        "animator",
+        "video producer/editor",
+        "sound designer",
+        "copywriter",
+        "accessibility specialist"
+      ]
+    },
+    {
+      "id": "business_product_operations",
+      "families": [
+        "strategy consultant",
+        "business architect",
+        "business analyst",
+        "product manager",
+        "process analyst",
+        "operations research analyst",
+        "program manager",
+        "procurement specialist",
+        "change manager",
+        "risk manager"
+      ]
+    },
+    {
+      "id": "finance_accounting_insurance",
+      "families": [
+        "financial controller",
+        "accountant",
+        "FP&A analyst",
+        "tax specialist",
+        "auditor",
+        "treasury specialist",
+        "actuary",
+        "credit/fraud/risk analyst"
+      ]
+    },
+    {
+      "id": "legal_regulatory_compliance",
+      "families": [
+        "legal counsel",
+        "contract specialist",
+        "privacy counsel/DPO",
+        "regulatory affairs specialist",
+        "compliance officer",
+        "AML/KYC specialist",
+        "legal operations",
+        "e-discovery specialist"
+      ]
+    },
+    {
+      "id": "healthcare_life_sciences",
+      "families": [
+        "licensed physician",
+        "registered nurse",
+        "pharmacist",
+        "clinical informaticist",
+        "clinical researcher",
+        "trial manager",
+        "biostatistician",
+        "epidemiologist",
+        "pharmacovigilance specialist",
+        "medical writer"
+      ]
+    },
+    {
+      "id": "science_engineering_manufacturing",
+      "families": [
+        "research scientist",
+        "laboratory specialist",
+        "systems engineer",
+        "mechanical/electrical/civil/chemical engineer",
+        "materials scientist",
+        "process engineer",
+        "quality/reliability engineer",
+        "HSE engineer",
+        "metrology specialist"
+      ]
+    },
+    {
+      "id": "architecture_built_environment",
+      "families": [
+        "architect",
+        "urban/landscape planner",
+        "structural/civil/MEP engineer",
+        "BIM manager",
+        "building surveyor",
+        "quantity surveyor",
+        "construction manager",
+        "site safety manager",
+        "commissioning engineer"
+      ]
+    },
+    {
+      "id": "marketing_sales_customer",
+      "families": [
+        "market researcher",
+        "brand manager",
+        "product marketing manager",
+        "content strategist",
+        "SEO specialist",
+        "performance marketer",
+        "CRM/lifecycle manager",
+        "sales engineer",
+        "account executive",
+        "customer success manager"
+      ]
+    },
+    {
+      "id": "education_workforce_learning",
+      "families": [
+        "curriculum architect",
+        "instructional designer",
+        "learning experience designer",
+        "subject-matter expert",
+        "teacher/trainer",
+        "assessment designer",
+        "learning scientist",
+        "learning analytics specialist"
+      ]
+    },
+    {
+      "id": "public_sector_social_impact",
+      "families": [
+        "policy analyst",
+        "public administrator",
+        "program manager",
+        "procurement specialist",
+        "public finance analyst",
+        "service designer",
+        "community engagement lead",
+        "monitoring/evaluation specialist",
+        "grant manager"
+      ]
+    },
+    {
+      "id": "energy_climate_environment",
+      "families": [
+        "power systems engineer",
+        "renewable energy engineer",
+        "grid planner",
+        "energy market analyst",
+        "environmental scientist",
+        "climate risk analyst",
+        "ESG specialist",
+        "carbon accountant"
+      ]
+    },
+    {
+      "id": "supply_chain_logistics",
+      "families": [
+        "supply chain architect",
+        "demand planner",
+        "sourcing specialist",
+        "inventory planner",
+        "logistics engineer",
+        "warehouse operations manager",
+        "transport planner",
+        "trade compliance specialist"
+      ]
+    }
+  ],
+  "promotion_policy": "Task-scoped profiles are promoted to the shared role registry only after source-backed method, complete four-artifact bundle, acceptance oracle and regression/review evidence exist."
+}

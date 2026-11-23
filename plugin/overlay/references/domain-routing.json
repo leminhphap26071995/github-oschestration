@@ -1,0 +1,282 @@
+{
+  "version": "1.1",
+  "authority": "Notion Universal Project Routing Registry for persistent project selection; live technical source for technical facts and acceptance",
+  "rules": [
+    "explicit one-off target applies to current task only unless owner asks to persist it",
+    "always-on-guard before domain or role routing",
+    "do not route solely from last edited page or historical chat",
+    "preserve source integration plugins as adapters until capability parity and runtime evidence are verified",
+    "every selected professional role must load its complete four-artifact bundle; explicit role training additionally loads its registered training path"
+  ],
+  "domains": {
+    "game_mod": {
+      "match": "active project/domain is Game Mod or task explicitly requests game reverse engineering/modding",
+      "load": [
+        "skills/game-mod-domain/SKILL.md",
+        "skills/roles/game-modifier/SKILL.md",
+        "skills/roles/game-modifier/mindset.md",
+        "skills/roles/game-modifier/workflow.md",
+        "skills/roles/game-modifier/knowledge.md"
+      ],
+      "training": "skills/roles/game-modifier/training.md",
+      "gates": [
+        "source checks",
+        "candidate integrity",
+        "real-game emulator gameplay when required",
+        "physical hardware when required",
+        "owner/BKG approval"
+      ],
+      "special_rules": [
+        "binary-first reverse engineering",
+        "target-specific mappings only",
+        "commercial images/BIOS/private candidates stay private",
+        "no master overwrite",
+        "never infer game runtime behavior from static/source checks"
+      ]
+    },
+    "game_development": {
+      "match": "user asks to create, build, program, prototype, debug or extend a game, game mechanic, engine feature or game-production system",
+      "load": [
+        "skills/game-development-domain/SKILL.md",
+        "skills/roles/game-developer/SKILL.md",
+        "skills/roles/game-developer/mindset.md",
+        "skills/roles/game-developer/workflow.md",
+        "skills/roles/game-developer/knowledge.md"
+      ],
+      "training": "skills/roles/game-developer/training.md",
+      "gates": [
+        "validated player-facing requirements",
+        "engine/framework integration and target-platform compatibility",
+        "functional/gameplay tests",
+        "profiling and performance on target",
+        "reproducible build and actual runtime acceptance"
+      ],
+      "special_rules": [
+        "select engine/framework/language from game type and target constraints",
+        "respect the engine/library game-loop ownership model",
+        "do not assume assets, APIs, shaders or physics behavior are portable across engines",
+        "verify at actual player-facing runtime and target hardware",
+        "separate editor preview, source tests, build integrity and gameplay acceptance"
+      ]
+    },
+    "career_training": {
+      "match": "learner asks for study, exam, JD/CV interview, quiz, mentoring, flashcards or labs",
+      "load": [
+        "skills/career-training/career-router/SKILL.md",
+        "skills/career-training/adaptive-core/SKILL.md",
+        "exactly one mode skill appropriate to current request",
+        "skills/career-training/cross-provider-transport/SKILL.md when cross-provider state or feedback transport is involved",
+        "references/career-training/state-schema.md",
+        "references/career-training/readiness.md",
+        "references/career-training/journey-map-contract.md when a map/roadmap/critical path is requested",
+        "references/career-training/scenario-scaffolding.md when planning a practical lab or readiness gate"
+      ],
+      "modes": [
+        "chat",
+        "mentor",
+        "quiz",
+        "flashcard",
+        "practice",
+        "plan",
+        "journey-map"
+      ],
+      "special_rules": [
+        "no cold quiz unless explicitly requested or existing quiz resumed",
+        "recover exact current learner checkpoint/attempt",
+        "one current Next Action",
+        "do not invent experience or mastery",
+        "Do not infer provider-runtime capability from a manifest"
+      ]
+    },
+    "engineering": {
+      "match": "code, debugging, repository change, architecture or deliverable build",
+      "load": [
+        "skills/requirement-intake/SKILL.md",
+        "skills/engineering-full-flow/SKILL.md",
+        "primary role bundle",
+        "skills/cicd-full-flow/SKILL.md only when requested or required",
+        "skills/graph-goal-convergence/SKILL.md for complex source-to-runtime goal tracing or CI evidence disputes"
+      ],
+      "gates": "scope-aware; exact target SHA and consumer proof if required"
+    },
+    "research_writing": {
+      "match": "research, comparison, fact-check, synthesis, draft, translation",
+      "load": [
+        "skills/research-writing/SKILL.md",
+        "research-lead role bundle only for substantive research leadership"
+      ],
+      "special_rules": [
+        "primary sources and dates when material",
+        "claim-to-source traceability",
+        "direct output without engineering ceremony for short requests"
+      ]
+    },
+    "new_empty_project": {
+      "match": "no existing usable project source/checkpoint and user requests project setup/discovery",
+      "load": [
+        "skills/ai-manager/SKILL.md",
+        "skills/always-on-guard/SKILL.md",
+        "pm role bundle when project planning is needed"
+      ],
+      "special_rules": [
+        "one high-value question at a time",
+        "do not repeat context recoverable from sources"
+      ]
+    },
+    "cross_session_or_context_break": {
+      "match": "continue, resume, correction, missing context, repeated generic answer, ambiguous workflow or contradictory checkpoint",
+      "load": [
+        "skills/always-on-guard/SKILL.md",
+        "skills/behavior-recovery/SKILL.md",
+        "skills/chat-mode-closed-loop/SKILL.md",
+        "skills/universal-context-graph-workflow/SKILL.md",
+        "relevant live source + checkpoint",
+        "skills/session-continuity/SKILL.md"
+      ],
+      "special_rules": [
+        "source retrieval before defining terms",
+        "fix earliest mismatch",
+        "continue feasible AI-owned work",
+        "no false completion"
+      ]
+    },
+    "one_pass_handoff": {
+      "match": "owner explicitly asks for one consolidated checklist or assistant work first",
+      "load": [
+        "skills/one-pass-user-handoff/SKILL.md"
+      ],
+      "special_rules": [
+        "finish assistant-owned work before owner-only instructions",
+        "one self-contained checklist and one minimal return packet"
+      ]
+    },
+    "academy_learning": {
+      "match": "selected project has an established Academy/curriculum learner runtime and user wants to resume/continue learning",
+      "load": [
+        "skills/academy-learning-runtime/SKILL.md",
+        "the selected domain’s specialist learning skill"
+      ],
+      "special_rules": [
+        "read the selected project’s canonical learner runtime pointer first",
+        "do not reuse another project’s user-specific learner state",
+        "no mastery without independent evidence"
+      ]
+    },
+    "gemini_practice": {
+      "match": "user explicitly wants a training/interview practice bridge to Gemini or to audit returned practice feedback",
+      "load": [
+        "skills/gemini-practice-bridge/SKILL.md",
+        "skills/career-training/adaptive-core/SKILL.md when the task is Career Training"
+      ],
+      "special_rules": [
+        "actual provider handoff and returned evidence required",
+        "established live relay schema takes priority",
+        "no secret transfer or false mastery"
+      ]
+    },
+    "github_projects_adapter": {
+      "match": "GitHub Projects v2 discovery, controlled field/item update, or OAuth troubleshooting",
+      "load": [
+        "skills/integration-routing/github-projects-boundaries.md",
+        "existing available GitHub Projects adapter manifest/tools"
+      ],
+      "special_rules": [
+        "check actual host tool/schema before operations",
+        "read before write; save original value; remote readback; authorized restore",
+        "never infer OAuth/runtime parity from manifest"
+      ]
+    },
+    "native_chat_runtime": {
+      "match": "owner requests browser control, multi-chat bootstrapping, or same-tab native chat handoff",
+      "load": [
+        "skills/integration-routing/native-chat-runtime.md",
+        "the matching retained native runtime adapter when available"
+      ],
+      "special_rules": [
+        "execute bounded probe only when supported",
+        "no cookies/tokens or unsupported cross-chat claims",
+        "local probe does not prove host runtime"
+      ]
+    },
+    "multi_role_coordination": {
+      "match": "owner explicitly requests multiple role assignments, issue-based collaboration, recorded dissent or cross-session handoff",
+      "load": [
+        "skills/team-collaboration/SKILL.md",
+        "skills/workflow-contract/SKILL.md",
+        "primary role bundle(s) from references/role-registry.json"
+      ],
+      "special_rules": [
+        "do not claim spawned/independent agents without actual trace",
+        "role task identity requires goal and issue binding",
+        "only one canonical comment/status contract"
+      ]
+    },
+    "short_chat_and_method_adaptation": {
+      "match": "SHORT_CHAT or repeated challenge/correction where task effort/method must adapt",
+      "load": [
+        "references/adaptive-decision-quality.md",
+        "skills/always-on-guard/SKILL.md"
+      ],
+      "special_rules": [
+        "short questions receive direct answers",
+        "second unresolved challenge changes method, not just answer length"
+      ]
+    },
+    "external_service_integration": {
+      "match": "a requested outcome depends on an external provider, connected application, API/MCP, repository, project board, Drive, email, browser or native session bridge",
+      "load": [
+        "skills/integration-routing/SKILL.md",
+        "the exact provider boundary and currently available adapter only"
+      ],
+      "special_rules": [
+        "discover the live tool/schema/identity/permissions before acting",
+        "keep source authority distinct from integration transport",
+        "read before write and read back material writes",
+        "preserve exact errors and try a materially different authorized route",
+        "do not infer host activation, OAuth, provider execution, browser control or cross-chat access from text/manifests"
+      ]
+    },
+    "github_repository_actions_adapter": {
+      "match": "GitHub repository, branches, files, commits, issues, pull requests, Actions jobs or artifacts",
+      "load": [
+        "skills/integration-routing/SKILL.md",
+        "skills/engineering-full-flow/SKILL.md",
+        "the actual available GitHub repository/workbench adapter"
+      ],
+      "special_rules": [
+        "verify authenticated account and exact owner/repo/ref/SHA",
+        "use read-only inspection before mutation",
+        "Actions evidence must include actual run/job/step/artifact for the target SHA",
+        "do not assume repository connector credentials grant Projects v2 access"
+      ]
+    },
+    "notion_project_state": {
+      "match": "project routing, task/checkpoint status, project hub or mutable operational state in Notion",
+      "load": [
+        "skills/integration-routing/SKILL.md",
+        "skills/live-progress-reconciliation/SKILL.md when reconciling status",
+        "the active Notion routing/project records"
+      ],
+      "special_rules": [
+        "routing registry selects persistent project/repository/branch",
+        "read the canonical live record before update",
+        "read back writes and preserve source timestamps/IDs",
+        "Notion status is a projection, not technical PASS"
+      ]
+    },
+    "google_drive_adapter": {
+      "match": "Google Drive/Docs/Sheets/Gmail/Workspace source, transport or connection operation",
+      "load": [
+        "skills/integration-routing/SKILL.md",
+        "skills/integration-routing/google-gemini-boundaries.md",
+        "the actual native Google connection or separately registered Drive MCP adapter"
+      ],
+      "special_rules": [
+        "native Drive, Drive MCP, Apps Script, Gemini UI and Gemini API are distinct execution surfaces",
+        "never transfer credentials between adapters",
+        "write result and destination receipt are separate gates",
+        "check for existing accepted relay/schema before adding infrastructure"
+      ]
+    }
+  }
+}

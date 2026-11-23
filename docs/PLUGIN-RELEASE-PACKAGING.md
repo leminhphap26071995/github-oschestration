@@ -4,6 +4,19 @@
 
 The canonical plugin release source is maintained under `plugin/overlay/`. It contains a versioned overlay for the existing UPW plugin identity. It is not a second plugin and does not replace the Plugin Creator backend as the release authority.
 
+## Role-routing payload completeness — UPW 0.1.167
+
+The 0.1.167 overlay restores the missing professional-routing layer rather than shipping only manifests:
+
+- Root and Codex manifests are both 0.1.167; their 48 default-prompt entries remain byte-for-byte equal to the live 0.1.166 prompt arrays.
+- Four runtime registries are packaged: `role-registry.json`, `role-registry.extensions.json`, `domain-routing.json`, and `professional-capability-catalog.json`.
+- Both routing entry skills are packaged: `professional-capability-discovery/SKILL.md` and `ai-tooling-lifecycle/SKILL.md`.
+- Every unique role advertised by the base and extension registries has all four artifacts: `SKILL.md`, `mindset.md`, `knowledge.md`, and `workflow.md`. The registries contain ten entries and nine unique role IDs because `ai-native-tooling-engineer` is intentionally present in both registries.
+- The nine complete bundles are AI Native Tooling Engineer, DevOps Engineer, Software Architect, QA Engineer, Security Reviewer, Professional Capability Architect, MCP Integration Engineer, VS Code Extension Platform Engineer, and OmniRoute Model Routing Engineer.
+- `plugin/validate_overlay.py` parses both registries and fails closed on any missing or malformed role artifact, mismatched manifest prompt, invalid discovery contract, or generic-role fallback.
+
+Domain-specific packs remain routed adapters and are not copied into this generic role payload. Their project-specific source and evidence retain their existing source authority.
+
 ## Automatic CI
 
 `.github/workflows/update-upw-plugin.yml` runs on a push to `main` that changes the owner-approved update request file. It runs only when an owner-approved `.github/upw-plugin-update-request.json` is committed to `main`. It validates the exact UPW Plugin Creator ID, expected current release ID and current live version, then requires the overlay version to be newer and both manifests to preserve the current default prompt. It validates the overlay, creates a ZIP whose root is the plugin root, checks ZIP integrity, computes SHA-256, records source/release provenance and uploads a short-lived handoff artifact. No `workflow_dispatch` is added.

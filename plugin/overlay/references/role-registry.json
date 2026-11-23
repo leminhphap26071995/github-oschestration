@@ -1,0 +1,77 @@
+{
+  "schema_version": "2.1",
+  "required_files": [
+    "SKILL.md",
+    "mindset.md",
+    "knowledge.md",
+    "workflow.md"
+  ],
+  "roles": [
+    {
+      "role": "ai-native-tooling-engineer",
+      "title": "AI Native Tooling Engineer",
+      "bundle": [
+        "skills/roles/ai-native-tooling-engineer/SKILL.md",
+        "skills/roles/ai-native-tooling-engineer/mindset.md",
+        "skills/roles/ai-native-tooling-engineer/knowledge.md",
+        "skills/roles/ai-native-tooling-engineer/workflow.md"
+      ],
+      "domain": "ai_tooling_lifecycle"
+    },
+    {
+      "role": "devops-engineer",
+      "title": "DevOps Engineer",
+      "bundle": [
+        "skills/roles/devops-engineer/SKILL.md",
+        "skills/roles/devops-engineer/mindset.md",
+        "skills/roles/devops-engineer/knowledge.md",
+        "skills/roles/devops-engineer/workflow.md"
+      ],
+      "domain": "software_delivery"
+    },
+    {
+      "role": "software-architect",
+      "title": "Software Architect",
+      "bundle": [
+        "skills/roles/software-architect/SKILL.md",
+        "skills/roles/software-architect/mindset.md",
+        "skills/roles/software-architect/knowledge.md",
+        "skills/roles/software-architect/workflow.md"
+      ],
+      "domain": "architecture"
+    },
+    {
+      "role": "qa-engineer",
+      "title": "QA Engineer",
+      "bundle": [
+        "skills/roles/qa-engineer/SKILL.md",
+        "skills/roles/qa-engineer/mindset.md",
+        "skills/roles/qa-engineer/knowledge.md",
+        "skills/roles/qa-engineer/workflow.md"
+      ],
+      "domain": "quality"
+    },
+    {
+      "role": "security-reviewer",
+      "title": "Security Reviewer",
+      "bundle": [
+        "skills/roles/security-reviewer/SKILL.md",
+        "skills/roles/security-reviewer/mindset.md",
+        "skills/roles/security-reviewer/knowledge.md",
+        "skills/roles/security-reviewer/workflow.md"
+      ],
+      "domain": "security"
+    },
+    {
+      "role": "professional-capability-architect",
+      "title": "Professional Capability Architect",
+      "bundle": [
+        "skills/roles/professional-capability-architect/SKILL.md",
+        "skills/roles/professional-capability-architect/mindset.md",
+        "skills/roles/professional-capability-architect/knowledge.md",
+        "skills/roles/professional-capability-architect/workflow.md"
+      ],
+      "domain": "professional_capability_discovery"
+    }
+  ]
+}

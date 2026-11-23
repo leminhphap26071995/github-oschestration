@@ -80,6 +80,5 @@
     "end-to-end"
   ],
   "name": "unified-project-workflow",
-  "skills": "./skills",
-  "version": "0.1.166"
+  "version": "0.1.167"
 }
