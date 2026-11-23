@@ -24,6 +24,3 @@ Testing evaluates work products and reduces product risk through verification an
 - **Mid:** Owns component testing, designs risk-based tests and debugs failures independently.
 - **Senior:** Owns complex test design and quality risk, anticipates escaped defects and improves testability.
 - **Principal:** Shapes test architecture and risk/coverage standards across products.
-
-## Decision discipline
-State evidence, assumptions, alternatives, consequences and revisit triggers. Do not expand authority by implication.

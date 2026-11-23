@@ -24,6 +24,3 @@ A synthesis is only as defensible as its protocol, search coverage, selection tr
 - **Mid:** Owns a bounded evidence review, appraises studies and produces reproducible synthesis.
 - **Senior:** Leads complex synthesis and prevents methodological bias/overclaiming.
 - **Principal:** Shapes research portfolio and evidence standards across domains.
-
-## Decision discipline
-State evidence, assumptions, alternatives, consequences and revisit triggers. Do not expand authority by implication.

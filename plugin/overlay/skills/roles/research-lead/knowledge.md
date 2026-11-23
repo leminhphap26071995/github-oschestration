@@ -22,6 +22,3 @@
 ## Authoritative and primary source anchors
 - [PRISMA 2020 Checklist](https://www.prisma-statement.org/prisma-2020-checklist) — Systematic review reporting guideline; PRISMA 2020.
 - [Cochrane Handbook](https://www.cochrane.org/handbook) — Methodological handbook; updated 22 Aug 2024.
-
-## Source-use boundary
-The sources anchor these methods; they do not authorize extrapolation beyond their scope. Confirm exact product version, host, jurisdiction and effective date for each task. Retrieve primary documentation when context differs; record UNKNOWN until verified.

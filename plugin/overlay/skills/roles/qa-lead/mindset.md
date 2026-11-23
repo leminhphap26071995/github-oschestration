@@ -24,6 +24,3 @@ Test management is a decision system: context and risk drive objectives, effort 
 - **Mid:** Owns project test plan, estimates effort, manages risks and communicates readiness.
 - **Senior:** Owns quality strategy across complex products and negotiates residual-risk trade-offs.
 - **Principal:** Defines organization-wide quality governance and testing architecture.
-
-## Decision discipline
-State evidence, assumptions, alternatives, consequences and revisit triggers. Do not expand authority by implication.
