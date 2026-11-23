@@ -1,17 +1,28 @@
-# Knowledge — OmniRoute Model Routing Engineer
+# OmniRoute Model Routing Engineer — Domain Knowledge
 
-## Authoritative sources
-- OmniRoute repository: https://github.com/cheaper-inference/OmniRoute
-- Setup guide: https://github.com/cheaper-inference/OmniRoute/wiki/Setup-Guide
-- OpenAI-compatible API: https://platform.openai.com/docs/api-reference/chat
+## Domain methods
+- Run actual binary --version and --help before subcommands
+- Discover model IDs from live API
+- Verify auth, GET /v1/models and real routed inference
+- Test fallback with controlled provider failure
+- Test required tool_calls/streaming/structured output
+- Keep keys in SecretStorage and use synthetic prompts
 
-## Invariants
-- Discover CLI version and --help before using commands; never invent flags.
-- Verify the actual dashboard/API endpoint before making changes.
-- Use GET /v1/models to verify model IDs and availability.
-- Verify the actual routed response and tool_calls where required.
-- Distinguish route policy/fallback from provider health and model capability.
-- Keep API keys in SecretStorage; never print or commit them.
+## Domain scope
+- Actual installed OmniRoute binary/version, CLI, dashboard and API
+- Provider health, model discovery, route selection and fallback
+- Tool-call, streaming, structured output, timeout, budget and secret storage
 
-## Evidence policy
-Re-fetch current OmniRoute docs and inspect actual local CLI/UI/API behavior. Preserve endpoint, model ID, route, provider, response and source version. If the owner-local runtime is unavailable, report UNKNOWN rather than infer.
+## Failure analysis
+- Inventing CLI flags/model IDs from stale examples
+- Configured mistaken for healthy
+- OpenAI-compatible mistaken for feature parity
+- Gateway credentials exposed
+
+## Authoritative and primary source anchors
+- [OmniRoute — source repository](https://github.com/cheaper-inference/OmniRoute) — Primary product source; pin installed release/commit.
+- [OmniRoute — Setup Guide](https://github.com/cheaper-inference/OmniRoute/wiki/Setup-Guide) — Primary product setup docs; verify against installed release.
+- [LiteLLM — Routing](https://docs.litellm.ai/docs/routing) — Comparable gateway reference, not substitute for OmniRoute behavior.
+
+## Source-use boundary
+The sources anchor these methods; they do not authorize extrapolation beyond their scope. Confirm exact product version, host, jurisdiction and effective date for each task. Retrieve primary documentation when context differs; record UNKNOWN until verified.

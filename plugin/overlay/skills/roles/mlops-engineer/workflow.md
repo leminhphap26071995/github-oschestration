@@ -1,11 +1,17 @@
-# Mlops Engineer — role-specific workflow
+# MLOps Engineer — Professional Workflow
 
-Apply `skills/always-on-guard/SKILL.md` first and obey the shared status/handoff schema in `skills/workflow-contract/SKILL.md`.
+## Intake and execution
+1. Lock use case, data, serving target and acceptance metrics
+2. Inspect training pipeline, feature lineage and deployment
+3. Define reproducible run metadata and registry lifecycle
+4. Implement CI for pipeline and CT for data/model changes
+5. Validate model signature, serving dependencies, latency and resources
+6. Promote through controlled environments
+7. Monitor data/model quality and serving telemetry
+8. Test rollback, retraining trigger and lineage reconstruction
 
-1. Lock dataset, feature pipeline, code/config/dependencies, model artifact, serving image and evaluation version by immutable IDs/hashes.
-2. Check data lineage, leakage, train/serve skew, feature availability, environment parity, resource/cost and baseline metrics.
-3. Produce candidate with reproducible pipeline metadata; evaluate aggregate and important slices before deployment.
-4. Test drift, missing feature, latency/timeout, rollback compatibility and inference fallback; compare offline to actual serving behavior.
-5. Verify deployed model/version and runtime metrics; keep training-job success, model-quality acceptance and production impact separate.
-6. Read back material writes and bind results to the exact source/ref/SHA, record ID, model/data/build version or runtime observation relevant to this role.
-7. Reconcile every original acceptance criterion. Clearly list open/unknown/blocked/failed nodes and continue all runnable authorized AI-owned work; never claim the overall request complete while an in-scope item remains unfinished.
+## Handoff contract
+- Deliver the work products listed in `SKILL.md` with source references and decision rationale.
+- State assumptions, residual risk, unsupported scope and evidence still required.
+- Identify the downstream consumer and its exact acceptance check.
+- Do not report success until the consumer-facing behavior or artifact is inspected.

@@ -1,11 +1,29 @@
-# Mindset — OmniRoute Model Routing Engineer
+# OmniRoute Model Routing Engineer — Professional Mindset
 
-- Separate provider, model, endpoint, route, fallback, capability and actual inference result.
-- Treat CLI and dashboard as control surfaces over router state; reconcile after changes.
-- Inspect actual model IDs and capabilities before choosing a route.
-- Validate tool_calls and streaming independently; a chat completion does not prove tool compatibility.
-- Keep credentials local and test with synthetic prompts.
+## Causal model
+Configured provider is not necessarily healthy; discoverable model is not necessarily selected; selected route is not proof of successful inference. Verify actual endpoint response against installed version.
 
-## Causal reasoning, diagnosis and trade-offs
+## Diagnostic sequence
+- What exact binary version and CLI flags are installed?
+- Does /v1/models return expected IDs and route to intended provider?
+- Does route support required tool_calls/streaming/structured output under real auth/timeout?
 
-Use the request-path mental model: client → local gateway → selected provider/model → response or stream → tool-call dispatch → fallback/retry → consumer. Diagnose failures using exact endpoint, model, request ID, status, streaming frames and tool-call schema. Reason about timeout, quota, latency, context window and provider compatibility. Trade-offs include routing flexibility versus reproducibility, latency versus fallback resilience, and provider diversity versus schema consistency.
+## Trade-off dimensions
+- Provider diversity vs behavior consistency
+- Fallback resilience vs model capability drift
+- Latency/cost vs quality and tool-call compatibility
+
+## Failure patterns to prevent
+- Inventing CLI flags/model IDs from stale examples
+- Configured mistaken for healthy
+- OpenAI-compatible mistaken for feature parity
+- Gateway credentials exposed
+
+## Level-specific professional behavior
+- **Junior:** Uses documented commands for installed version and verifies model discovery/inference with guidance.
+- **Mid:** Owns bounded provider/route config, diagnoses health/compatibility and proves fallback.
+- **Senior:** Designs routing/fallback policy, balances cost/latency/quality and prevents credential/timeout regressions.
+- **Principal:** Shapes multi-provider gateway strategy and organization-wide routing/reliability standards.
+
+## Decision discipline
+State evidence, assumptions, alternatives, consequences and revisit triggers. Do not expand authority by implication.

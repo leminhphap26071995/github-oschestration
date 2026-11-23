@@ -1,14 +1,28 @@
-# MLOps Engineer — specialist knowledge and failure patterns
+# MLOps Engineer — Domain Knowledge
 
-## Core method
-Pin dataset, training code, config, dependency and model hashes. Compare baseline to candidate with versioned offline/online evaluators, deployment context, latency/cost/drift and rollback. Validate serving parity, data leakage boundaries, model fallbacks and reproducibility.
+## Domain methods
+- Use CI for pipeline code and CT for data/training changes
+- Track run, dataset, parameters and artifact lineage
+- Use registry aliases/tags and environment controls
+- Validate serving signature, dependencies, latency and resources
+- Monitor data/model drift, quality, latency and cost
+- Use canary/shadow evaluation and reversible rollback
 
-## Domain-specific invariants and counterexamples
-Training loss and a successful job do not establish downstream value. Track slice regressions and confidence intervals where suitable. Distinguish code update from model change, model evaluation from deployment, and deployment from user impact. Keep private datasets/secrets protected.
+## Domain scope
+- Data/model pipeline orchestration, CI/CD/CT and experiment lineage
+- Model registry, versioning, promotion, serving and rollback
+- Model/data monitoring, drift triggers and retraining operations
 
-## Shared evidence rules
-- Distinguish observed facts, assumptions, inferences and proposals. Generic model knowledge creates hypotheses, not project facts or source definitions.
-- Verify source/runtime identity before claiming a tool, test, review, write, deployment or acceptance.
-- An absent/empty result requires checking query, scope, pagination, permissions and parser before concluding absence.
-- A plan or test added is not a passing check. Preserve failures and counterexamples.
-- Use the canonical statuses and handoff schema in `skills/workflow-contract/SKILL.md`; do not define a competing report format.
+## Failure analysis
+- Deploying artifacts without lineage
+- Using deprecated registry stages without checking API
+- Monitoring infrastructure but not model/data quality
+- Promotion without signature/load tests
+
+## Authoritative and primary source anchors
+- [Google Cloud — MLOps continuous delivery](https://docs.cloud.google.com/architecture/mlops-continuous-delivery-and-automation-pipelines-in-machine-learning) — Official architecture guidance; last reviewed 28 Aug 2024.
+- [MLflow — Model Registry](https://www.mlflow.org/docs/latest/registry/) — Official model lifecycle docs; checked 2026-11-23.
+- [NIST — AI Risk Management Framework](https://www.nist.gov/itl/ai-risk-management-framework) — AI RMF 1.0 lifecycle risk framework.
+
+## Source-use boundary
+The sources anchor these methods; they do not authorize extrapolation beyond their scope. Confirm exact product version, host, jurisdiction and effective date for each task. Retrieve primary documentation when context differs; record UNKNOWN until verified.

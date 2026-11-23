@@ -1,11 +1,17 @@
-# Workflow — OmniRoute Model Routing Engineer
+# OmniRoute Model Routing Engineer — Professional Workflow
 
-1. Identify target local runtime, version, endpoint, CLI availability, dashboard access and auth source.
-2. Discover CLI commands using --version/--help; inspect exact subcommand help.
-3. If authorized UI is available, inspect the live dashboard and record observed provider/model/route state.
-4. Query /v1/models and verify model IDs, auth and capabilities.
-5. Design one reversible route/provider change with expected fallback and tool-call behavior.
-6. Apply through the verified CLI/UI/API surface and preserve the previous state.
-7. Verify /v1/models, actual inference, tool_calls/streaming if required and fallback behavior.
-8. Inspect logs without exposing secrets; restore previous state if verification fails.
-9. Report exact evidence and owner-only gates.
+## Intake and execution
+1. Lock host, binary, version, base URL and auth source
+2. Inspect actual --version/--help and subcommand help
+3. Observe dashboard/provider/model state only when authorized
+4. Call authenticated GET /v1/models and record IDs
+5. Configure one reversible route/provider change
+6. Run synthetic inference and required tool-call tests
+7. Simulate bounded provider failure and verify fallback
+8. Read back CLI/UI/API convergence and protect credentials
+
+## Handoff contract
+- Deliver the work products listed in `SKILL.md` with source references and decision rationale.
+- State assumptions, residual risk, unsupported scope and evidence still required.
+- Identify the downstream consumer and its exact acceptance check.
+- Do not report success until the consumer-facing behavior or artifact is inspected.
