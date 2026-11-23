@@ -16,6 +16,6 @@
   "chatgpt_native_attempted": true,
   "fallback_reason": "CHATGPT_HOST_CANNOT_PACKAGE_COMPLETE_OVERLAY",
   "chatgpt_native_blocker": "ChatGPT has no supported local packaging route for the connector-only 203-file overlay in this host. Plugin Creator archive retrieval is not mountable into the execution filesystem, and the private package_overlay.py creates only a manifest regression artifact. Use the sanitized GitHub package builder for the complete archive; ChatGPT remains responsible for Plugin Creator publication and readback.",
-  "request_revision": 7,
-  "build_request_reason": "Owner-authorized GitHub backup build for 0.1.174; role files now contain only domain-specific methods, while shared level/decision/source policies are centralized."
+  "request_revision": 8,
+  "build_request_reason": "Retry after repairing test module indentation; owner-authorized GitHub backup build for 0.1.174."
 }
