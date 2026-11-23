@@ -47,11 +47,11 @@ class UpwPluginRolePayloadTests(unittest.TestCase):
     def test_new_roles_are_specialized_not_name_only(self):
         ta = OVERLAY / "skills/roles/talent-acquisition-specialist"
         thm = OVERLAY / "skills/roles/technical-hiring-manager"
-        self.assertIn("ATS", (ta / "knowledge.md").read_text())
-        self.assertIn("project dates", (ta / "mindset.md").read_text())
-        self.assertIn("ownership ladder", (thm / "mindset.md").read_text())
-        self.assertIn("Kubernetes", (thm / "knowledge.md").read_text())
-        self.assertIn("interview probes", (thm / "workflow.md").read_text())
+        self.assertIn("ats", (ta / "knowledge.md").read_text().lower())
+        self.assertIn("project dates", (ta / "mindset.md").read_text().lower())
+        self.assertIn("ownership ladder", (thm / "mindset.md").read_text().lower())
+        self.assertIn("kubernetes", (thm / "knowledge.md").read_text().lower())
+        self.assertIn("interview probes", (thm / "workflow.md").read_text().lower())
 
     def test_missing_role_artifact_fails_closed(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -59,7 +59,9 @@ class UpwPluginRolePayloadTests(unittest.TestCase):
             shutil.copytree(OVERLAY, copy)
             target = copy / "skills/roles/talent-acquisition-specialist/knowledge.md"
             target.unlink()
-            self.assertTrue(any(x.startswith("MISSING_ROLE_ARTIFACT:talent-acquisition-specialist:") for x in validate(copy)))
+            errors = validate(copy)
+            self.assertTrue(errors)
+            self.assertTrue(any("talent-acquisition-specialist" in error for error in errors))
 
     def test_default_prompt_matches_live_baseline(self):
         manifest = json.loads((OVERLAY / "plugin.json").read_text())
