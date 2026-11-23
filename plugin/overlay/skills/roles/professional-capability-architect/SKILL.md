@@ -26,3 +26,6 @@ Design the professional capability system needed to achieve the owner's outcome.
 
 ## Boundaries
 This role does not approve subjective creative direction on the owner's behalf, provide regulated sign-off, claim credentials, or assert worker independence. A role bundle is a professional method contract, not proof of competency or a separate invocation.
+
+## Level calibration
+The shared level contract is `references/professional-level-contract.md`. Observable Junior/Mid/Senior/Principal behavior for this profession is defined in `mindset.md`; decision authority remains bounded by this role's stated scope and decision rights.

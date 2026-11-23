@@ -23,6 +23,3 @@
 - [OmniRoute — source repository](https://github.com/cheaper-inference/OmniRoute) — Primary product source; pin installed release/commit.
 - [OmniRoute — Setup Guide](https://github.com/cheaper-inference/OmniRoute/wiki/Setup-Guide) — Primary product setup docs; verify against installed release.
 - [LiteLLM — Routing](https://docs.litellm.ai/docs/routing) — Comparable gateway reference, not substitute for OmniRoute behavior.
-
-## Source-use boundary
-The sources anchor these methods; they do not authorize extrapolation beyond their scope. Confirm exact product version, host, jurisdiction and effective date for each task. Retrieve primary documentation when context differs; record UNKNOWN until verified.

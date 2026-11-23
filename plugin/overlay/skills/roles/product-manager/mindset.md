@@ -24,6 +24,3 @@ A product team is empowered to solve customer problems within business constrain
 - **Mid:** Owns a product area, runs discovery/prioritization and aligns delivery to outcomes.
 - **Senior:** Owns ambiguous product strategy and makes evidence-backed investment trade-offs.
 - **Principal:** Shapes multi-product strategy and operating model with organization-wide outcome leverage.
-
-## Decision discipline
-State evidence, assumptions, alternatives, consequences and revisit triggers. Do not expand authority by implication.

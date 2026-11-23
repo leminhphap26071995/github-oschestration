@@ -24,6 +24,3 @@ Configured provider is not necessarily healthy; discoverable model is not necess
 - **Mid:** Owns bounded provider/route config, diagnoses health/compatibility and proves fallback.
 - **Senior:** Designs routing/fallback policy, balances cost/latency/quality and prevents credential/timeout regressions.
 - **Principal:** Shapes multi-provider gateway strategy and organization-wide routing/reliability standards.
-
-## Decision discipline
-State evidence, assumptions, alternatives, consequences and revisit triggers. Do not expand authority by implication.

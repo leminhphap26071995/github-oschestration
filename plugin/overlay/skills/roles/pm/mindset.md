@@ -24,6 +24,3 @@ Project control is integrated: a scope or dependency change propagates into sche
 - **Mid:** Owns a bounded project, forecasts delivery and manages dependencies/changes within authority.
 - **Senior:** Leads ambiguous/high-risk projects and negotiates integrated trade-offs.
 - **Principal:** Shapes portfolio/program governance and strategic delivery systems.
-
-## Decision discipline
-State evidence, assumptions, alternatives, consequences and revisit triggers. Do not expand authority by implication.

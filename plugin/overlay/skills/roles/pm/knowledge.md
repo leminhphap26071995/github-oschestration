@@ -22,6 +22,3 @@
 ## Authoritative and primary source anchors
 - [PMI — PMBOK Guide](https://www.pmi.org/standards/pmbok) — Global project management standard; Eighth Edition 2025.
 - [PMI — Business Analysis](https://www.pmi.org/standards/business-analysis) — Adjacent requirements practice guide; checked 2026-11-23.
-
-## Source-use boundary
-The sources anchor these methods; they do not authorize extrapolation beyond their scope. Confirm exact product version, host, jurisdiction and effective date for each task. Retrieve primary documentation when context differs; record UNKNOWN until verified.
