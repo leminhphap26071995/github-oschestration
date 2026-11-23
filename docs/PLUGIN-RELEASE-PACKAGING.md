@@ -4,18 +4,22 @@
 
 The canonical plugin release source is maintained under `plugin/overlay/`. It contains a versioned overlay for the existing UPW plugin identity. It is not a second plugin and does not replace the Plugin Creator backend as the release authority.
 
-## Role-routing payload completeness — UPW 0.1.167
+## Role-routing payload completeness — UPW 0.1.168
 
-The 0.1.167 overlay restores the missing professional-routing layer rather than shipping only manifests:
+The 0.1.168 overlay restores the missing professional-routing layer rather than shipping only manifests:
 
-- Root and Codex manifests are both 0.1.167; their 48 default-prompt entries remain byte-for-byte equal to the live 0.1.166 prompt arrays.
+- Root, Codex and Agent manifests are all 0.1.168; the 48 root/Codex default-prompt entries remain byte-for-byte equal to the live 0.1.166 prompt arrays.
 - Four runtime registries are packaged: `role-registry.json`, `role-registry.extensions.json`, `domain-routing.json`, and `professional-capability-catalog.json`.
 - Both routing entry skills are packaged: `professional-capability-discovery/SKILL.md` and `ai-tooling-lifecycle/SKILL.md`.
 - Every unique role advertised by the base and extension registries has all four artifacts: `SKILL.md`, `mindset.md`, `knowledge.md`, and `workflow.md`. The registries contain ten entries and nine unique role IDs because `ai-native-tooling-engineer` is intentionally present in both registries.
 - The nine complete bundles are AI Native Tooling Engineer, DevOps Engineer, Software Architect, QA Engineer, Security Reviewer, Professional Capability Architect, MCP Integration Engineer, VS Code Extension Platform Engineer, and OmniRoute Model Routing Engineer.
-- `plugin/validate_overlay.py` parses both registries and fails closed on any missing or malformed role artifact, mismatched manifest prompt, invalid discovery contract, or generic-role fallback.
+- `plugin/validate_overlay.py` parses all three manifests and both role registries and fails closed on any missing or malformed role artifact, mismatched manifest prompt, invalid discovery contract, or generic-role fallback.
 
 Domain-specific packs remain routed adapters and are not copied into this generic role payload. Their project-specific source and evidence retain their existing source authority.
+
+Release `upw-v0.1.167` is superseded because its Agent compatibility manifest retained version 0.1.166. Apply only `upw-v0.1.168`, which aligns all three manifests.
+
+Canonical private source revision: `0b142e75792504f741e2ad0670054f8b70d58734`.
 
 ## Automatic CI
 

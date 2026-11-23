@@ -7,6 +7,7 @@ from pathlib import Path, PurePosixPath
 REQUIRED = [
     "plugin.json",
     ".codex-plugin/plugin.json",
+    ".agent-plugin/plugin.json",
     "skills/project-ticket-context-isolation/SKILL.md",
     "skills/github-actions-run-lifecycle/SKILL.md",
     "skills/context-recovery/SKILL.md",
@@ -119,15 +120,20 @@ def validate(root: Path):
 
     standard = _read_json(root, "plugin.json", errors)
     host = _read_json(root, ".codex-plugin/plugin.json", errors)
+    agent = _read_json(root, ".agent-plugin/plugin.json", errors)
     role_registry = _read_json(root, "references/role-registry.json", errors)
     domain_routing = _read_json(root, "references/domain-routing.json", errors)
     capability_catalog = _read_json(root, "references/professional-capability-catalog.json", errors)
     extension_registry = _read_json(root, "references/role-registry.extensions.json", errors)
-    if any(value is None for value in (standard, host, role_registry, domain_routing, capability_catalog, extension_registry)):
+    if any(value is None for value in (standard, host, agent, role_registry, domain_routing, capability_catalog, extension_registry)):
         return errors
 
-    if standard.get("version") != host.get("version"):
+    if standard.get("version") != host.get("version") or standard.get("version") != agent.get("version"):
         errors.append("MANIFEST_VERSION_MISMATCH")
+    if agent.get("name") != standard.get("name"):
+        errors.append("AGENT_MANIFEST_NAME_MISMATCH")
+    if agent.get("skills") != "./skills":
+        errors.append("AGENT_MANIFEST_SKILLS_PATH_MISMATCH")
     openai = standard.get("extensions", {}).get("com.openai", {})
     onboarding = openai.get("onboardingSkill")
     if not isinstance(onboarding, str) or not onboarding.startswith("./"):

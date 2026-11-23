@@ -15,6 +15,16 @@ class UpwPluginRolePayloadTests(unittest.TestCase):
     def test_complete_overlay_passes(self):
         self.assertEqual([], validate(OVERLAY_ROOT))
 
+    def test_all_three_manifests_share_name_and_version(self):
+        root = json.loads((OVERLAY_ROOT / "plugin.json").read_text(encoding="utf-8"))
+        codex = json.loads((OVERLAY_ROOT / ".codex-plugin/plugin.json").read_text(encoding="utf-8"))
+        agent = json.loads((OVERLAY_ROOT / ".agent-plugin/plugin.json").read_text(encoding="utf-8"))
+        self.assertEqual(root["name"], codex["name"])
+        self.assertEqual(root["name"], agent["name"])
+        self.assertEqual(root["version"], codex["version"])
+        self.assertEqual(root["version"], agent["version"])
+        self.assertEqual("./skills", agent["skills"])
+
     def test_all_registered_roles_have_complete_four_artifact_bundles(self):
         base = json.loads((OVERLAY_ROOT / "references/role-registry.json").read_text(encoding="utf-8"))
         extensions = json.loads((OVERLAY_ROOT / "references/role-registry.extensions.json").read_text(encoding="utf-8"))
