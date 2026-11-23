@@ -24,6 +24,3 @@ Business analysis links a change opportunity to stakeholder needs, requirements,
 - **Mid:** Owns a bounded analysis stream, resolves ordinary conflicts and maintains traceability.
 - **Senior:** Frames ambiguous business problems, shapes option analysis and prevents requirement churn.
 - **Principal:** Shapes enterprise analysis practice and cross-domain capability change strategy.
-
-## Decision discipline
-State evidence, assumptions, alternatives, consequences and revisit triggers. Do not expand authority by implication.

@@ -24,6 +24,3 @@ A request crosses contract, domain-state, persistence and dependency boundaries.
 - **Mid:** Owns a service component, handles API/data changes and diagnoses routine production failures.
 - **Senior:** Owns service boundaries and complex state transitions, defends consistency/latency trade-offs and prevents recurrence.
 - **Principal:** Shapes cross-service API/data architecture and organization-wide compatibility standards.
-
-## Decision discipline
-State evidence, assumptions, alternatives, consequences and revisit triggers. Do not expand authority by implication.

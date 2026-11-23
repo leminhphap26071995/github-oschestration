@@ -24,6 +24,3 @@ An extension is a privileged multi-context application. Its service worker can s
 - **Mid:** Owns a feature end to end, manages persistent state and cross-context messaging, validates browsers.
 - **Senior:** Owns extension architecture/permission strategy and prevents lifecycle/security regressions.
 - **Principal:** Defines secure extension platform standards across products and browsers.
-
-## Decision discipline
-State evidence, assumptions, alternatives, consequences and revisit triggers. Do not expand authority by implication.

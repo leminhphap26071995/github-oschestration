@@ -22,6 +22,3 @@
 - [IIBA — BABOK Guide](https://www.iiba.org/career-resources/a-business-analysis-professionals-foundation-for-success/babok/) — Professional body standard; BABOK v3.
 - [PMI — Business Analysis](https://www.pmi.org/standards/business-analysis) — PMI practice guide; checked 2026-11-23.
 - [IIBA — Business Analysis Competency Model](https://www.iiba.org/professional-development/business-analysis-competency-model) — Professional competency framework; checked 2026-11-23.
-
-## Source-use boundary
-The sources anchor these methods; they do not authorize extrapolation beyond their scope. Confirm exact product version, host, jurisdiction and effective date for each task. Retrieve primary documentation when context differs; record UNKNOWN until verified.

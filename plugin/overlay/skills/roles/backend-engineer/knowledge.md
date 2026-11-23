@@ -24,6 +24,3 @@
 - [RFC 9110 — HTTP Semantics](https://www.rfc-editor.org/rfc/rfc9110.html) — IETF Standards Track; June 2022.
 - [OWASP API Security Top 10](https://api-security.owasp.org/) — OWASP security guidance; 2023 edition.
 - [PostgreSQL — Transaction Isolation](https://www.postgresql.org/docs/current/transaction-iso.html) — Official database docs; checked 2026-11-23.
-
-## Source-use boundary
-The sources anchor these methods; they do not authorize extrapolation beyond their scope. Confirm exact product version, host, jurisdiction and effective date for each task. Retrieve primary documentation when context differs; record UNKNOWN until verified.
