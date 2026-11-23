@@ -9,3 +9,6 @@ This directory is the ChatGPT Plugin Creator payload source for UPW. It is not a
 - CV review route: `skills/cv-update-lifecycle/SKILL.md`
 
 CLI manifests and CLI-only bootstrap skills are maintained outside this ChatGPT package and are excluded from the Plugin Creator archive.
+
+
+Repository-level owner-expectation gate implementation and tests live under `scripts/` and `tests/`; they are not ChatGPT plugin resources and are never included in the release archive.
