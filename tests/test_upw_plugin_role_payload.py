@@ -88,3 +88,19 @@ class UpwPluginRolePayloadTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+    def test_all_roles_have_specialist_depth_and_level_calibration(self):
+        index = json.loads((OVERLAY / "references/role-specialization-index.json").read_text())
+        self.assertEqual(35, len(index["roles"]))
+        self.assertEqual("PROHIBITED", index["generic_role_fallback"])
+        self.assertTrue((OVERLAY / "references/professional-level-contract.md").is_file())
+        self.assertTrue((OVERLAY / "references/role-specialization-quality-gate.md").is_file())
+        for role in index["roles"]:
+            bundle = OVERLAY / role["bundle"]
+            mindset = (bundle / "mindset.md").read_text(encoding="utf-8").lower()
+            knowledge = (bundle / "knowledge.md").read_text(encoding="utf-8")
+            workflow = (bundle / "workflow.md").read_text(encoding="utf-8")
+            self.assertTrue(all(level in mindset for level in ("junior", "mid", "senior", "principal")), role["role_id"])
+            self.assertGreaterEqual(len(__import__("re").findall(r"https?://", knowledge)), 2, role["role_id"])
+            self.assertGreater(len(workflow), 250, role["role_id"])
+            self.assertNotRegex(knowledge, r"(?i)generic role fallback|general model knowledge is a source")

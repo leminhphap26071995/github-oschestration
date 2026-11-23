@@ -22,7 +22,7 @@ class ChatGPTArchiveContractTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             output = Path(temp) / "upw-chatgpt.zip"
             count = package(OVERLAY, output)
-            self.assertEqual(200, count)
+            self.assertEqual(203, count)
             with ZipFile(output) as archive:
                 names = set(archive.namelist())
                 self.assertIn("plugin.json", names)
@@ -30,6 +30,9 @@ class ChatGPTArchiveContractTests(unittest.TestCase):
                 self.assertIn("skills/cv-update-lifecycle/SKILL.md", names)
                 self.assertIn("skills/roles/talent-acquisition-specialist/workflow.md", names)
                 self.assertIn("skills/roles/technical-hiring-manager/knowledge.md", names)
+                self.assertIn("references/professional-level-contract.md", names)
+                self.assertIn("references/role-specialization-index.json", names)
+                self.assertIn("references/role-specialization-quality-gate.md", names)
                 self.assertFalse(any(n.startswith((".codex-plugin/", ".agent-plugin/", ".claude-plugin/")) for n in names))
                 self.assertFalse(any("codex-project-bootstrap" in n for n in names))
                 self.assertFalse(any(n.startswith("plugin/overlay/") for n in names))

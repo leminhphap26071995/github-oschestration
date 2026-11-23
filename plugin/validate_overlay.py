@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Fail-closed validation for the ChatGPT-only UPW plugin overlay."""
 import json
+import hashlib
+import re
 from pathlib import Path, PurePosixPath
 
 REQUIRED = [
@@ -11,6 +13,9 @@ REQUIRED = [
     "references/professional-capability-catalog.json",
     "references/professional-capability-catalog.extensions.json",
     "references/cv-update-contract.md",
+    "references/professional-level-contract.md",
+    "references/role-specialization-index.json",
+    "references/role-specialization-quality-gate.md",
     "skills/chatgpt-runtime-onboarding/SKILL.md",
     "skills/cv-update-lifecycle/SKILL.md",
     "skills/professional-capability-discovery/SKILL.md",
@@ -76,6 +81,11 @@ def validate(root: Path):
         errors.append("DEFAULT_PROMPT_COUNT_MISMATCH")
     if prompts != baseline:
         errors.append("DEFAULT_PROMPT_CHANGED_FROM_LIVE_BASELINE")
+    route = next((x for x in prompts or [] if isinstance(x, str) and x.startswith("PLUGIN UPDATE ROUTING:")), "")
+    if "CHATGPT_NATIVE_PRIMARY" not in route or "GITHUB_BUILD_BACKUP" not in route:
+        errors.append("PLUGIN_UPDATE_ROUTE_MARKERS_MISSING")
+    if "only when a concrete ChatGPT host limitation" not in route:
+        errors.append("GITHUB_BACKUP_NOT_FAIL_CLOSED")
     if "UPW" not in manifest.get("keywords", []):
         errors.append("UPW_KEYWORD_MISSING")
 
@@ -91,6 +101,10 @@ def validate(root: Path):
     if ext.get("extends") != "references/role-registry.json":
         errors.append("ROLE_EXTENSION_PARENT_MISMATCH")
 
+    specialization = read_json(root / "references/role-specialization-index.json", errors)
+    if specialization is None:
+        return errors
+    indexed = {r.get("role_id") for r in specialization.get("roles", [])}
     role_ids = set()
     base_roles = base.get("roles", [])
     ext_roles = ext.get("roles", [])
@@ -131,6 +145,45 @@ def validate(root: Path):
                 errors.append(f"MISSING_ROLE_ARTIFACT:{role_id}:{rel}")
             elif (root / rel).stat().st_size < 100:
                 errors.append(f"ROLE_ARTIFACT_TOO_SMALL:{role_id}:{rel}")
+
+    if indexed != role_ids:
+        errors.append("ROLE_SPECIALIZATION_INDEX_REGISTRY_MISMATCH")
+    if len(indexed) != 35 or specialization.get("generic_role_fallback") != "PROHIBITED":
+        errors.append("ROLE_SPECIALIZATION_INDEX_INVALID")
+    for role in specialization.get("roles", []):
+        role_id = role.get("role_id", "UNKNOWN")
+        bundle = root / role.get("bundle", "")
+        mindset = bundle / "mindset.md"
+        knowledge = bundle / "knowledge.md"
+        workflow = bundle / "workflow.md"
+        if mindset.is_file():
+            body = mindset.read_text(encoding="utf-8").lower()
+            if not all(level in body for level in ("junior", "mid", "senior", "principal")):
+                errors.append(f"ROLE_LEVEL_BEHAVIOR_MISSING:{role_id}")
+        if knowledge.is_file():
+            body = knowledge.read_text(encoding="utf-8")
+            if len(re.findall(r"https?://", body)) < 2:
+                errors.append(f"ROLE_SOURCE_ANCHORS_MISSING:{role_id}")
+            if re.search(r"(?i)generic role fallback|general model knowledge is a source", body):
+                errors.append(f"GENERIC_ROLE_KNOWLEDGE:{role_id}")
+        if workflow.is_file() and workflow.stat().st_size < 250:
+            errors.append(f"ROLE_WORKFLOW_TOO_SHALLOW:{role_id}")
+
+    expected = meta.get("source_blob_shas", {})
+    actual = {}
+    candidates = [root / "plugin.json"]
+    for directory in ("references", "skills"):
+        candidates.extend(p for p in (root / directory).rglob("*") if p.is_file())
+    for path in candidates:
+        rel = path.relative_to(root.parent.parent).as_posix()
+        if rel.endswith("references/codex-skill-mirror.json"):
+            continue
+        data = path.read_bytes()
+        actual[rel] = hashlib.sha1(b"blob " + str(len(data)).encode() + b"\\0" + data).hexdigest()
+    if set(actual) != set(expected):
+        errors.append("SOURCE_BLOB_PATH_SET_MISMATCH")
+    elif actual != expected:
+        errors.append("SOURCE_BLOB_SHA_MISMATCH")
 
     if len(role_ids) != meta.get("unique_role_count"):
         errors.append("UNIQUE_ROLE_COUNT_MISMATCH")
