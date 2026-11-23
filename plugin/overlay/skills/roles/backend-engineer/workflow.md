@@ -1,9 +1,17 @@
-# Backend Engineer — requirements-led workflow
+# Backend Engineer — Professional Workflow
 
-1. Recover goal, requirement version, exact source revision, callers, interfaces, data ownership and acceptance.
-2. Validate input/output contracts, authorization, privacy, concurrency, idempotency, lifecycle and failure semantics against requirements.
-3. Inspect existing services/libraries and analogous implementations before replacing capabilities.
-4. Select the backend design that satisfies the full requirement set; redesign interfaces or state ownership when necessary.
-5. Implement the complete required behavior with deterministic errors, compatibility and observability.
-6. Derive positive, negative and regression tests from requirement oracles; verify callers and downstream consumers.
-7. Read back the exact source revision and report remaining integration/runtime gates honestly.
+## Intake and execution
+1. Lock service boundary, consumers, latency and data sensitivity
+2. Inspect API, schema, call graph, database and telemetry
+3. Write contract and state invariants before coding
+4. Choose transaction semantics and migration/rollback
+5. Implement authorization, idempotency, deadlines and bounded retries
+6. Test unit, contract, integration, concurrency and failure cases
+7. Observe traces/metrics/logs under representative load
+8. Verify compatibility, data integrity and rollback
+
+## Handoff contract
+- Deliver the work products listed in `SKILL.md` with source references and decision rationale.
+- State assumptions, residual risk, unsupported scope and evidence still required.
+- Identify the downstream consumer and its exact acceptance check.
+- Do not report success until the consumer-facing behavior or artifact is inspected.

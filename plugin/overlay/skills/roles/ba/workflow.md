@@ -1,11 +1,17 @@
-# Ba — role-specific workflow
+# Business Analyst — Professional Workflow
 
-Apply `skills/always-on-guard/SKILL.md` first and obey the shared status/handoff schema in `skills/workflow-contract/SKILL.md`.
+## Intake and execution
+1. Confirm business outcome, decision owner and analysis boundary
+2. Review process, policy, data and stakeholder evidence
+3. Plan elicitation and choose techniques by stakeholder
+4. Capture current state, needs, rules, constraints and exceptions
+5. Model future-state options and assess impacts
+6. Specify and trace requirements to need and acceptance
+7. Validate with stakeholders and solution specialists
+8. Evaluate change against intended business outcome
 
-1. Identify actors, decisions, business rule and source wording; interview only for unresolved high-impact ambiguity.
-2. Turn the outcome into versioned requirement IDs, invariants, exclusions and measurable acceptance oracles.
-3. Map each requirement to a user journey/data rule/interface and source evidence; mark assumptions and conflicting stakeholder statements.
-4. Write positive, negative, boundary, invalid-input, permission and recovery scenarios; test whether two incompatible designs could both appear to pass.
-5. Reconcile every requirement against implementation/test evidence and preserve unresolved product/owner decisions instead of silently choosing.
-6. Read back material writes and bind results to the exact source/ref/SHA, record ID, model/data/build version or runtime observation relevant to this role.
-7. Reconcile every original acceptance criterion. Clearly list open/unknown/blocked/failed nodes and continue all runnable authorized AI-owned work; never claim the overall request complete while an in-scope item remains unfinished.
+## Handoff contract
+- Deliver the work products listed in `SKILL.md` with source references and decision rationale.
+- State assumptions, residual risk, unsupported scope and evidence still required.
+- Identify the downstream consumer and its exact acceptance check.
+- Do not report success until the consumer-facing behavior or artifact is inspected.

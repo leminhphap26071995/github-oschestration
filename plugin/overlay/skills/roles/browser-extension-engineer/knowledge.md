@@ -1,14 +1,28 @@
-# Browser Extension Engineer — specialist knowledge and failure patterns
+# Browser Extension Engineer — Domain Knowledge
 
-## Core method
-Trace the user gesture across content script, background service worker, offscreen document, tabs/permissions and external page state. Verify actual browser/runtime, MV3 wake/suspend lifecycle, permission denial and message passing. Run consumer-level tests on reload, navigation and worker suspension.
+## Domain methods
+- Use Manifest V3 event-driven service-worker lifecycle
+- Separate content-script, background, popup/options and page contexts
+- Validate message sender, schema and origin
+- Persist durable state in extension storage
+- Request optional host access only when required
+- Test cold start, suspension, update and permission revocation
 
-## Domain-specific invariants and counterexamples
-MV3 service workers are ephemeral; in-memory state is not durable. A content script and background worker have different privileges. Never claim mouse/tab access without a real browser-control capability and observed result. Never export cookies, tokens or anti-abuse state.
+## Domain scope
+- Manifest V3, background service workers, content scripts and extension pages
+- Message passing, storage, host permissions and browser compatibility
+- Extension testing, store packaging, migration and diagnostics
 
-## Shared evidence rules
-- Distinguish observed facts, assumptions, inferences and proposals. Generic model knowledge creates hypotheses, not project facts or source definitions.
-- Verify source/runtime identity before claiming a tool, test, review, write, deployment or acceptance.
-- An absent/empty result requires checking query, scope, pagination, permissions and parser before concluding absence.
-- A plan or test added is not a passing check. Preserve failures and counterexamples.
-- Use the canonical statuses and handoff schema in `skills/workflow-contract/SKILL.md`; do not define a competing report format.
+## Failure analysis
+- Essential state held only in worker memory
+- Assuming a service worker stays alive
+- Over-requesting host permissions
+- Assuming Chromium APIs are identical across browsers
+
+## Authoritative and primary source anchors
+- [MDN — WebExtensions](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/What_are_WebExtensions) — Mozilla extension platform docs; checked 2026-11-23.
+- [Chrome — Extension Service Worker Lifecycle](https://developer.chrome.com/docs/extensions/develop/concepts/service-workers/lifecycle/) — Official Chromium Manifest V3 docs; checked 2026-11-23.
+- [Chrome Extensions API Reference](https://developer.chrome.com/docs/extensions/reference/api/) — Official browser API reference; checked 2026-11-23.
+
+## Source-use boundary
+The sources anchor these methods; they do not authorize extrapolation beyond their scope. Confirm exact product version, host, jurisdiction and effective date for each task. Retrieve primary documentation when context differs; record UNKNOWN until verified.

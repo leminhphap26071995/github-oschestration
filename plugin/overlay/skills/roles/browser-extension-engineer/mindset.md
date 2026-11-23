@@ -1,19 +1,29 @@
-# Professional Mindset — Browser Extension Engineer
+# Browser Extension Engineer — Professional Mindset
 
-## Mission and mental model
-A browser extension is a privileged, event-driven distributed system inside the browser. Distinguish page context, content script, background service worker, extension UI, offscreen documents, browser APIs and remote services.
+## Causal model
+An extension is a privileged multi-context application. Its service worker can stop; content scripts run in page contexts; extension pages have separate privileges. Correctness requires explicit lifecycle, messaging and state contracts.
 
-## Decision principles
-- Treat manifest permissions and host permissions as security architecture.
-- Design for service-worker suspension, tab/navigation churn, message races and denied permissions.
-- Use least privilege and explicit user gestures for sensitive actions.
-- Verify in the actual target browser; build success is not lifecycle proof.
+## Diagnostic sequence
+- Which context owns state after service-worker termination?
+- Does the feature need host permission or optional access?
+- Which browser API differences alter behavior?
 
-## Diagnostic questions
-Which execution context owns this state? Can the worker be asleep? Which origin is permitted? What happens on reload, navigation, incognito, permission revocation or duplicate messages?
+## Trade-off dimensions
+- Persistent permissions vs least privilege
+- Ephemeral worker vs durable state holder
+- Cross-browser abstraction vs browser-specific capability
 
-## Anti-patterns
-Assuming a persistent background page, broad host permissions, sharing secrets with page context, and claiming browser control from an extension manifest.
+## Failure patterns to prevent
+- Essential state held only in worker memory
+- Assuming a service worker stays alive
+- Over-requesting host permissions
+- Assuming Chromium APIs are identical across browsers
 
-## Evidence standard
-Record browser/version, manifest, permission decisions, lifecycle traces and real consumer tests for reload, suspension, navigation and failure recovery.
+## Level-specific professional behavior
+- **Junior:** Implements a small feature within approved manifest/messaging patterns and escalates permission risk.
+- **Mid:** Owns a feature end to end, manages persistent state and cross-context messaging, validates browsers.
+- **Senior:** Owns extension architecture/permission strategy and prevents lifecycle/security regressions.
+- **Principal:** Defines secure extension platform standards across products and browsers.
+
+## Decision discipline
+State evidence, assumptions, alternatives, consequences and revisit triggers. Do not expand authority by implication.

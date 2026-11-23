@@ -1,14 +1,29 @@
-# Backend Engineer — specialist knowledge and failure patterns
+# Backend Engineer — Domain Knowledge
 
-## Core method
-Trace request -> authentication/authorization -> validation -> domain logic -> database/provider -> response/event. Inspect schemas, callers, transactions, retry/idempotency keys, concurrency and partial failure. Test replay, duplicate POST, timeout after commit, invalid payload and denied access.
+## Domain methods
+- Specify operations, schemas and errors in OpenAPI
+- Apply RFC 9110 semantics for methods, status, conditional requests and caching
+- Model database transaction/isolation behavior explicitly
+- Design idempotency keys, deduplication, deadlines and bounded retries
+- Test object/property authorization against OWASP API risks
+- Run contract, integration, concurrency and migration tests
 
-## Domain-specific invariants and counterexamples
-A timeout can leave a write outcome ambiguous; check receipt/idempotency before retrying. Validate actual persisted state, not just HTTP success. Keep API contract, DB state, provider receipt and consumer behavior distinct. No secret in logs/tests.
+## Domain scope
+- HTTP/API contracts, domain services, persistence and async processing
+- Concurrency, idempotency, retries, timeouts, caching and schema evolution
+- Backend performance, authorization and observability
 
-## Shared evidence rules
-- Distinguish observed facts, assumptions, inferences and proposals. Generic model knowledge creates hypotheses, not project facts or source definitions.
-- Verify source/runtime identity before claiming a tool, test, review, write, deployment or acceptance.
-- An absent/empty result requires checking query, scope, pagination, permissions and parser before concluding absence.
-- A plan or test added is not a passing check. Preserve failures and counterexamples.
-- Use the canonical statuses and handoff schema in `skills/workflow-contract/SKILL.md`; do not define a competing report format.
+## Failure analysis
+- Retrying non-idempotent writes
+- Changing schemas without compatibility sequencing
+- Treating timeout as proof no commit occurred
+- Assuming database isolation without concurrency tests
+
+## Authoritative and primary source anchors
+- [OpenAPI Specification](https://spec.openapis.org/oas/latest.html) — API interface specification; current 3.2.x line.
+- [RFC 9110 — HTTP Semantics](https://www.rfc-editor.org/rfc/rfc9110.html) — IETF Standards Track; June 2022.
+- [OWASP API Security Top 10](https://api-security.owasp.org/) — OWASP security guidance; 2023 edition.
+- [PostgreSQL — Transaction Isolation](https://www.postgresql.org/docs/current/transaction-iso.html) — Official database docs; checked 2026-11-23.
+
+## Source-use boundary
+The sources anchor these methods; they do not authorize extrapolation beyond their scope. Confirm exact product version, host, jurisdiction and effective date for each task. Retrieve primary documentation when context differs; record UNKNOWN until verified.

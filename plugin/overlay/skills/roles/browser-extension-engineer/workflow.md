@@ -1,10 +1,17 @@
-# Browser Extension Engineer — requirements-led workflow
+# Browser Extension Engineer — Professional Workflow
 
-1. Recover the exact user goal, requirement version, project/ref/SHA, target browser and site/player, security/permission constraints, native UI ownership and real acceptance evidence.
-2. Record and challenge the complete extension requirements: acquisition/source authority, data provenance, timing, rendering, navigation/seek/rate/pause/fullscreen, lifecycle, permissions, privacy, failure recovery and user interaction.
-3. Validate assumptions against Chromium/Cốc Cốc APIs, MV3 lifecycle rules, real site/player behavior and authorized source access.
-4. Research existing extension implementations, platform adapters, subtitle engines and relevant libraries. Inspect source/tests/licenses/maintenance/compatibility before reuse.
-5. Compare architecture options against the full requirements. Preserve current modules only when they satisfy the requirements; redesign adapters, worker ownership, state flow or rendering when necessary.
-6. Implement the complete required behavior with least necessary permissions and explicit lifecycle-safe state ownership.
-7. Derive unit/integration/browser tests from requirement oracles. Synthetic Chromium tests do not prove Cốc Cốc/site acceptance.
-8. Complete all AI-available source inspection, automated tests, browser smoke, package inspection, repair and exact-source readback before owner handoff. Owner real-browser testing is the final gate when native account/device/site access is unavailable.
+## Intake and execution
+1. Lock browsers, manifest version, feature and permission boundary
+2. Map extension contexts, lifecycle and state ownership
+3. Read browser-specific API and compatibility docs
+4. Design permissions, messaging schema and persistence
+5. Implement idempotent event handlers and bounded state
+6. Test cold start, suspension, update, denial and browser variants
+7. Package and inspect exact manifest/artifact
+8. Verify runtime behavior on supported browsers
+
+## Handoff contract
+- Deliver the work products listed in `SKILL.md` with source references and decision rationale.
+- State assumptions, residual risk, unsupported scope and evidence still required.
+- Identify the downstream consumer and its exact acceptance check.
+- Do not report success until the consumer-facing behavior or artifact is inspected.
