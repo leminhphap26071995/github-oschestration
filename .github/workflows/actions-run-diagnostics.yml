@@ -9,6 +9,7 @@ on:
       - Portable AI Workflow Conformance
       - GitHub API Usage Monitor Smoke Test
       - UPW Plugin Manual Release
+      - UPW ChatGPT Plugin Release
       - Workflow Cleanup
       - Workflow Quality Gate
       - ".github/workflows/zz-real-invalid-workflow.yml"

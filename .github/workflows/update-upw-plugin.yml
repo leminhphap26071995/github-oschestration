@@ -118,25 +118,33 @@ jobs:
             dist/release-notes.md
           if-no-files-found: error
           retention-days: 14
-      - name: Publish versioned GitHub Release
+      - name: Publish or verify immutable GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           set -euo pipefail
           tag="upw-v0.1.170"
+          archive="UPW-0.1.170-ChatGPT-plugin.zip"
+          new_sha="$(sha256sum "dist/$archive" | awk '{print $1}')"
           if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            echo "RELEASE_TAG_ALREADY_EXISTS:$tag" >&2
-            exit 1
+            mkdir -p /tmp/existing-upw-release
+            gh release download "$tag" --repo "$GITHUB_REPOSITORY" --pattern "$archive" --dir /tmp/existing-upw-release
+            gh release download "$tag" --repo "$GITHUB_REPOSITORY" --pattern "SHA256SUMS" --dir /tmp/existing-upw-release
+            (cd /tmp/existing-upw-release && sha256sum -c SHA256SUMS)
+            existing_sha="$(sha256sum "/tmp/existing-upw-release/$archive" | awk '{print $1}')"
+            test "$existing_sha" = "$new_sha"
+            echo "RELEASE_ALREADY_PUBLISHED_WITH_IDENTICAL_ARCHIVE:$new_sha"
+          else
+            gh release create "$tag" \
+              "dist/$archive" \
+              dist/SHA256SUMS \
+              dist/plugin-creator-handoff.json \
+              --repo "$GITHUB_REPOSITORY" \
+              --target "$GITHUB_SHA" \
+              --title "UPW 0.1.170 — ChatGPT plugin" \
+              --notes-file dist/release-notes.md
           fi
-          gh release create "$tag" \
-            dist/UPW-0.1.170-ChatGPT-plugin.zip \
-            dist/SHA256SUMS \
-            dist/plugin-creator-handoff.json \
-            --repo "$GITHUB_REPOSITORY" \
-            --target "$GITHUB_SHA" \
-            --title "UPW 0.1.170 — ChatGPT plugin" \
-            --notes-file dist/release-notes.md
       - name: Confirm Plugin Creator handoff boundary
         run: |
           echo "PACKAGE_READY: archive and handoff are published. Live Plugin Creator update and ChatGPT runtime readback remain separate acceptance steps."
