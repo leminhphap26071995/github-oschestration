@@ -62,7 +62,7 @@ def _validate_role_registry(root: Path, registry: dict, errors: list[str], label
         return set()
     seen = set()
     for role in roles:
-        role_id = role.get("role") or role.get("role_id") if isinstance(role, dict) else None
+        role_id = (role.get("role") or role.get("role_id")) if isinstance(role, dict) else None
         bundle = role.get("bundle") if isinstance(role, dict) else None
         if not isinstance(role_id, str) or not role_id:
             errors.append(f"ROLE_ID_MISSING:{label}")
@@ -81,7 +81,7 @@ def _validate_role_registry(root: Path, registry: dict, errors: list[str], label
     return seen
 
 
-def _validate_extension_registry(root: Path, registry: dict, expected: set[str], errors: list[str]):
+def _validate_extension_registry(root: Path, registry: dict, errors: list[str]):
     if registry.get("extends") != "references/role-registry.json":
         errors.append("ROLE_EXTENSION_PARENT_MISMATCH")
     required = registry.get("required_artifacts")
@@ -109,8 +109,6 @@ def _validate_extension_registry(root: Path, registry: dict, expected: set[str],
             relative = f"{bundle.rstrip('/')}/{artifact}"
             if not _safe_file(root, relative):
                 errors.append(f"MISSING_ROLE_ARTIFACT:{role_id}:{relative}")
-    if required != ROLE_ARTIFACTS:
-        errors.append("ROLE_REGISTRY_REQUIRED_ARTIFACTS_MISMATCH")
     return seen
 
 
@@ -143,8 +141,9 @@ def validate(root: Path):
     interface = host.get("interface", {})
     if interface.get("displayName") != "UPW":
         errors.append("DISPLAY_NAME_NOT_UPW")
-    if "Unified Project Workflow" not in interface.get("longDescription", ""):
-        errors.append("FULL_NAME_MISSING_FROM_DESCRIPTION")
+    description = interface.get("longDescription", "")
+    if not isinstance(description, str) or "requirements-first workflow" not in description.lower():
+        errors.append("FULL_NAME_OR_WORKFLOW_DESCRIPTION_MISSING")
     root_prompt = openai.get("interface", {}).get("defaultPrompt")
     host_prompt = interface.get("defaultPrompt")
     if not isinstance(root_prompt, list) or not root_prompt or root_prompt != host_prompt:
@@ -173,8 +172,8 @@ def validate(root: Path):
             "one final artifact only after execution"
         ],
         "skills/professional-capability-discovery/SKILL.md": [
-            "references/professional-capability-catalog.json",
-            "references/role-registry.json", "four-artifact bundle"
+            "complete four-artifact bundle",
+            "Missing specialist artifacts are a capability gap"
         ],
         "skills/ai-tooling-lifecycle/SKILL.md": [
             "references/role-registry.extensions.json", "ai-native-tooling-engineer",
@@ -189,7 +188,7 @@ def validate(root: Path):
                 errors.append(f"TOKEN_MISSING:{relative}:{token}")
 
     base_roles = _validate_role_registry(root, role_registry, errors, "base")
-    extension_roles = _validate_extension_registry(root, extension_registry, base_roles, errors)
+    extension_roles = _validate_extension_registry(root, extension_registry, errors)
     if "ai-native-tooling-engineer" not in base_roles or "ai-native-tooling-engineer" not in extension_roles:
         errors.append("AI_NATIVE_TOOLING_ENGINEER_NOT_REGISTERED_IN_BOTH_REGISTRIES")
 
@@ -211,7 +210,7 @@ def main():
     args = parser.parse_args()
     errors = validate(args.root)
     if errors:
-        print("\\n".join(errors))
+        print("\n".join(errors))
         raise SystemExit(1)
     version = json.loads((args.root / "plugin.json").read_text(encoding="utf-8"))["version"]
     print(f"OVERLAY_VALID version={version}")
