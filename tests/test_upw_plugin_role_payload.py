@@ -85,11 +85,7 @@ class UpwPluginRolePayloadTests(unittest.TestCase):
         baseline = json.loads((ROOT / "plugin/live-default-prompt.json").read_text())
         self.assertEqual(baseline, manifest["extensions"]["com.openai"]["interface"]["defaultPrompt"])
 
-
-if __name__ == "__main__":
-    unittest.main()
-
-    def test_all_roles_have_specialist_depth_and_level_calibration(self):
+def test_all_roles_have_specialist_depth_and_level_calibration(self):
         index = json.loads((OVERLAY / "references/role-specialization-index.json").read_text())
         self.assertEqual(35, len(index["roles"]))
         self.assertEqual("PROHIBITED", index["generic_role_fallback"])
@@ -104,3 +100,6 @@ if __name__ == "__main__":
             self.assertGreaterEqual(len(__import__("re").findall(r"https?://", knowledge)), 2, role["role_id"])
             self.assertGreater(len(workflow), 250, role["role_id"])
             self.assertNotRegex(knowledge, r"(?i)generic role fallback|general model knowledge is a source")
+
+if __name__ == "__main__":
+    unittest.main()

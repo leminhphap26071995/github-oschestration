@@ -12,6 +12,6 @@ ChatGPT-native Plugin Creator is the default live-publication route. Recover exa
 
 Use the sanitized package pipeline in `leminhphap26071995/github-oschestration` only when a concrete ChatGPT host limitation prevents local archive assembly/handoff or the native Plugin Creator path is unavailable. The fallback builds a complete ChatGPT-only ZIP, checksum and source-bound handoff metadata. ChatGPT remains responsible for invoking Plugin Creator after retrieving the artifact whenever the native update action is available. GitHub Actions/releases do not publish the live plugin.
 
-` .upw-overlay-files.json` is the explicit allowlist for the partial overlay and currently contains only `plugin.json`; therefore `plugin/package_overlay.py` produces a manifest-only regression artifact, not a complete or uploadable plugin archive. Never treat that artifact as a release package.
+`.upw-overlay-files.json` is the explicit allowlist for the partial overlay and currently contains only `plugin.json`; therefore `plugin/package_overlay.py` produces a manifest-only regression artifact, not a complete or uploadable plugin archive. Never treat that artifact as a release package.
 
 Owner UI action is limited to demonstrable owner-exclusive consent/account/device operations. Do not ask the owner to perform routine packaging, upload or verification while an AI-owned route is available.
