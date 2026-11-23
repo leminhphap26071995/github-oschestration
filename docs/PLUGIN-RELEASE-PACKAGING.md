@@ -6,7 +6,7 @@ This repository builds the **ChatGPT Plugin Creator** package only. Codex, Claud
 
 The canonical source remains `leminhphap-improvement/ai-workflow-archtiecture`. The public repository contains a sanitized, versioned copy of the ChatGPT overlay and packaging tests. The Plugin Creator backend remains the live release authority.
 
-## UPW 0.1.172 specialist payload
+## UPW 0.1.173 specialist payload
 
 - ChatGPT root manifest: `plugin.json`.
 - ChatGPT onboarding: `skills/chatgpt-runtime-onboarding/SKILL.md`.

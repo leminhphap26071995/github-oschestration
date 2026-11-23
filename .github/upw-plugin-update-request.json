@@ -4,18 +4,21 @@
   "requested_by": "repository-owner",
   "consumer": "chatgpt",
   "plugin_id": "plugins_6adcacd0c4988191a4f3d33a5bec0d29",
-  "expected_release_id": "pluginrel_6b0448ac651c8191b1c5e96069f90aba",
-  "current_version": "0.1.171",
-  "target_version": "0.1.172",
+  "expected_release_id": "pluginrel_6b04694129688191961486d2dcf16ddd",
+  "current_version": "0.1.172",
+  "target_version": "0.1.173",
   "source_repository": "leminhphap-improvement/ai-workflow-archtiecture",
-  "source_commit_sha": "2472aeedae3ec699ee729b0de2438138eaa63bb7",
+  "source_commit_sha": "7bd91e8a83a112425f3ef6bb79c161c85afc1b06",
   "expected_default_prompt_count": 48,
   "expected_role_count": 35,
   "expected_role_artifact_count": 140,
-  "delete_paths": [],
+  "delete_paths": [
+    ".agent-plugin/plugin.json",
+    ".codex-plugin/plugin.json"
+  ],
   "chatgpt_native_attempted": true,
   "fallback_reason": "CHATGPT_HOST_CANNOT_PACKAGE_COMPLETE_OVERLAY",
   "chatgpt_native_blocker": "ChatGPT has no supported local packaging route for the connector-only 203-file overlay in this host. Plugin Creator archive retrieval is not mountable into the execution filesystem, and the private package_overlay.py creates only a manifest regression artifact. Use the sanitized GitHub package builder for the complete archive; ChatGPT remains responsible for Plugin Creator publication and readback.",
-  "request_revision": 2,
-  "build_request_reason": "Owner-authorized fallback package build after verified ChatGPT host packaging limitation; ChatGPT remains responsible for live Plugin Creator publication."
+  "request_revision": 3,
+  "build_request_reason": "Owner-authorized fallback package build; exact stale CLI-only paths are removed through Plugin Creator delete_paths."
 }
