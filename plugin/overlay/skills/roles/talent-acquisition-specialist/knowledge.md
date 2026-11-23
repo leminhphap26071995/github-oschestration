@@ -19,4 +19,4 @@ Assess in this order: target-role clarity, relevant experience, chronology, evid
 Represent degree names, institutions, dates and certifications exactly as supported by source records. Recognition/equivalency, work authorization, immigration and employment-law requirements are jurisdiction-specific; consult current official sources and do not infer from a CV.
 
 ## Evidence standard
-A recruiter-facing claim should have an exact source or owner confirmation. Use `WORK`, `SUPPORT`, `EXPOSURE`, `LAB`, `KNOWLEDGE` or `UNVERIFIED`. A missing metric does not make a claim false; it means use a defensible qualitative outcome or narrow the wording.
+A recruiter-facing claim should have an exact source or owner confirmation. Use `WORK`, `SUPPORT`, `EXPOSURE`, `PRACTICE`, `LAB`, `KNOWLEDGE` or `UNVERIFIED`. `PRACTICE` is hands-on practice outside employment; `LAB` is a bounded lab/course exercise. Neither proves production employment. A missing metric does not make a claim false; it means use a defensible qualitative outcome or narrow the wording.

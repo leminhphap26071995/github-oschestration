@@ -80,6 +80,63 @@ class UpwPluginRolePayloadTests(unittest.TestCase):
             errors = validate(copy)
             self.assertTrue(any("MISSING_ROLE_ARTIFACT:talent-acquisition-specialist:" in error for error in errors))
 
+
+    def test_role_artifacts_are_distinct_for_every_registered_role(self):
+        base = json.loads((OVERLAY / "references/role-registry.json").read_text())
+        ext = json.loads((OVERLAY / "references/role-registry.extensions.json").read_text())
+        contents = {name: [] for name in ARTIFACTS}
+        for role in base["roles"]:
+            for rel in role["bundle"]:
+                contents[Path(rel).name].append((OVERLAY / rel).read_text(encoding="utf-8"))
+        for role in ext["roles"]:
+            for artifact in ARTIFACTS:
+                contents[artifact].append((OVERLAY / role["bundle"] / artifact).read_text(encoding="utf-8"))
+        for artifact, values in contents.items():
+            self.assertEqual(35, len(values), artifact)
+            self.assertEqual(35, len(set(values)), artifact)
+
+    def test_cv_route_has_conditional_ba_and_interview_trainer(self):
+        route = json.loads((OVERLAY / "references/domain-routing.json").read_text())["domains"]["cv_professional_review"]
+        selection = route["role_selection"]
+        self.assertIn("ba", selection["supporting_roles"])
+        self.assertIn("Business Analyst is conditional", selection["selection_rule"])
+        self.assertIn("Interview Trainer is conditional only", selection["selection_rule"])
+        self.assertTrue(any("source conflicts" in rule.lower() for rule in route["special_rules"]))
+        registry = json.loads((OVERLAY / "references/role-registry.json").read_text())
+        extension = json.loads((OVERLAY / "references/role-registry.extensions.json").read_text())
+        ids = {r["role"] for r in registry["roles"]} | {r["role_id"] for r in extension["roles"]}
+        self.assertTrue(set(selection["primary_roles"] + selection["supporting_roles"] + selection["required_supporting_roles"]).issubset(ids))
+
+    def test_cv_source_conflict_and_provenance_contract_is_candidate_agnostic(self):
+        skill = (OVERLAY / "skills/cv-update-lifecycle/SKILL.md").read_text(encoding="utf-8")
+        contract = (OVERLAY / "references/cv-update-contract.md").read_text(encoding="utf-8")
+        self.assertIn("Source authority and conflict resolution", skill)
+        self.assertIn("source_conflict_id", contract)
+        self.assertIn("tenure_assessment", contract)
+        self.assertIn("PRACTICE", skill)
+        for forbidden in ("Symphony", "Cargo Note", "Flamingo", "Trustify", "Guardian"):
+            self.assertNotIn(forbidden, skill)
+            self.assertNotIn(forbidden, contract)
+        for role in ("talent-acquisition-specialist", "technical-hiring-manager", "interview-trainer"):
+            content = "\\n".join((OVERLAY / "skills/roles" / role / name).read_text(encoding="utf-8") for name in ("SKILL.md", "knowledge.md", "workflow.md"))
+            self.assertIn("PRACTICE", content, role)
+            self.assertIn("EXPOSURE", content, role)
+
+    def test_source_blob_manifest_is_exact_and_fails_on_mutation(self):
+        meta = json.loads((ROOT / "plugin/source-sync.json").read_text(encoding="utf-8"))
+        self.assertEqual(200, meta["chatgpt_payload_file_count"])
+        self.assertEqual(200, len(meta["source_blob_shas"]))
+        with tempfile.TemporaryDirectory() as temp:
+            parent = Path(temp)
+            copy = parent / "overlay"
+            shutil.copytree(OVERLAY, copy)
+            shutil.copy2(ROOT / "plugin/source-sync.json", parent / "source-sync.json")
+            shutil.copy2(ROOT / "plugin/live-default-prompt.json", parent / "live-default-prompt.json")
+            target = copy / "skills/cv-update-lifecycle/SKILL.md"
+            target.write_text(target.read_text(encoding="utf-8") + "\\nMUTATION\\n", encoding="utf-8")
+            errors = validate(copy)
+            self.assertTrue(any("SOURCE_BLOB_SHA_MISMATCH:plugin/overlay/skills/cv-update-lifecycle/SKILL.md" == e for e in errors))
+
     def test_default_prompt_matches_live_baseline(self):
         manifest = json.loads((OVERLAY / "plugin.json").read_text())
         baseline = json.loads((ROOT / "plugin/live-default-prompt.json").read_text())

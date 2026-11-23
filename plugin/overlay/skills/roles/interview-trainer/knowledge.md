@@ -26,7 +26,7 @@ A MUST can be high hiring importance but still require only an honest gap explan
 Never delay applying or attending an interview to finish generic training unless a verified hard eligibility gate or explicit employer deadline makes that necessary.
 
 ## Response construction
-Use a concise answer structure: direct claim -> concrete context -> personal action/decision -> technical mechanism -> outcome/evidence -> trade-off/limitation -> likely follow-up. If no WORK evidence exists, state the real provenance (SUPPORT/LAB/KNOWLEDGE) and do not disguise it. Use role responsibilities to anticipate scenarios, not to fabricate past achievements.
+Use a concise answer structure: direct claim -> concrete context -> personal action/decision -> technical mechanism -> outcome/evidence -> trade-off/limitation -> likely follow-up. If no WORK evidence exists, state the real provenance (SUPPORT/EXPOSURE/PRACTICE/LAB/KNOWLEDGE) and do not disguise it. Never turn a disputed or UNVERIFIED CV claim into a scripted fact. Use role responsibilities to anticipate scenarios, not to fabricate past achievements.
 
 ## Failure patterns and counterexamples
 - JD says “preferred GCP”: not a hard gate by default.

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Fail-closed validation for the ChatGPT-only UPW plugin overlay."""
+import hashlib
 import json
 from pathlib import Path, PurePosixPath
 
@@ -61,6 +62,29 @@ def validate(root: Path):
     if any(x is None for x in (meta, baseline, manifest, base, ext, routing, catalog_ext)):
         return errors
 
+    if not isinstance(meta.get("source_ref"), str) or not meta.get("source_ref"):
+        errors.append("SOURCE_REF_MISSING")
+    source_commit = meta.get("source_commit_sha")
+    if not isinstance(source_commit, str) or len(source_commit) != 40:
+        errors.append("SOURCE_COMMIT_SHA_INVALID")
+    source_blobs = meta.get("source_blob_shas", {})
+    if not isinstance(source_blobs, dict) or meta.get("chatgpt_payload_file_count") != len(source_blobs):
+        errors.append("SOURCE_BLOB_MANIFEST_COUNT_MISMATCH")
+    else:
+        prefix = "plugin/overlay/"
+        for rel, expected_sha in source_blobs.items():
+            if not isinstance(rel, str) or not rel.startswith(prefix):
+                errors.append(f"SOURCE_BLOB_PATH_OUTSIDE_CHATGPT_OVERLAY:{rel}")
+                continue
+            target = root / rel[len(prefix):]
+            if not target.is_file():
+                errors.append(f"SOURCE_BLOB_FILE_MISSING:{rel}")
+                continue
+            payload = target.read_bytes()
+            actual_sha = hashlib.sha1(b"blob " + str(len(payload)).encode() + bytes([0]) + payload).hexdigest()
+            if actual_sha != expected_sha:
+                errors.append(f"SOURCE_BLOB_SHA_MISMATCH:{rel}")
+
     if meta.get("consumer") != "chatgpt":
         errors.append("CONSUMER_MUST_BE_CHATGPT")
     if not isinstance(manifest.get("version"), str) or manifest.get("version") != meta.get("plugin_version"):
@@ -92,6 +116,7 @@ def validate(root: Path):
         errors.append("ROLE_EXTENSION_PARENT_MISMATCH")
 
     role_ids = set()
+    artifact_contents = {name: [] for name in ROLE_ARTIFACTS}
     base_roles = base.get("roles", [])
     ext_roles = ext.get("roles", [])
     if len(base_roles) != meta.get("base_role_count"):
@@ -115,6 +140,8 @@ def validate(root: Path):
                 errors.append(f"MISSING_ROLE_ARTIFACT:{role_id}:{rel}")
             elif (root / rel).stat().st_size < 100:
                 errors.append(f"ROLE_ARTIFACT_TOO_SMALL:{role_id}:{rel}")
+            else:
+                artifact_contents[PurePosixPath(rel).name].append((role_id, (root / rel).read_text(encoding="utf-8")))
 
     for role in ext_roles:
         role_id = role.get("role_id")
@@ -131,6 +158,13 @@ def validate(root: Path):
                 errors.append(f"MISSING_ROLE_ARTIFACT:{role_id}:{rel}")
             elif (root / rel).stat().st_size < 100:
                 errors.append(f"ROLE_ARTIFACT_TOO_SMALL:{role_id}:{rel}")
+            else:
+                artifact_contents[artifact].append((role_id, (root / rel).read_text(encoding="utf-8")))
+
+    for artifact, entries in artifact_contents.items():
+        contents = [content for _, content in entries]
+        if len(set(contents)) != len(contents):
+            errors.append(f"ROLE_ARTIFACT_CONTENT_NOT_SPECIALIZED:{artifact}")
 
     if len(role_ids) != meta.get("unique_role_count"):
         errors.append("UNIQUE_ROLE_COUNT_MISMATCH")
@@ -175,6 +209,19 @@ def validate(root: Path):
         errors.append("CV_ROUTE_TECHNICAL_HIRING_MANAGER_REQUIRED_SUPPORT_MISSING")
     if "technical-hiring-manager" not in selection.get("required_supporting_role_conditions", {}):
         errors.append("CV_ROUTE_TECHNICAL_SUPPORT_CONDITION_MISSING")
+
+    route_roles = set(selection.get("primary_roles", []) + selection.get("supporting_roles", []) + selection.get("required_supporting_roles", []))
+    for role_id in sorted(route_roles - role_ids):
+        errors.append(f"CV_ROUTE_ROLE_NOT_REGISTERED:{role_id}")
+    if "ba" not in selection.get("supporting_roles", []):
+        errors.append("CV_ROUTE_BUSINESS_ANALYST_CONDITIONAL_SUPPORT_MISSING")
+    selection_rule = selection.get("selection_rule", "")
+    if "Business Analyst is conditional" not in selection_rule:
+        errors.append("CV_ROUTE_BUSINESS_ANALYST_CONDITION_MISSING")
+    if "Interview Trainer is conditional only" not in selection_rule:
+        errors.append("CV_ROUTE_INTERVIEW_TRAINER_CONDITION_MISSING")
+    if not any("source conflicts" in rule.lower() for rule in cv_route.get("special_rules", [])):
+        errors.append("CV_ROUTE_SOURCE_CONFLICT_RULE_MISSING")
     role_context_path = root / "skills/role-context-loading/SKILL.md"
     if role_context_path.is_file():
         role_context = role_context_path.read_text(encoding="utf-8")
@@ -191,6 +238,22 @@ def validate(root: Path):
         errors.append("CV_LIFECYCLE_TECHNICAL_SUPPORT_NOT_EXPLICIT")
     if "SINGLE_SESSION_CROSSCHECK" not in cv_skill:
         errors.append("CV_LIFECYCLE_CROSSCHECK_LABEL_MISSING")
+
+    for token in ("Source authority and conflict resolution", "PRACTICE", "Business Analyst", "renderer", "candidate-specific"):
+        if token.lower() not in cv_skill.lower():
+            errors.append(f"CV_LIFECYCLE_CONTRACT_TOKEN_MISSING:{token}")
+    cv_contract = (root / "references/cv-update-contract.md").read_text(encoding="utf-8")
+    for token in ("source_conflict_id", "tenure_assessment", "PRACTICE", "candidate-specific"):
+        if token.lower() not in cv_contract.lower():
+            errors.append(f"CV_CONTRACT_TOKEN_MISSING:{token}")
+    for forbidden_fact in ("Symphony", "Cargo Note", "Flamingo", "Trustify", "Guardian"):
+        if forbidden_fact.lower() in cv_skill.lower() or forbidden_fact.lower() in cv_contract.lower():
+            errors.append(f"CANDIDATE_SPECIFIC_FACT_IN_GENERIC_CV_CONTRACT:{forbidden_fact}")
+    for role_id in ("talent-acquisition-specialist", "technical-hiring-manager", "interview-trainer"):
+        role_text = "\\n".join((root / "skills/roles" / role_id / name).read_text(encoding="utf-8") for name in ("SKILL.md", "knowledge.md", "workflow.md"))
+        for token in ("PRACTICE", "EXPOSURE"):
+            if token.lower() not in role_text.lower():
+                errors.append(f"CV_ROLE_PROVENANCE_TOKEN_MISSING:{role_id}:{token}")
 
     return errors
 

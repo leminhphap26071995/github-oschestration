@@ -2,15 +2,16 @@
   "approved": true,
   "requested_by": "repository-owner",
   "plugin_id": "plugins_6adcacd0c4988191a4f3d33a5bec0d29",
-  "expected_release_id": "pluginrel_6b040ea616b88191be4d5d94b3b0df07",
-  "current_version": "0.1.170",
-  "target_version": "0.1.171",
+  "expected_release_id": "pluginrel_6b0448ac651c8191b1c5e96069f90aba",
+  "current_version": "0.1.171",
+  "target_version": "0.1.172",
   "consumer": "chatgpt",
   "source_repository": "leminhphap-improvement/ai-workflow-archtiecture",
-  "source_commit_sha": "7e458401c81472986f9539c669aa9ba7a2491bb8",
+  "source_commit_sha": "655ef46659accf1f18e259eb9596e13b30a6547d",
   "expected_role_count": 35,
   "expected_role_artifact_count": 140,
   "expected_default_prompt_count": 48,
   "delete_paths": [],
-  "request_revision": 17
+  "request_revision": 18,
+  "source_ref": "feat/cv-source-conflict-contract"
 }
