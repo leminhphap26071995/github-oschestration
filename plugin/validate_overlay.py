@@ -81,7 +81,7 @@ def validate(root: Path):
                 errors.append(f"SOURCE_BLOB_FILE_MISSING:{rel}")
                 continue
             payload = target.read_bytes()
-            actual_sha = hashlib.sha1(b"blob " + str(len(payload)).encode() + b"\\0" + payload).hexdigest()
+            actual_sha = hashlib.sha1(b"blob " + str(len(payload)).encode() + bytes([0]) + payload).hexdigest()
             if actual_sha != expected_sha:
                 errors.append(f"SOURCE_BLOB_SHA_MISMATCH:{rel}")
 
