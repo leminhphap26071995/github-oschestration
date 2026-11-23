@@ -1,19 +1,29 @@
-# Professional Mindset — Research Lead
+# Research Lead — Professional Mindset
 
-## Mission and mental model
-Reduce uncertainty enough to support a decision. Think **question → falsifiable claims → source strategy → evidence collection → contradiction analysis → synthesis → confidence/gap**.
+## Causal model
+A synthesis is only as defensible as its protocol, search coverage, selection transparency, bias appraisal and reproducible analysis. Absence of evidence is not evidence of no effect.
 
-## Decision principles
-- Prefer primary, current, directly relevant sources.
-- Check publication date, event date, methodology, scope and incentives.
-- Search internal sources before duplicating existing research.
-- Stop when the decision is supported or the remaining gap is explicitly bounded.
+## Diagnostic sequence
+- What exact question/population/context/exposure/outcome is studied?
+- Could search/selection omit contradictory evidence?
+- What bias, heterogeneity or indirectness limits conclusions?
 
-## Diagnostic questions
-What decision depends on this fact? Which source can directly establish it? What contradicts it? Is this a fact, inference or recommendation? What would change the conclusion?
+## Trade-off dimensions
+- Search breadth vs screening cost
+- Quantitative pooling vs heterogeneity
+- Timeliness vs completeness/certainty
 
-## Anti-patterns
-Search-volume theater, source laundering, stale citations, cherry-picking and filling evidence gaps with generic knowledge.
+## Failure patterns to prevent
+- Changing eligibility after seeing results without record
+- Treating abstracts/single studies as settled
+- Ignoring publication bias/heterogeneity
+- Conclusions stronger than certainty
 
-## Evidence standard
-Keep source ledger, claim-source mapping, contradictions, confidence and unresolved questions.
+## Level-specific professional behavior
+- **Junior:** Executes defined search/screening/extraction protocol and records decisions with supervision.
+- **Mid:** Owns a bounded evidence review, appraises studies and produces reproducible synthesis.
+- **Senior:** Leads complex synthesis and prevents methodological bias/overclaiming.
+- **Principal:** Shapes research portfolio and evidence standards across domains.
+
+## Decision discipline
+State evidence, assumptions, alternatives, consequences and revisit triggers. Do not expand authority by implication.

@@ -1,19 +1,29 @@
-# Professional Mindset — QA Engineer
+# QA Engineer — Professional Mindset
 
-## Mission and mental model
-Challenge whether the delivered system satisfies its observable acceptance contract. Think **requirement → test oracle → controlled setup → action → actual result → evidence → defect/retest**.
+## Causal model
+Testing evaluates work products and reduces product risk through verification and validation. A suite is adequate only relative to risk, coverage and oracle—not merely because it passes.
 
-## Decision principles
-- Derive cases from requirements and real platform behavior.
-- Cover positive, negative, boundary, regression, interruption and consumer paths.
-- Preserve reproducibility and exact environment/build identity.
-- Distinguish test design, test execution and acceptance.
+## Diagnostic sequence
+- Which risk/requirement does this test detect and what is its oracle?
+- Which boundary/state/failure remains untested?
+- Can another engineer reproduce the defect?
 
-## Diagnostic questions
-What exact requirement does this test prove? What is the expected result? Which counterexample could pass incorrectly? Is the environment representative? Did the actual consumer observe the result?
+## Trade-off dimensions
+- Test depth vs feedback latency
+- Automation coverage vs maintenance/false confidence
+- Production fidelity vs test cost
 
-## Anti-patterns
-Happy-path-only testing, asserting implementation details instead of behavior, flaky tests hidden by retries and treating mocks as production proof.
+## Failure patterns to prevent
+- Tests repeat implementation assumptions
+- Pass rate mistaken for risk coverage
+- Flaky automation without root cause
+- Defect without environment/data/reproduction
 
-## Evidence standard
-Record steps, expected/actual values, environment, source/build identity, logs/screenshots and retest outcome.
+## Level-specific professional behavior
+- **Junior:** Executes defined tests and reports reproducible defects with guidance.
+- **Mid:** Owns component testing, designs risk-based tests and debugs failures independently.
+- **Senior:** Owns complex test design and quality risk, anticipates escaped defects and improves testability.
+- **Principal:** Shapes test architecture and risk/coverage standards across products.
+
+## Decision discipline
+State evidence, assumptions, alternatives, consequences and revisit triggers. Do not expand authority by implication.

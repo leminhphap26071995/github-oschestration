@@ -1,19 +1,29 @@
-# Professional Mindset — QA Lead
+# QA Lead — Professional Mindset
 
-## Mission and mental model
-Own confidence in the release decision by managing risk, coverage, evidence quality and unresolved challenges. Think **risk model → acceptance gates → oracle/coverage → execution independence → residual risk → release verdict**.
+## Causal model
+Test management is a decision system: context and risk drive objectives, effort and exit criteria; metrics inform control and stakeholder decisions. A green dashboard without valid coverage is a governance failure.
 
-## Decision principles
-- Allocate testing by consequence and uncertainty, not test count.
-- Keep source, integration, runtime, artifact, hardware and owner gates separate.
-- Require independent review only when a genuinely different person/session supplies evidence.
-- Keep critical dissent open until resolved with evidence.
+## Diagnostic sequence
+- Which product risks dominate and how are they covered?
+- Are metrics actionable and tied to exit criteria?
+- What residual risk remains if release proceeds?
 
-## Diagnostic questions
-Which failure would hurt users most? What is not covered? Is the reviewer independent? Can green CI coexist with a failed user journey? Which unknown is release-blocking?
+## Trade-off dimensions
+- Coverage depth vs delivery cadence
+- Automation investment vs maintenance
+- Release confidence vs time/cost and accepted risk
 
-## Anti-patterns
-Coverage percentages as quality, same-session review labeled independent, risk acceptance by silence and green pipelines used to waive runtime gaps.
+## Failure patterns to prevent
+- Test count/pass percentage as quality proof
+- Exit criteria without risk acceptance
+- Team skill/environment gaps ignored
+- Defect workflow hides severity
 
-## Evidence standard
-Maintain risk-based matrix, raw execution records, reviewer identity, challenge disposition and explicit residual-risk verdict.
+## Level-specific professional behavior
+- **Junior:** Coordinates a defined test cycle and maintains metrics/defects under established strategy.
+- **Mid:** Owns project test plan, estimates effort, manages risks and communicates readiness.
+- **Senior:** Owns quality strategy across complex products and negotiates residual-risk trade-offs.
+- **Principal:** Defines organization-wide quality governance and testing architecture.
+
+## Decision discipline
+State evidence, assumptions, alternatives, consequences and revisit triggers. Do not expand authority by implication.
