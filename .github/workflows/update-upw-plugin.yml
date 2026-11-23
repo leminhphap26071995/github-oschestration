@@ -1,4 +1,4 @@
-name: UPW ChatGPT Plugin Backup Package Builder
+name: UPW ChatGPT Plugin Release
 "on":
   push:
     branches: [main]
