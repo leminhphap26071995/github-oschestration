@@ -179,7 +179,7 @@ def validate(root: Path):
         if rel.endswith("references/codex-skill-mirror.json"):
             continue
         data = path.read_bytes()
-        actual[rel] = hashlib.sha1(b"blob " + str(len(data)).encode() + b"\\0" + data).hexdigest()
+        actual[rel] = hashlib.sha1(b"blob " + str(len(data)).encode() + b"\0" + data).hexdigest()
     if set(actual) != set(expected):
         errors.append("SOURCE_BLOB_PATH_SET_MISMATCH")
     elif actual != expected:
