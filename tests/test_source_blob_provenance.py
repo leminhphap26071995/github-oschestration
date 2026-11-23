@@ -28,7 +28,7 @@ class SourceBlobProvenanceTests(unittest.TestCase):
         for source_path, expected_sha in expected.items():
             relative = source_path.removeprefix("plugin/overlay/")
             data = (OVERLAY / relative).read_bytes()
-            actual_sha = hashlib.sha1(f"blob {len(data)}\\0".encode("utf-8") + data).hexdigest()
+            actual_sha = hashlib.sha1(f"blob {len(data)}\0".encode("utf-8") + data).hexdigest()
             self.assertEqual(expected_sha, actual_sha, source_path)
 
 
