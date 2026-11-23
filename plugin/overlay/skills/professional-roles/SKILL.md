@@ -1,68 +1,41 @@
 ---
 name: professional-roles
-description: Principal-grade professional role registry, specialist evidence, cross-role challenge and concise human communication.
+description: Source-backed specialist registry, narrow occupational scope and level-calibrated decision authority.
 ---
 # Professional Role Registry
 
-The universal guard and workflow contract govern all roles. Select a single accountable primary and add specialists only for real disciplines, risks or dependencies. A role name is expertise context, not an independent worker.
+## Mission
+Select and activate the exact professional discipline required by the deliverables. A role is a narrow occupational method contract, not a persona, generic expert prompt or independent worker.
 
-## Principal-grade professional standard
-Every role should reason at Principal level for its discipline. This is a behavior standard, not a claim of human credentials.
+## Mandatory loading
+1. Resolve the role ID from the base registry plus additive extension registry.
+2. Read `references/role-specialization-index.json`, `references/professional-level-contract.md` and `references/role-specialization-quality-gate.md`.
+3. Load the complete role `SKILL.md`, `mindset.md`, `knowledge.md` and `workflow.md`.
+4. Verify scope, exclusions, decision rights, source anchors and level behaviors. If the bundle fails, create a task-scoped specialist profile; never substitute a generic role.
+5. Select one accountable primary. Add supporting specialists only for separate deliverables, risks or decision rights.
 
-- **Senior:** owns a bounded system or workstream, anticipates consequences within that scope, improves quality and operability, and mentors peers.
-- **Principal:** shapes direction across systems/teams, resolves ambiguous cross-domain trade-offs, anticipates second- and third-order effects, establishes reusable standards, creates leverage, and develops senior engineers/leads.
+## Professional depth
+- `SKILL.md`: occupational identity, narrow scope, exclusions, decision rights, outputs and acceptance.
+- `mindset.md`: profession-specific causal model, diagnostics, trade-offs, failure patterns and Junior/Mid/Senior/Principal behaviors.
+- `knowledge.md`: only discipline-specific methods, standards, tools, invariants, technical detail and authoritative sources.
+- `workflow.md`: that profession's own intake-to-verification practice and handoff.
 
-Principal judgment is not verbosity or overengineering. It means making the few high-impact decisions that protect the full outcome and lifecycle.
+General model knowledge may generate search terms only. It cannot replace role knowledge, authoritative sources or project evidence. Missing specialist knowledge remains UNKNOWN. Shared cross-role policy belongs in the universal core, not copied into specialist knowledge.
 
-## Cross-role review and challenge
-- PM validates human outcome, value, priority, scope and acceptance.
-- Tech Lead validates technical feasibility, architecture, interfaces and operational consequences.
-- Specialist executors validate domain correctness and must independently compare PM/Tech Lead decisions with their own authoritative domain evidence.
-- If a lead's interpretation conflicts with the human goal or specialist evidence, explain the contradiction, impact and viable alternative. Ask Tech Lead for unresolved technical decisions and PM for value/scope decisions. Do not silently implement a material assumption.
-- PM and Tech Lead must invite dissent, answer challenges with evidence and revise decisions when warranted. Role hierarchy never outranks the human expectation or verified domain facts.
+## Level calibration
+Reasoning quality and seniority authority are separate:
+- Junior: guided execution of bounded work; follow approved methods and escalate unknowns.
+- Mid: independent delivery and troubleshooting of a bounded component/workstream.
+- Senior: ownership of ambiguous problems, defended trade-offs, prevention, improvement and peer development.
+- Principal: cross-system direction, second/third-order trade-offs, reusable standards and systemic leverage.
+Every role must express these behaviors through its own work products and decision rights. The shared ladder does not grant authority.
 
-## Failure and context integrity
-After the first failed engineering attempt, re-anchor to the original human expectation and all MUST criteria before retry. Before a second attempt or after a second failure of the same method, fully revalidate the goal, source, assumptions and evidence route; change method. Logs and errors are observations, not replacement goals. Never continue symptom chasing that breaks context.
+## Cross-role challenge
+- PM validates value, scope and project acceptance.
+- Tech Lead validates team-level technical coherence and integration.
+- Architects validate structural decisions within their scope.
+- Domain specialists challenge decisions against their own source-backed methods.
+- If evidence conflicts with a lead's interpretation, explain the contradiction, impact and viable alternative; escalate to the decision owner.
 
-## Communication
-Ordinary responses should be concise, structured and natural human communication. Lead with the answer/decision, include only material reasons, evidence, risk and next action. Do not expose hidden reasoning, narrate agent orchestration, or force internal status labels/JSON into a normal reply. Use formal receipts only when the user or consuming workflow needs them.
-
-## Mandatory four-artifact professional bundle
-Every registered role has one canonical bundle:
-1. `SKILL.md` — identity, mission, scope, decision rights and outputs.
-2. `mindset.md` — causal models, diagnostic questions, trade-offs, anti-patterns and evidence standards.
-3. `knowledge.md` — specialist methods, standards, tools, domain invariants and failure patterns.
-4. `workflow.md` — role-specific gates from intake through verification and handoff.
-
-A genuine professional mindset explains how the profession reasons about its causal system. Generic motivational prose or a generic engineering checklist is not specialist knowledge.
-
-## Outcome-derived specialist routing
-Use `skills/professional-capability-discovery/SKILL.md` and the capability catalog to derive disciplines from deliverables. The registry is a reusable index, not a closed universe. Create task-scoped bundles for missing specialties before implementation. Do not route domain work to PM/Tech Lead as a substitute for a specialist.
-
-## AI/ML role boundaries
-- `ai-native-engineer`: Principal AI/ML systems direction across predictive ML, GenAI, MLOps/LLMOps, evaluation, context engineering, production operations and governance.
-- `mlops-engineer`: implementation of reproducible data/training/inference pipelines, lineage, deployment, monitoring, rollback and retraining.
-- `data-ai-engineer`: data, model/provider behavior, inference and domain evaluation implementation.
-- `ai-native-tooling-engineer`: discovery, evaluation, installation and maintenance of AI-native skills, tools, plugins and agent integrations.
-These roles are complementary. Do not conflate AI system engineering with installing AI developer tools.
-
-## Existing specialist and causal-layer roles
-- Runtime symptoms, timeouts, telemetry and incident recovery: `sre-engineer`.
-- Backend/API routing, retries, cancellation and state: `backend-engineer`.
-- Module/interface/lifecycle architecture: `software-architect`.
-- Acceptance/regression design: `qa-engineer`.
-- CI/build/release/quota/artifacts: `devops-engineer`.
-- Trust/permission/security: `security-reviewer`.
-- Browser/Chromium extension lifecycle: `browser-extension-engineer`.
-- Greenfield game/game-system creation: `game-developer`.
-- Existing closed-game reverse engineering/modification: `game-modifier`.
-- Missing/novel domain-specialist discovery: `professional-capability-architect`.
-
-## Evidence and independence
-A role bundle is a method contract, not proof of mastery. Preserve source references, edition/date/jurisdiction, competency provenance and actual execution evidence. Same-session critique is not independent QA. Never claim a worker was spawned because a role was selected.
-
-## Additive AI tooling specialist registry
-When present, load the additive specialist registry and merge by canonical role ID. Every specialist must have the four required artifacts. For AI tooling lifecycle use `ai-native-tooling-engineer`; for MCP use `mcp-integration-engineer`; for VS Code host/runtime use `vscode-extension-platform-engineer`; for OmniRoute use `omniroute-model-routing-engineer`. These roles do not gain permissions from their labels.
-
-## No general-knowledge substitution
-Specialists must use their `knowledge.md` and current authoritative sources. General model knowledge can generate hypotheses and search terms only. If a required source is missing or unavailable, mark UNKNOWN and research or ask for it.
+## Independence and evidence
+A role bundle is a method contract, not proof of professional credentials, mastery or a separate invocation. Same-session critique is not independent QA. Preserve source, edition, jurisdiction, provenance and execution evidence. Never claim a worker was spawned because a role was selected.

@@ -39,36 +39,31 @@ Use role-specific skills: `mcp-integration-lifecycle`, `vscode-extension-mainten
 - A package installed in npm is not necessarily connected to a VS Code Agent runtime. A connected MCP server is not necessarily invoked. Verify every boundary.
 - Prefer a supported native integration over arbitrary shell scripts. If a command is required, inspect exact docs and pin a version.
 
-## UPW live-plugin update vs GitHub CI routing
+## UPW live-plugin update routing — ChatGPT primary, GitHub build backup
 
-Treat the live ChatGPT plugin and the GitHub source/release as two distinct delivery surfaces. GitHub is the versioned technical source; Plugin Creator is authoritative for the installed/live ChatGPT plugin and current release.
+### Route A — ChatGPT-native default
+1. Recover exact plugin ID, current release ID/version and live file inventory from Plugin Creator.
+2. Inspect canonical ChatGPT source and exact branch/commit; keep ChatGPT and CLI payloads separate.
+3. Make authorized source changes and prepare the changed ChatGPT payload in the active ChatGPT host.
+4. Build the overlay locally when the host supports a reliable archive handoff.
+5. Call Plugin Creator update with the exact current release ID; preserve rollback and delete-path semantics.
+6. Read back new release ID/version and every changed file. Verify fresh ChatGPT runtime loading separately.
 
-### Route A — direct Plugin Creator update (default for live plugin changes)
-Use the native Plugin Creator update operation when the requested change affects UPW plugin skills, prompts, manifests, references or support files and does not require a repository-built artifact:
-1. Recover the exact plugin ID and current release ID/version from Plugin Creator.
-2. Read the current plugin files/archive and inspect the exact paths to change.
-3. Update and commit the canonical GitHub source first, preserving source provenance and synchronized manifest versions.
-4. Build a valid overlay archive containing the root `plugin.json` plus every changed file and required manifest. Omitted files remain intact; do not delete files unless explicitly intended.
-5. Call Plugin Creator update directly with the host-uploaded archive and the exact current release ID as the optimistic concurrency guard. This operation is the publication step; do not route through GitHub Actions merely to update the live plugin.
-6. Read back the new release ID/version and every changed file from Plugin Creator. Verify manifests, skill contents and plugin identity.
+### Route B — GitHub backup builder, only when ChatGPT cannot build/hand off
+Use this route only after a concrete host limitation prevents ChatGPT from assembling or handing off the complete archive, or the native Plugin Creator path is unavailable. Record the exact blocker; convenience or routine CI is not sufficient.
+1. Keep ChatGPT as task owner and primary executor; commit canonical sanitized ChatGPT source to its authoritative repository.
+2. Update the owner-approved source-sync and fallback request with exact source SHA, current release ID/version, target version and blocker evidence.
+3. Let the scoped automatic GitHub workflow build and validate the complete ChatGPT-only ZIP, checksum and immutable handoff metadata.
+4. Retrieve the exact artifact and verify source SHA, plugin ID, expected release ID, target version, role/artifact counts and archive digest.
+5. ChatGPT then invokes Plugin Creator with that exact artifact whenever the native update tool remains available.
+6. If Plugin Creator itself requires owner-only UI consent/account/device action, stop at that boundary and request only that action; do not hand off routine build, upload or verification.
 
-### Route B — GitHub Actions / CI (only when repository work requires it)
-Use CI when at least one is true:
-- The changed source includes workflow/build/test/package/release contracts that require the repository's defined CI gates.
-- The owner explicitly requests a GitHub release/artifact or a repository-owned release pipeline.
-- A source-defined automatic release workflow is the actual authorized publication mechanism and its trigger/consumer behavior is verified.
+### Separation and acceptance
+- GitHub is the backup builder/source mirror, not the default executor and not the live publisher.
+- A GitHub Action, ZIP, release or artifact does not mutate the live Plugin Creator plugin.
+- Keep source commit, package digest, Plugin Creator release/readback and fresh-runtime activation as separate evidence.
+- Never claim completion without live Plugin Creator readback and consumer verification.
 
-CI validates/builds/releases GitHub repository artifacts. It does NOT, by itself, update the live ChatGPT plugin. If CI produces the archive, use that artifact as input to the native Plugin Creator update unless an independently verified source-defined automation already performs that exact live update. Never assume a GitHub release equals a Plugin Creator release.
-
-### Owner manual action — exceptional host boundary only
-Do not ask the owner to upload, click Publish, run CI, copy files or perform routine plugin maintenance while an authorized native Plugin Creator route is available. First exhaust the direct tool route and any supported host-uploaded archive path. Request owner action only for a demonstrated owner-exclusive consent/account/device operation or a hard host boundary that the connected tools cannot cross. Record the exact failed capability and preserve AI ownership; a blocker does not transfer the work to the owner.
-
-### Failure classification
-- Plugin Creator archive/manifest validation error: repair the archive and retry after re-reading current release; it is not CI quota exhaustion.
-- Plugin Creator access/permission error: inspect plugin scope and editor/owner authorization; do not switch to CI unless the requirement is specifically a GitHub artifact.
-- Plugin Creator daily quota exhaustion: only an explicit provider quota signal permits the documented quota fallback. CI is not automatically a substitute for publishing the live plugin.
-- GitHub Actions failure: classify from exact run-scoped provider evidence; do not infer quota from missing logs, runner_id=0 or zero steps.
-- After any successful update, verify the new live release and changed-file readback separately from GitHub commit/CI evidence.
 ## Playwright
 For coding-agent browser workflows, prefer official Playwright CLI + Agent Skill; import the official skill into the appropriate runtime resource catalog as well as installing the CLI. Use Playwright MCP when persistent browser tools are required. Verify official package metadata, pin the exact version, request host approval, connect, check browser tools and run a harmless local-page smoke test.
 

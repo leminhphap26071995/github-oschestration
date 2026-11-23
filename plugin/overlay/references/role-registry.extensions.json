@@ -8,7 +8,7 @@
     "knowledge.md",
     "workflow.md"
   ],
-  "knowledge_policy": "Use the role's knowledge.md and current authoritative sources. General model knowledge may guide discovery but is never evidence and cannot replace missing specialist knowledge. If a source cannot be verified, mark UNKNOWN.",
+  "knowledge_policy": "Every role bundle must be narrow and domain-specific. knowledge.md contains source-backed methods, standards, tools, invariants and failure patterns for that profession only. General model knowledge is discovery-only, never domain evidence or fallback. If authoritative sources or exact version context are missing, record UNKNOWN. Every role must instantiate Junior/Mid/Senior/Principal behavior in mindset.md and pass references/role-specialization-quality-gate.md.",
   "roles": [
     {
       "role_id": "ai-native-tooling-engineer",

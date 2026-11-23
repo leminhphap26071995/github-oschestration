@@ -64,6 +64,8 @@ Keep source/static/unit/regression, hosted exact-SHA CI, build/artifact integrit
 
 ## Goal-driven GitHub source-to-Actions loop
 
+**Identity-first / Git Tree-first invariant:** lock the exact repository, ref, commit and root Git Tree before interpreting workflow-run, job, runner, check-run, log or artifact identifiers. Provider IDs are downstream correlations, never the source identity.
+
 For a GitHub-backed engineering goal, keep source navigation, edits and Actions observation in one continuous loop rather than treating a commit or green run as delivery:
 
 1. **Recover and lock:** recover the immutable goal, all MUST criteria, repo/branch, exact current HEAD, project gate, workflow policy and previous attempts.

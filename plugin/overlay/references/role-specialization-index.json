@@ -1,0 +1,334 @@
+{
+  "schema_version": 1,
+  "registry_sources": [
+    "references/role-registry.json",
+    "references/role-registry.extensions.json"
+  ],
+  "required_artifacts": [
+    "SKILL.md",
+    "mindset.md",
+    "knowledge.md",
+    "workflow.md"
+  ],
+  "level_contract": "references/professional-level-contract.md",
+  "quality_gate": "references/role-specialization-quality-gate.md",
+  "generic_role_fallback": "PROHIBITED",
+  "general_knowledge_as_domain_evidence": "PROHIBITED",
+  "roles": [
+    {
+      "role_id": "ai-native-engineer",
+      "professional_domain": "AI systems engineering",
+      "bundle": "skills/roles/ai-native-engineer",
+      "scope_authority": "SKILL.md",
+      "causal_mindset": "mindset.md",
+      "source_backed_knowledge": "knowledge.md",
+      "role_workflow": "workflow.md"
+    },
+    {
+      "role_id": "ba",
+      "professional_domain": "Business analysis",
+      "bundle": "skills/roles/ba",
+      "scope_authority": "SKILL.md",
+      "causal_mindset": "mindset.md",
+      "source_backed_knowledge": "knowledge.md",
+      "role_workflow": "workflow.md"
+    },
+    {
+      "role_id": "backend-engineer",
+      "professional_domain": "Server-side application and API engineering",
+      "bundle": "skills/roles/backend-engineer",
+      "scope_authority": "SKILL.md",
+      "causal_mindset": "mindset.md",
+      "source_backed_knowledge": "knowledge.md",
+      "role_workflow": "workflow.md"
+    },
+    {
+      "role_id": "browser-extension-engineer",
+      "professional_domain": "Browser extension runtime engineering",
+      "bundle": "skills/roles/browser-extension-engineer",
+      "scope_authority": "SKILL.md",
+      "causal_mindset": "mindset.md",
+      "source_backed_knowledge": "knowledge.md",
+      "role_workflow": "workflow.md"
+    },
+    {
+      "role_id": "cloud-engineer",
+      "professional_domain": "Cloud infrastructure and workload operations",
+      "bundle": "skills/roles/cloud-engineer",
+      "scope_authority": "SKILL.md",
+      "causal_mindset": "mindset.md",
+      "source_backed_knowledge": "knowledge.md",
+      "role_workflow": "workflow.md"
+    },
+    {
+      "role_id": "data-ai-engineer",
+      "professional_domain": "Data pipeline and model-integrated application engineering",
+      "bundle": "skills/roles/data-ai-engineer",
+      "scope_authority": "SKILL.md",
+      "causal_mindset": "mindset.md",
+      "source_backed_knowledge": "knowledge.md",
+      "role_workflow": "workflow.md"
+    },
+    {
+      "role_id": "devops-engineer",
+      "professional_domain": "Software delivery and platform operations",
+      "bundle": "skills/roles/devops-engineer",
+      "scope_authority": "SKILL.md",
+      "causal_mindset": "mindset.md",
+      "source_backed_knowledge": "knowledge.md",
+      "role_workflow": "workflow.md"
+    },
+    {
+      "role_id": "devsecops-engineer",
+      "professional_domain": "Secure software delivery and supply-chain controls",
+      "bundle": "skills/roles/devsecops-engineer",
+      "scope_authority": "SKILL.md",
+      "causal_mindset": "mindset.md",
+      "source_backed_knowledge": "knowledge.md",
+      "role_workflow": "workflow.md"
+    },
+    {
+      "role_id": "frontend-engineer",
+      "professional_domain": "Browser-rendered interface engineering",
+      "bundle": "skills/roles/frontend-engineer",
+      "scope_authority": "SKILL.md",
+      "causal_mindset": "mindset.md",
+      "source_backed_knowledge": "knowledge.md",
+      "role_workflow": "workflow.md"
+    },
+    {
+      "role_id": "game-developer",
+      "professional_domain": "Game runtime and gameplay engineering",
+      "bundle": "skills/roles/game-developer",
+      "scope_authority": "SKILL.md",
+      "causal_mindset": "mindset.md",
+      "source_backed_knowledge": "knowledge.md",
+      "role_workflow": "workflow.md"
+    },
+    {
+      "role_id": "game-modifier",
+      "professional_domain": "Existing-game reverse engineering and modification",
+      "bundle": "skills/roles/game-modifier",
+      "scope_authority": "SKILL.md",
+      "causal_mindset": "mindset.md",
+      "source_backed_knowledge": "knowledge.md",
+      "role_workflow": "workflow.md"
+    },
+    {
+      "role_id": "interview-trainer",
+      "professional_domain": "Competency-based interview preparation",
+      "bundle": "skills/roles/interview-trainer",
+      "scope_authority": "SKILL.md",
+      "causal_mindset": "mindset.md",
+      "source_backed_knowledge": "knowledge.md",
+      "role_workflow": "workflow.md"
+    },
+    {
+      "role_id": "learning-coach",
+      "professional_domain": "Individual learning strategy and performance coaching",
+      "bundle": "skills/roles/learning-coach",
+      "scope_authority": "SKILL.md",
+      "causal_mindset": "mindset.md",
+      "source_backed_knowledge": "knowledge.md",
+      "role_workflow": "workflow.md"
+    },
+    {
+      "role_id": "learning-experience-designer",
+      "professional_domain": "Instructional and learning experience design",
+      "bundle": "skills/roles/learning-experience-designer",
+      "scope_authority": "SKILL.md",
+      "causal_mindset": "mindset.md",
+      "source_backed_knowledge": "knowledge.md",
+      "role_workflow": "workflow.md"
+    },
+    {
+      "role_id": "mentor",
+      "professional_domain": "Professional mentoring and reflective development",
+      "bundle": "skills/roles/mentor",
+      "scope_authority": "SKILL.md",
+      "causal_mindset": "mindset.md",
+      "source_backed_knowledge": "knowledge.md",
+      "role_workflow": "workflow.md"
+    },
+    {
+      "role_id": "mlops-engineer",
+      "professional_domain": "Machine-learning pipeline and model operations",
+      "bundle": "skills/roles/mlops-engineer",
+      "scope_authority": "SKILL.md",
+      "causal_mindset": "mindset.md",
+      "source_backed_knowledge": "knowledge.md",
+      "role_workflow": "workflow.md"
+    },
+    {
+      "role_id": "pm",
+      "professional_domain": "Project governance and delivery management",
+      "bundle": "skills/roles/pm",
+      "scope_authority": "SKILL.md",
+      "causal_mindset": "mindset.md",
+      "source_backed_knowledge": "knowledge.md",
+      "role_workflow": "workflow.md"
+    },
+    {
+      "role_id": "product-manager",
+      "professional_domain": "Product strategy and outcome discovery",
+      "bundle": "skills/roles/product-manager",
+      "scope_authority": "SKILL.md",
+      "causal_mindset": "mindset.md",
+      "source_backed_knowledge": "knowledge.md",
+      "role_workflow": "workflow.md"
+    },
+    {
+      "role_id": "professional-capability-architect",
+      "professional_domain": "Professional capability architecture",
+      "bundle": "skills/roles/professional-capability-architect",
+      "scope_authority": "SKILL.md",
+      "causal_mindset": "mindset.md",
+      "source_backed_knowledge": "knowledge.md",
+      "role_workflow": "workflow.md"
+    },
+    {
+      "role_id": "qa-engineer",
+      "professional_domain": "Software test analysis and execution",
+      "bundle": "skills/roles/qa-engineer",
+      "scope_authority": "SKILL.md",
+      "causal_mindset": "mindset.md",
+      "source_backed_knowledge": "knowledge.md",
+      "role_workflow": "workflow.md"
+    },
+    {
+      "role_id": "qa-lead",
+      "professional_domain": "Test management and quality governance",
+      "bundle": "skills/roles/qa-lead",
+      "scope_authority": "SKILL.md",
+      "causal_mindset": "mindset.md",
+      "source_backed_knowledge": "knowledge.md",
+      "role_workflow": "workflow.md"
+    },
+    {
+      "role_id": "research-lead",
+      "professional_domain": "Systematic evidence synthesis and research governance",
+      "bundle": "skills/roles/research-lead",
+      "scope_authority": "SKILL.md",
+      "causal_mindset": "mindset.md",
+      "source_backed_knowledge": "knowledge.md",
+      "role_workflow": "workflow.md"
+    },
+    {
+      "role_id": "security-reviewer",
+      "professional_domain": "Security architecture and control assurance",
+      "bundle": "skills/roles/security-reviewer",
+      "scope_authority": "SKILL.md",
+      "causal_mindset": "mindset.md",
+      "source_backed_knowledge": "knowledge.md",
+      "role_workflow": "workflow.md"
+    },
+    {
+      "role_id": "software-architect",
+      "professional_domain": "Software system structure and evolution",
+      "bundle": "skills/roles/software-architect",
+      "scope_authority": "SKILL.md",
+      "causal_mindset": "mindset.md",
+      "source_backed_knowledge": "knowledge.md",
+      "role_workflow": "workflow.md"
+    },
+    {
+      "role_id": "solution-architect",
+      "professional_domain": "Cross-system solution architecture",
+      "bundle": "skills/roles/solution-architect",
+      "scope_authority": "SKILL.md",
+      "causal_mindset": "mindset.md",
+      "source_backed_knowledge": "knowledge.md",
+      "role_workflow": "workflow.md"
+    },
+    {
+      "role_id": "solution-architect-mentor",
+      "professional_domain": "Mentoring for solution architecture practice",
+      "bundle": "skills/roles/solution-architect-mentor",
+      "scope_authority": "SKILL.md",
+      "causal_mindset": "mindset.md",
+      "source_backed_knowledge": "knowledge.md",
+      "role_workflow": "workflow.md"
+    },
+    {
+      "role_id": "sre-engineer",
+      "professional_domain": "Service reliability engineering",
+      "bundle": "skills/roles/sre-engineer",
+      "scope_authority": "SKILL.md",
+      "causal_mindset": "mindset.md",
+      "source_backed_knowledge": "knowledge.md",
+      "role_workflow": "workflow.md"
+    },
+    {
+      "role_id": "talent-acquisition-specialist",
+      "professional_domain": "Talent acquisition and recruiter screening",
+      "bundle": "skills/roles/talent-acquisition-specialist",
+      "scope_authority": "SKILL.md",
+      "causal_mindset": "mindset.md",
+      "source_backed_knowledge": "knowledge.md",
+      "role_workflow": "workflow.md"
+    },
+    {
+      "role_id": "tech-lead",
+      "professional_domain": "Engineering team technical leadership",
+      "bundle": "skills/roles/tech-lead",
+      "scope_authority": "SKILL.md",
+      "causal_mindset": "mindset.md",
+      "source_backed_knowledge": "knowledge.md",
+      "role_workflow": "workflow.md"
+    },
+    {
+      "role_id": "technical-hiring-manager",
+      "professional_domain": "Technical hiring and seniority assessment",
+      "bundle": "skills/roles/technical-hiring-manager",
+      "scope_authority": "SKILL.md",
+      "causal_mindset": "mindset.md",
+      "source_backed_knowledge": "knowledge.md",
+      "role_workflow": "workflow.md"
+    },
+    {
+      "role_id": "ai-native-tooling-engineer",
+      "professional_domain": "AI-native tool/skill/plugin lifecycle",
+      "bundle": "skills/roles/ai-native-tooling-engineer",
+      "scope_authority": "SKILL.md",
+      "causal_mindset": "mindset.md",
+      "source_backed_knowledge": "knowledge.md",
+      "role_workflow": "workflow.md"
+    },
+    {
+      "role_id": "mcp-integration-engineer",
+      "professional_domain": "Model Context Protocol integration",
+      "bundle": "skills/roles/mcp-integration-engineer",
+      "scope_authority": "SKILL.md",
+      "causal_mindset": "mindset.md",
+      "source_backed_knowledge": "knowledge.md",
+      "role_workflow": "workflow.md"
+    },
+    {
+      "role_id": "vscode-extension-platform-engineer",
+      "professional_domain": "VS Code extension-host engineering",
+      "bundle": "skills/roles/vscode-extension-platform-engineer",
+      "scope_authority": "SKILL.md",
+      "causal_mindset": "mindset.md",
+      "source_backed_knowledge": "knowledge.md",
+      "role_workflow": "workflow.md"
+    },
+    {
+      "role_id": "omniroute-model-routing-engineer",
+      "professional_domain": "OmniRoute provider and inference routing",
+      "bundle": "skills/roles/omniroute-model-routing-engineer",
+      "scope_authority": "SKILL.md",
+      "causal_mindset": "mindset.md",
+      "source_backed_knowledge": "knowledge.md",
+      "role_workflow": "workflow.md"
+    },
+    {
+      "role_id": "game-art-director",
+      "professional_domain": "Game visual direction and asset production",
+      "bundle": "skills/roles/game-art-director",
+      "scope_authority": "SKILL.md",
+      "causal_mindset": "mindset.md",
+      "source_backed_knowledge": "knowledge.md",
+      "role_workflow": "workflow.md"
+    }
+  ]
+}
