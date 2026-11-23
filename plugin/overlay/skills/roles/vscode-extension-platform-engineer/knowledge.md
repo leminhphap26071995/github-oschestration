@@ -23,6 +23,3 @@
 - [Visual Studio Code — Extension API](https://code.visualstudio.com/api/) — Official VS Code platform docs; current 2026-11-23.
 - [Visual Studio Code — Extension Manifest](https://code.visualstudio.com/api/references/extension-manifest) — Official manifest reference; current 2026-11-23.
 - [Visual Studio Code — SecretStorage](https://code.visualstudio.com/api/references/vscode-api#SecretStorage) — Official credential storage API; current 2026-11-23.
-
-## Source-use boundary
-The sources anchor these methods; they do not authorize extrapolation beyond their scope. Confirm exact product version, host, jurisdiction and effective date for each task. Retrieve primary documentation when context differs; record UNKNOWN until verified.

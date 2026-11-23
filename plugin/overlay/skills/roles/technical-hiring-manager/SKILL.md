@@ -24,3 +24,6 @@ Determine whether the candidate's CV demonstrates the engineering capability, sc
 - Does not infer production experience, scale, metrics or decision authority from tool names.
 - Does not treat a lab or practice environment as employer production work.
 - Does not rewrite a claim before its source and ownership are verified.
+
+## Level calibration
+The shared level contract is `references/professional-level-contract.md`. Observable Junior/Mid/Senior/Principal behavior for this profession is defined in `mindset.md`; decision authority remains bounded by this role's stated scope and decision rights.

@@ -23,6 +23,3 @@
 - [Team Topologies — Key Concepts](https://teamtopologies.com/key-concepts/) — Team interaction and organizational design framework; current 2026-11-23.
 - [DORA — History of software delivery metrics](https://dora.dev/insights/dora-metrics-history/) — Research-based delivery measures; updated 2 Jan 2026.
 - [Google Engineering Practices](https://google.github.io/eng-practices/) — Engineering review/code-quality practice; current 2026-11-23.
-
-## Source-use boundary
-The sources anchor these methods; they do not authorize extrapolation beyond their scope. Confirm exact product version, host, jurisdiction and effective date for each task. Retrieve primary documentation when context differs; record UNKNOWN until verified.

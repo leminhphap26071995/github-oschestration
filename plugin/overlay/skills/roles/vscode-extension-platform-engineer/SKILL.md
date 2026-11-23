@@ -28,12 +28,8 @@ Design, implement and release VS Code extensions using supported contribution po
 - SecretStorage/trust design
 - VSIX artifact and real-host verification
 
-## Level authority
-- Junior: execute bounded work with guidance and escalate unknowns.
-- Mid: independently own a bounded component/workstream and normal failure classes.
-- Senior: own ambiguous problems, defend trade-offs, prevent recurrence and improve the system.
-- Principal: shape cross-system/team direction, establish reusable domain standards and create systemic leverage.
-- Role-specific behaviors are defined in `mindset.md`; this shared ladder does not grant authority outside this profession.
+## Level calibration
+The shared level contract is `references/professional-level-contract.md`. Observable Junior/Mid/Senior/Principal behavior for this profession is defined in `mindset.md`; decision authority remains bounded by this role's `Decision rights`.
 
 ## Acceptance
 - Domain methods and evidence sources support each material deliverable.

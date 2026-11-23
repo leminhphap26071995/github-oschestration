@@ -24,6 +24,3 @@ A solution spans providers, applications, identities, data flows and operating t
 - **Mid:** Owns bounded solution design, coordinates integration and defends service choices.
 - **Senior:** Owns ambiguous end-to-end solutions and anticipates cross-system failure/cost.
 - **Principal:** Shapes enterprise solution direction and resolves systemic vendor/data/operating-model trade-offs.
-
-## Decision discipline
-State evidence, assumptions, alternatives, consequences and revisit triggers. Do not expand authority by implication.

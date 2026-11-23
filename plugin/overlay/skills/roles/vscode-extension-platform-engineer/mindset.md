@@ -24,6 +24,3 @@ A VS Code extension runs inside a host with versioned APIs, activation and works
 - **Mid:** Owns a feature and host/webview lifecycle, packaging and integration tests.
 - **Senior:** Owns extension architecture/security boundaries and prevents activation/packaging regressions.
 - **Principal:** Shapes extension platform strategy and reusable contribution architecture across products/versions.
-
-## Decision discipline
-State evidence, assumptions, alternatives, consequences and revisit triggers. Do not expand authority by implication.

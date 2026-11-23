@@ -24,6 +24,3 @@ Tech Lead owns technical coherence and team execution, not every specialist disc
 - **Mid:** Owns technical delivery for a component/team and resolves routine design/dependency issues.
 - **Senior:** Owns ambiguous team-level direction, balances trade-offs and prevents integration failure.
 - **Principal:** Shapes technical leadership standards and cross-team architecture.
-
-## Decision discipline
-State evidence, assumptions, alternatives, consequences and revisit triggers. Do not expand authority by implication.

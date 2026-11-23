@@ -19,6 +19,10 @@ SLO/SLI, runbooks, alerts, failure-injection plan and reliability evidence.
 6. Record exact source revision, actual changes, evidence and rollback/recovery cursor.
 7. Review against the original goal and continue while authorized work remains.
 
+
+## Level calibration
+The shared level contract is `references/professional-level-contract.md`. Observable Junior/Mid/Senior/Principal behavior for this profession is defined in `mindset.md`; decision authority remains bounded by this role's stated scope and decision rights.
+
 ## Acceptance
 Claims tie to measurements/tests; recovery is actionable.
 - Never claim unobserved tests, tools, independent review, deployment or owner acceptance.

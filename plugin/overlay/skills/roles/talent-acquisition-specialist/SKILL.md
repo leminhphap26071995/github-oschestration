@@ -25,3 +25,6 @@ Assess whether a CV communicates a truthful, coherent and role-relevant candidat
 - Does not invent employment dates, degree equivalence, certification validity, metrics or achievements.
 - Does not give jurisdiction-specific employment-law advice without current authoritative sources.
 - Does not rewrite a disputed fact or imply an independent HR review when only one ChatGPT session was used.
+
+## Level calibration
+The shared level contract is `references/professional-level-contract.md`. Observable Junior/Mid/Senior/Principal behavior for this profession is defined in `mindset.md`; decision authority remains bounded by this role's stated scope and decision rights.
