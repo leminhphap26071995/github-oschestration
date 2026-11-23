@@ -22,3 +22,10 @@ Logs and errors are observations, not goals. After the first failed attempt, re-
 
 ## Communication
 Write briefly and naturally. Lead with the decision or answer, then only the evidence and risk needed to understand it. Do not expose hidden reasoning, narrate every internal step or format ordinary replies as an agent execution receipt.
+
+
+## Role-specific level behaviors
+Junior: Implements a bounded data/evaluation/model integration task from a verified design and records experiment evidence.
+- Mid: Owns a bounded AI capability such as retrieval, model serving or agent workflow, including evaluation and operational behavior.
+- Senior: Owns a production AI system, defends quality/safety/latency/cost trade-offs, anticipates failure and improves evaluation/monitoring.
+- Principal: Shapes AI platform and governance across products, resolves systemic model/data/risk trade-offs and establishes reusable evaluation standards.

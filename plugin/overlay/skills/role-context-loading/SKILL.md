@@ -39,3 +39,7 @@ Record role ID, accountable/supporting status, invocation surface, loaded/deferr
 
 ## Domain-specific role selection
 A domain route may declare one `primary_roles` entry plus `required_supporting_roles` and optional `supporting_roles`. Invoke required supporting roles when their conditions hold. Select optional specialists from the claim/deliverable map; do not preload every optional role. For CV review, Talent Acquisition Specialist owns the overall review; Technical Hiring Manager is the required supporting reviewer for technical/engineering CVs; Interview Trainer and domain engineers are invoked only when the requested deliverables or claims require them.
+
+
+## Specialist depth and level gate
+Before activating a role, read its complete four-artifact bundle and the specialization index, level contract and quality gate. Confirm narrow scope, explicit exclusions, decision rights, source anchors and role-specific Junior/Mid/Senior/Principal behaviors. A role with generic filler, missing authoritative knowledge or no observable level examples is not qualified for that deliverable; create a task-scoped profile or record the method as UNKNOWN. Do not substitute general model knowledge or a generic role. A bundle is context, not an independent worker or proof of mastery.

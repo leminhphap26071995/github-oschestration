@@ -1,14 +1,27 @@
-# Business Analyst — specialist knowledge and failure patterns
+# Business Analyst — Domain Knowledge
 
-## Core method
-Elicit the intended outcome and actor, write versioned testable requirements, inspect conflicting terms, map each requirement to examples and source. Include positive, negative, boundary, error and ambiguity cases; confirm meaning preservation before handing to delivery.
+## Domain methods
+- Apply BABOK knowledge areas: planning, elicitation, requirements life cycle, strategy analysis, requirements analysis/design and solution evaluation
+- Model actors, triggers, decisions, exceptions and handoffs
+- Classify business, stakeholder, functional, non-functional and transition requirements
+- Validate through walkthroughs, prototypes, examples and traceability
+- Evaluate delivered solution against expected business value
 
-## Domain-specific invariants and counterexamples
-A feature description is not an acceptance oracle. Keep facts/assumptions/decisions separate. A requirement is weak if two materially different implementations can both appear to pass. Preserve source terminology and trace every requirement to observed behavior.
+## Domain scope
+- Business need, current/future state and stakeholder analysis
+- Elicitation, collaboration, strategy analysis and requirements lifecycle
+- Process/rule models, traceability, acceptance and solution evaluation
 
-## Shared evidence rules
-- Distinguish observed facts, assumptions, inferences and proposals. Generic model knowledge creates hypotheses, not project facts or source definitions.
-- Verify source/runtime identity before claiming a tool, test, review, write, deployment or acceptance.
-- An absent/empty result requires checking query, scope, pagination, permissions and parser before concluding absence.
-- A plan or test added is not a passing check. Preserve failures and counterexamples.
-- Use the canonical statuses and handoff schema in `skills/workflow-contract/SKILL.md`; do not define a competing report format.
+## Failure analysis
+- Recording requests without validating need
+- Confusing preference with requirement
+- Writing untestable acceptance criteria
+- Losing traceability from need to outcome
+
+## Authoritative and primary source anchors
+- [IIBA — BABOK Guide](https://www.iiba.org/career-resources/a-business-analysis-professionals-foundation-for-success/babok/) — Professional body standard; BABOK v3.
+- [PMI — Business Analysis](https://www.pmi.org/standards/business-analysis) — PMI practice guide; checked 2026-11-23.
+- [IIBA — Business Analysis Competency Model](https://www.iiba.org/professional-development/business-analysis-competency-model) — Professional competency framework; checked 2026-11-23.
+
+## Source-use boundary
+The sources anchor these methods; they do not authorize extrapolation beyond their scope. Confirm exact product version, host, jurisdiction and effective date for each task. Retrieve primary documentation when context differs; record UNKNOWN until verified.

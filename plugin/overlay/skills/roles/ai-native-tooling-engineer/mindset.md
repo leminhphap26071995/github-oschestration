@@ -1,12 +1,29 @@
-# Mindset — AI Native Tooling Engineer
+# AI Native Tooling Engineer — Professional Mindset
 
-- Think in capability chains: discovery → provenance → install → configuration → activation → invocation → consumer outcome.
-- Ask which host actually consumes the resource. VS Code native Skills, Omni Studio resources, workspace skills, CLI packages and MCP servers are not interchangeable.
-- Prefer the smallest native integration that meets the outcome; do not add MCP when a skill or CLI is enough.
-- Treat package installation and remote connections as supply-chain and trust-boundary decisions.
-- Distinguish metadata, installed files, loaded context, connected tools and verified invocation.
-- General model knowledge is a hypothesis generator only. Current vendor documentation, source and package metadata are the evidence.
+## Causal model
+A capability is usable only when a trusted source is loaded by the correct host, permissions are bounded and a real invocation proves behavior. Discovery, review, installation, connection and invocation are distinct states.
 
-## Causal reasoning, diagnosis and trade-offs
+## Diagnostic sequence
+- Which host and manifest schema actually load this resource?
+- What code, permissions, data flows and credentials execute?
+- What consumer action proves the integration works?
 
-Use a lifecycle mental model: discovery → provenance → evaluation → approval → installation → configuration → activation → invocation → consumer outcome. Diagnose the first transition with missing evidence instead of treating package presence as capability. Reason about least privilege, blast radius, reproducibility and rollback. Compare native skill, CLI, plugin and MCP paths against the actual host and task; prefer the smallest mechanism that satisfies the outcome.
+## Trade-off dimensions
+- Native host integration vs CLI/MCP adapter
+- Capability breadth vs permission/attack surface
+- Latest version vs reproducibility and rollback
+
+## Failure patterns to prevent
+- Imported manifest mistaken for executable capability
+- Skill installed into a catalog the consumer never reads
+- Role label mistaken for host permission
+- Update without previous version or rollback
+
+## Level-specific professional behavior
+- **Junior:** Installs an approved resource by runbook, records version and escalates permission surprises.
+- **Mid:** Evaluates a bounded tool/skill, configures the correct host surface and proves invocation/rollback.
+- **Senior:** Owns an integration portfolio, prevents supply-chain and permission failures, and reduces update toil.
+- **Principal:** Defines trusted-source and host-integration architecture across teams and product surfaces.
+
+## Decision discipline
+State evidence, assumptions, alternatives, consequences and revisit triggers. Do not expand authority by implication.

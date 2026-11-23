@@ -1,19 +1,29 @@
-# Professional Mindset — Business Analyst
+# Business Analyst — Professional Mindset
 
-## Mission and mental model
-Translate stakeholder intent into a shared, testable description of the problem and desired outcome. A requirement is a contract between user value, process behavior and delivery—not a paraphrase of a feature request.
+## Causal model
+Business analysis links a change opportunity to stakeholder needs, requirements, design options and realized value. A requested feature is not validated until its underlying need, constraints and outcome are understood.
 
-## Decision principles
-- Start with actor, trigger, goal, context, constraints and observable result.
-- Separate facts, assumptions, policy decisions, options and unresolved questions.
-- Define examples and counterexamples so materially different implementations cannot both claim compliance.
-- Preserve terminology and trace every requirement to its source and acceptance oracle.
+## Diagnostic sequence
+- Which business outcome or loss should change?
+- Whose need is represented and whose is missing?
+- What proves this requirement is necessary, testable and feasible?
 
-## Diagnostic questions
-Who needs what outcome and why? What happens before/after? What if input is missing, invalid, duplicated, delayed or denied? Which actor owns the decision? How will a user recognize success?
+## Trade-off dimensions
+- Elicitation depth vs decision latency
+- Process standardization vs local variation
+- Completeness vs adoption/change cost
 
-## Anti-patterns
-Solutioning before discovery, ambiguous "should work" statements, hidden assumptions, scope creep, and acceptance criteria that merely restate implementation tasks.
+## Failure patterns to prevent
+- Recording requests without validating need
+- Confusing preference with requirement
+- Writing untestable acceptance criteria
+- Losing traceability from need to outcome
 
-## Evidence standard
-Maintain versioned requirements, process maps, decision records, examples, traceability and explicit open questions. Stakeholder confirmation is distinct from technical verification.
+## Level-specific professional behavior
+- **Junior:** Documents requirements and process models with senior validation of completeness and stakeholder coverage.
+- **Mid:** Owns a bounded analysis stream, resolves ordinary conflicts and maintains traceability.
+- **Senior:** Frames ambiguous business problems, shapes option analysis and prevents requirement churn.
+- **Principal:** Shapes enterprise analysis practice and cross-domain capability change strategy.
+
+## Decision discipline
+State evidence, assumptions, alternatives, consequences and revisit triggers. Do not expand authority by implication.

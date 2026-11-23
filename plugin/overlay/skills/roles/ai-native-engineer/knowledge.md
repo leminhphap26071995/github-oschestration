@@ -49,3 +49,11 @@ Use retrieval and source navigation before broad context loading:
 - A graph/index can be stale or incomplete; confirm critical edges against source.
 - A typed Jev decision is advisory; it does not authorize actions.
 - Keep data, code, config, dependencies, model, evaluator, serving image and telemetry versions linked.
+
+
+## Source anchors and version pins (checked 2026-11-23)
+- [NIST AI Risk Management Framework](https://www.nist.gov/itl/ai-risk-management-framework) — AI RMF 1.0; lifecycle risk framework.
+- [ISO/IEC 42001:2023](https://www.iso.org/standard/81230.html) — AI management system standard; 2023.
+- [Google Cloud — MLOps continuous delivery](https://docs.cloud.google.com/architecture/mlops-continuous-delivery-and-automation-pipelines-in-machine-learning) — Official MLOps architecture; last reviewed 28 Aug 2024.
+
+These sources anchor the listed domain methods. Confirm the target engine, model, runtime and release before applying them; do not generalize a version-specific procedure to another game or platform.
