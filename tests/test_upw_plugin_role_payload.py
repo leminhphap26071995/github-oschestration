@@ -101,5 +101,17 @@ def test_all_roles_have_specialist_depth_and_level_calibration(self):
             self.assertGreater(len(workflow), 250, role["role_id"])
             self.assertNotRegex(knowledge, r"(?i)generic role fallback|general model knowledge is a source")
 
+    def test_specialist_files_exclude_generic_cross_role_boilerplate(self):
+        index=json.loads((OVERLAY / "references/role-specialization-index.json").read_text(encoding="utf-8"))
+        for role in index["roles"]:
+            bundle=OVERLAY / role["bundle"]
+            skill=(bundle/"SKILL.md").read_text(encoding="utf-8")
+            mindset=(bundle/"mindset.md").read_text(encoding="utf-8")
+            knowledge=(bundle/"knowledge.md").read_text(encoding="utf-8")
+            self.assertIn("## Level calibration",skill,role["role_id"])
+            self.assertNotIn("## Level authority",skill,role["role_id"])
+            self.assertNotIn("## Decision discipline",mindset,role["role_id"])
+            self.assertNotIn("## Source-use boundary",knowledge,role["role_id"])
+
 if __name__ == "__main__":
     unittest.main()

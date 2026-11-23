@@ -6,7 +6,7 @@ This repository builds the **ChatGPT Plugin Creator** package only. Codex, Claud
 
 The canonical source remains `leminhphap-improvement/ai-workflow-archtiecture`. The public repository contains a sanitized, versioned copy of the ChatGPT overlay and packaging tests. The Plugin Creator backend remains the live release authority.
 
-## UPW 0.1.173 specialist payload
+## UPW 0.1.174 specialist payload
 
 - ChatGPT root manifest: `plugin.json`.
 - ChatGPT onboarding: `skills/chatgpt-runtime-onboarding/SKILL.md`.
@@ -14,6 +14,7 @@ The canonical source remains `leminhphap-improvement/ai-workflow-archtiecture`. 
 - 35 unique professional roles: 30 base + 5 extension roles.
 - 140 required role artifacts: `SKILL.md`, `mindset.md`, `knowledge.md`, `workflow.md` for every role.
 - Every role has explicit scope, exclusions, decision rights, domain methods, source anchors, failure patterns and Junior/Mid/Senior/Principal behaviors.
+- Generic level ladders, decision-discipline boilerplate and source-use boilerplate are centralized in shared contracts, not duplicated inside specialist artifacts.
 - Shared references: professional level contract, specialization index and role quality gate.
 - The 48 default-prompt entries remain; the update-routing entry now declares ChatGPT-native primary and GitHub backup.
 

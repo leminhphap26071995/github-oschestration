@@ -160,12 +160,14 @@ def validate(root: Path):
             body = mindset.read_text(encoding="utf-8").lower()
             if not all(level in body for level in ("junior", "mid", "senior", "principal")):
                 errors.append(f"ROLE_LEVEL_BEHAVIOR_MISSING:{role_id}")
+            if "## Decision discipline" in body:errors.append(f"GENERIC_DECISION_DISCIPLINE_DUPLICATED:{role_id}")
         if knowledge.is_file():
             body = knowledge.read_text(encoding="utf-8")
             if len(re.findall(r"https?://", body)) < 2:
                 errors.append(f"ROLE_SOURCE_ANCHORS_MISSING:{role_id}")
             if re.search(r"(?i)generic role fallback|general model knowledge is a source", body):
                 errors.append(f"GENERIC_ROLE_KNOWLEDGE:{role_id}")
+            if "## Source-use boundary" in body:errors.append(f"GENERIC_SOURCE_BOUNDARY_DUPLICATED:{role_id}")
         if workflow.is_file() and workflow.stat().st_size < 250:
             errors.append(f"ROLE_WORKFLOW_TOO_SHALLOW:{role_id}")
 
