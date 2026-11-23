@@ -25,6 +25,14 @@ def main():
         for required in ("plugin.json", ".codex-plugin/plugin.json"):
             if required not in names:
                 raise SystemExit(f"ZIP_REQUIRED_FILE_MISSING:{required}")
+        portable = json.loads(archive.read("plugin.json"))
+        openai = portable.get("extensions", {}).get("com.openai", {})
+        onboarding = openai.get("onboardingSkill")
+        if not isinstance(onboarding, str) or not onboarding.startswith("./"):
+            raise SystemExit("ZIP_ROOT_ONBOARDING_SKILL_PATH_MISSING_OR_INVALID")
+        onboarding_path = onboarding[2:]
+        if onboarding_path not in names or not onboarding_path.endswith("/SKILL.md"):
+            raise SystemExit(f"ZIP_ONBOARDING_SKILL_NOT_PACKAGED:{onboarding}")
     print(f"PACKAGED version={manifest['version']} files={len(names)} output={args.output}")
 if __name__ == "__main__":
     main()
