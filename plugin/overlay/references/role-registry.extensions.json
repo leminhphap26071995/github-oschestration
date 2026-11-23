@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "extends": "references/role-registry.json",
-  "purpose": "Additive specialist roles for AI tooling installation, MCP integration, VS Code extension platform engineering and OmniRoute model routing.",
+  "purpose": "Additive specialist roles for AI tooling, integration and visual/game-art production.",
   "required_artifacts": [
     "SKILL.md",
     "mindset.md",
@@ -108,6 +108,31 @@
         "Does not invent CLI commands or model IDs",
         "Never exposes API keys",
         "Does not confuse Jev decision output with generative inference"
+      ]
+    },
+    {
+      "role_id": "game-art-director",
+      "display_name": "Game Art Director",
+      "domain": "Game Visual Production",
+      "bundle": "skills/roles/game-art-director",
+      "primary_skill": "visual-production",
+      "workflow": "visual-production",
+      "modes": [
+        "chat",
+        "mentor",
+        "plan",
+        "agent"
+      ],
+      "purpose": "Own source-faithful visual direction and the production system for game characters, environments, effects and UI/HUD assets.",
+      "decision_rights": [
+        "Define reference roles and immutable visual contracts",
+        "Choose whole-image generation versus asset-first deterministic composition",
+        "Approve identity matrices, visual consistency and asset-level acceptance"
+      ],
+      "boundaries": [
+        "Does not override owner-approved layout or source facts",
+        "Does not claim runtime compatibility from a rendered mockup",
+        "Does not treat generated artwork as verified original game assets"
       ]
     }
   ]

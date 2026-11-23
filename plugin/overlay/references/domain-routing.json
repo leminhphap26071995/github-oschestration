@@ -277,6 +277,51 @@
         "write result and destination receipt are separate gates",
         "check for existing accepted relay/schema before adding infrastructure"
       ]
+    },
+    "cv_professional_review": {
+      "match": "owner asks to review, audit, update, rewrite, publish or verify a CV/resume, including General CV and JD-specific variants",
+      "load": [
+        "skills/cv-update-lifecycle/SKILL.md",
+        "references/cv-update-contract.md",
+        "references/role-registry.json",
+        "references/professional-capability-catalog.json",
+        "references/professional-capability-catalog.extensions.json"
+      ],
+      "role_selection": {
+        "primary_roles": [
+          "talent-acquisition-specialist",
+          "technical-hiring-manager"
+        ],
+        "supporting_roles": [
+          "interview-trainer",
+          "tech-lead",
+          "devops-engineer",
+          "cloud-engineer",
+          "devsecops-engineer",
+          "sre-engineer",
+          "qa-lead",
+          "qa-engineer"
+        ],
+        "selection_rule": "Invoke only roles required by the claims and deliverables; every invoked role loads all four artifacts."
+      },
+      "gates": [
+        "canonical repository, branch, HEAD and CV content blob verified",
+        "employment chronology and project dates reconciled independently",
+        "claim-to-evidence ledger complete with provenance preserved",
+        "HR screening and technical hiring assessment both recorded",
+        "no unsupported metrics, ownership, seniority, credentials or production claims",
+        "template and renderer remain unchanged unless owner explicitly authorizes a separate change",
+        "exact PDF, source SHA, content blob SHA and artifact digest verified before release"
+      ],
+      "special_rules": [
+        "Interview Trainer coaches candidate readiness; it does not substitute for HR/Talent Acquisition screening.",
+        "Talent Acquisition Specialist evaluates recruiter/ATS screening and employment chronology; it does not certify deep technical truth.",
+        "Technical Hiring Manager evaluates technical scope, seniority, ownership and defensibility; it does not replace HR screening.",
+        "Separate employment tenure from project-specific dates; never copy employer dates into project dates without evidence.",
+        "Same-session role perspectives are SINGLE_SESSION_CROSSCHECK, not independent professional sign-off.",
+        "Do not rewrite disputed claims before factual reconciliation and owner authorization.",
+        "A built PDF is not an approved or distributed CV; release requires explicit owner approval for the exact PDF hash."
+      ]
     }
   }
 }

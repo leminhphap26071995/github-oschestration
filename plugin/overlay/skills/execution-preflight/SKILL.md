@@ -1,42 +1,49 @@
 ---
 name: execution-preflight
-description: Mandatory fail-closed task classification, project/ticket context resolution, professional capability discovery, complete role-bundle loading and host-aware execution readiness before project-facing tools.
+description: Source-aware preflight routing with mandatory GitHub Actions role-selection preflight and exact evidence correlation.
 ---
-# Execution Preflight — Mandatory Entry Gate
+# Execution Preflight — GitHub Actions Role Gate
 
-For every substantive, resumed, corrective, incident/debugging, repository, research, state-dependent or tool-backed task, execute this gate before project investigation or project-facing tool calls. This is model-guided instruction in ChatGPT unless a host-side broker enforces it; never claim host enforcement from a skill alone.
+Read-only source recovery may use authorized GitHub/Notion connectors. `project.workflow` Python resolution and generated role-context compilation have one permitted execution path: the project's configured automatic GitHub Actions workflow. UPW's installed/native specialist skill bundles are a separate ChatGPT-native capability: the orchestrator may load the matching four-artifact bundle directly as model context when the task can be executed with available native host tools. This is not a `project.workflow` run, does not create an independent worker, and must not be reported as a CI role-preflight PASS.
 
-## 0. Stop before project work
-Allowed before the visible receipt: read UPW entry skills, canonical plugin-root registries, professional capability catalog, host execution contract and exact selected specialist bundles. Do not call GitHub, Notion, Project Files, external web research, repositories or providers first.
+## 1. Read-only source recovery
+- Recover the explicit project/ticket, original goal, acceptance, repository/ref and exact source SHA.
+- Inspect the exact commit's Git Tree, workflow YAML blob, branch/path filters, jobs, permissions, reusable workflows and expected receipt/artifact.
+- Do not block remote reads on local Python, shell, DNS or filesystem probes.
 
-## 1. Lock outcome and context identity
-Record requested outcome, mode, domain, causal layer, MUST acceptance, constraints/non-goals, target and source authority. Resolve `PROJECT_ID + WORKSTREAM_TYPE + TICKET_ID/GOAL_ID`; a one-off target applies only to this task. For persistent routing, consult the Notion Routing Registry after preflight. Never select a checkpoint by latest timestamp.
+## 2. Mandatory CI role preflight
+- For every task requiring project.workflow/role_pack.py generated multi-role splitting or generated context compilation, run preflight only through the project's automatic GitHub Actions workflow, bound to the exact committed SHA and versioned task/request contract. Selecting one primary specialist from the canonical registry and loading its verified four-artifact bundle as native ChatGPT model context is a distinct route; it does not execute project.workflow, generate a multi-role split, or spawn a worker.
+- Python and `project.workflow` may execute inside that GitHub-hosted runner. Never execute `project.workflow`, `role_pack.py` or role-selection Python through ChatGPT-local Python/container, local shell or another non-permitted host.
+- Use only configured automatic events (`push`, `pull_request`, `workflow_run`). Never use `workflow_dispatch`, manual workflow buttons or manual reruns.
+- Do not run `project.workflow`, role-pack Python, or claim generated/compiled role-context output before the exact-SHA CI receipt passes.
+- Native skill-bundle loading is permitted for ChatGPT-native execution when its four files are available and verified. Select one accountable primary role; load supporting roles only when invoked. Do not claim independent workers or a CI receipt from prompt/skill loading.
+- If the CI preflight is blocked or did not execute, mark only the CI-generated role-context gate `BLOCKED`/`UNKNOWN`; continue AI-owned work that can be performed through one verified native primary specialist context and available host tools. Do not perform a manual multi-role split or claim generated context. Never use local Python or shell as a substitute for `project.workflow`.
 
-## 2. Derive professional capability
-Read `skills/professional-capability-discovery/SKILL.md` and `references/professional-capability-catalog.json`. Derive deliverables, lifecycle, domain workstreams and acceptance oracles from the outcome. Choose the primary specialist and justified reviewers from `references/role-registry.json`. PM/Tech Lead/Architect are not substitutes for domain specialists. If an exact specialty is absent or the outcome spans unfamiliar disciplines, select professional-capability-architect as the discovery primary, read its complete registered four-artifact bundle, and create/load the task-specific specialist bundle before implementation.
+## 3. Mandatory evidence order
+Every Actions-backed role preflight and engineering loop MUST follow this exact chain:
 
-## 3. Causal-layer routing
-- Runtime health/timeout/availability/incident → sre-engineer.
-- Backend/API/state/retries/cancellation → backend-engineer.
-- Model/provider inference/data evaluation → data-ai-engineer.
-- Agent/tool/plugin/role routing/preflight → ai-native-engineer; software-architect and qa-engineer reviewers when justified.
-- Module/interface/lifecycle architecture → software-architect.
-- Acceptance/regression → qa-engineer.
-- CI/build/release/artifacts/quota → devops-engineer + `skills/github-actions-run-lifecycle/SKILL.md`.
-- Security/trust/permissions → security-reviewer.
-- Browser/Chromium extension → browser-extension-engineer.
-- Greenfield game → game-developer + game_development.
-- Existing closed-game modification → game-modifier + game_mod.
-- Add domain professionals from the deliverable map; do not restrict routing to this list.
+`Git Tree → blob/receipt → runner_id → job_id → run_id + attempt → head_sha → actual execution`
 
-## 4. Discover and load current plugin contracts
-For an owned personal UPW plugin, call Plugin Creator `list_owned_personal_plugins` first, capture exact plugin_id/current_release_id, then `get_plugin_files`. Read references/role-registry.json, references/domain-routing.json, references/professional-capability-catalog.json and references/host-execution-and-quota-contract.md. Read skills/workflow-contract/SKILL.md. Parse each selected role's exact bundle and read all four artifacts in full. Read every applicable domain skill. Missing/truncated/unreadable artifacts mean BLOCKED; never downgrade silently.
+1. **Git Tree:** lock the exact commit's root tree; inventory workflow, request, receipt schema and expected output paths. Resolve truncated trees completely.
+2. **blob/receipt:** read exact workflow/request blobs and retrieve the CI receipt. Verify schema, blob/content hashes, repository/ref, task and source commit/tree binding.
+3. **runner_id:** validate runner correlation from the receipt and authoritative provider payload. Preserve PRESENT, explicit NULL and MISSING; raw zero is not proof of cause or execution.
+4. **job_id:** bind the exact job to the runner and receipt. Do not infer it from a check-run ID or display name.
+5. **run_id + attempt:** bind the job to the exact run and attempt; preserve relevant earlier attempts.
+6. **head_sha:** cross-check receipt, run and job SHA against the locked commit SHA. Any mismatch breaks the chain.
+7. **actual execution:** inspect executed step states, exit codes, logs and output/artifact hashes. IDs, runner assignment, green summaries and compiled prompts alone do not prove execution.
 
-## 5. Probe the active execution surface
-Use `references/host-execution-and-quota-contract.md`. Preflight is performed by the active host that owns the next tool invocation. Do not run it inside ChatGPT's bounded Python/container runtime and treat it as the host or user's local device. Classify only relevant network/DNS, filesystem, shell/runtime, packages/resources, media/vision, browser/UI, provider scopes, storage, continuity and budget capabilities as READY/LIMITED/MISSING/DENIED/UNKNOWN. A local failure should route to another authorized adapter where possible.
+Never start provenance correlation from `runner_id`, a run/job wrapper, check-run ID or logs. Never skip a missing stage. A known `/actions/runs/{N}` URL supplies `run_id=N`, not runner_id; verify it against the exact run object. Failure-cause triage is a separate short path: inspect the exact-run annotation before fetching job/runner/step metadata. If payment/spending-limit/Actions-billing text is decisive, classify `QUOTA_EXHAUSTED` and stop; mark downstream job/runner fields `NOT_QUERIED_BY_DESIGN` unless already present in the source-bound receipt. Only continue the full provenance chain for non-decisive annotations or independent execution diagnosis.
 
-## 6. Visible receipt
-Emit PREFLIGHT: COMPLETE or PREFLIGHT: BLOCKED before project-facing tools. Include task/mode/domain/outcome; project/ticket identity; MUST acceptance; primary/reviewer roles and rationale; exact plugin identity/version/release; registry/catalog/host-contract paths read; exact role-bundle artifacts; domain packs; runtime capability status; missing artifacts and blockers; target authority and next permitted step. If professional-capability-architect is used, state that implementation is not permitted until the exact domain-specialist bundle is generated and loaded.
+## 4. Requirements and specialist methods
+Use verified canonical role IDs and exact four-artifact bundle paths from the role registry. A native ChatGPT specialist invocation means the corresponding skill artifacts were loaded into this conversation and the work was performed with that context; it does not mean a separate worker was spawned. CI-generated `project.workflow` context remains gated by its own exact-SHA receipt. Load one primary role bundle and supporting bundles only when invoked; never fabricate role IDs, bundle contents or worker execution.
 
-## 7. Host enforcement boundary
-ChatGPT instructions can guide ordering but cannot intercept the host tool broker. Label ChatGPT instruction preflight MODEL_GUIDED. Label VS Code/Omni Studio preflight HOST_ENFORCED only after the extension-owned gate and negative invocation tests prove denied calls never execute.
+## 5. Local probes are conditional
+Local probes never replace role preflight. ChatGPT Python/container is not the user's machine and is not an alternate role-preflight executor.
+
+## 6. Evidence and closure
+Record repository/ref/SHA, Git Tree SHA, workflow/blob SHA, receipt identity/hash, runner_id, job_id, run_id, attempt, head_sha, executed steps, exit result, output hashes, selected native specialist bundle(s) and first unmet acceptance criterion. Parse run URLs as run_id and apply the Run URL, identifier and report consistency gate in `skills/github-actions-run-lifecycle/SKILL.md`; when annotation-first short-circuit applies, explicitly mark unqueried downstream fields `NOT_QUERIED_BY_DESIGN`. CI PASS validates only its own gate, not product/consumer/owner acceptance. A failed or unexecuted gate requires evidence recovery; do not substitute local Python.
+
+
+## Native role versus CI role-split boundary
+
+The native ChatGPT route may load exactly one accountable primary role's canonical four-artifact bundle (SKILL.md, mindset.md, knowledge.md, workflow.md) from a verified registry path. Record it as NATIVE_PRIMARY_ROLE_CONTEXT_LOADED, not ROLE_SPLIT_PREFLIGHT_PASS, ROLE_PROMPT_INJECTED or an independent worker. Supporting specialist roles are loaded only when explicitly invoked and must not be represented as independent workers. The generated project.workflow/role_pack.py multi-role split remains CI-only and requires the exact-SHA receipt plus actual executed preflight steps.

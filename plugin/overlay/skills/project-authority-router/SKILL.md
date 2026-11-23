@@ -1,17 +1,17 @@
 ---
 name: project-authority-router
-description: Resolve the explicit project and ticket source authority without cross-workstream checkpoint leakage.
+description: Resolve explicit project and ticket authority across provider-neutral work-management, knowledge, source-control and CI adapters.
 ---
 # Project Authority Router
 
 Use for project-specific, resumed, cross-session, context-switching or ambiguous work; SHORT_CHAT stays direct.
 
-1. Honor the explicit goal/workstream/ticket in the current request. For persistent project/repository/branch selection, consult the Notion Universal Project Routing Registry; a one-off target applies only to this task.
-2. Apply `skills/project-ticket-context-isolation/SKILL.md`. Resolve project and ticket by identity; never by latest timestamp, latest chat, account-wide activity or familiar repository name.
-3. Keep engineering/GitHub, Game Mod, VS Code Extension, Career/Interview (including Papaya), Academy, provider integration and plugin/workflow maintenance as separate contexts unless an explicit cross-project dependency is declared.
-4. Lock goal, ticket, source identity (repo/ref/SHA or provider record), current status, acceptance, role bundle IDs and one Next Action. Validate the matching project and ticket checkpoint before mutation.
-5. GitHub owns versioned source/contracts/tests/technical receipts; Notion Routing Registry selects persistent route; the owning project/work board owns mutable ticket state. Handoffs and summaries are pointers, not proof.
-6. On a switch, save/read back the outgoing ticket cursor, then load and validate the destination ticket. Switching back must restore the prior ticket's first unmet criterion.
-7. Load only matching domain and specialist skills. For Career/Interview use career-router + adaptive-core + exactly one selected mode; for engineering use engineering-full-flow and the relevant roles; for CI/CD use `skills/github-actions-run-lifecycle/SKILL.md` and proportional gates.
+1. Honor the explicit goal/workstream/ticket in the current request. Apply \`skills/project-ticket-context-isolation/SKILL.md\`; resolve identity, never latest timestamp.
+2. Read the project-local authority map or \`AGENTS.md\`. If none exists, discover actual host connectors and ask only when multiple authoritative candidates remain ambiguous.
+3. Resolve each concern independently: project registry, work management, knowledge base, source control, CI/CD, evidence store and runtime. Jira + Confluence + GitHub, Notion + GitLab, Linear + Bitbucket and other combinations are examples, not defaults.
+4. Lock project_id, ticket_id, workstream, goal, requirement version, source identity, status, acceptance and one Next Action. Keep ticket, knowledge page, repository issue, PR/MR and pipeline run IDs distinct.
+5. Read/write only through the provider that owns the relevant concern. Read before write, inspect actual permissions/schema, read back material writes, and avoid dual-write unless an explicit synchronization contract exists.
+6. On a project switch, persist/read back the outgoing ticket cursor where supported, then load the destination's own authority and checkpoint. Switching back restores the previous first unmet criterion.
+7. Load only matching domain and specialist skills. Role names do not prove independent workers.
 8. Skills/manifests/releases do not grant OAuth, tools, browser control, cross-chat visibility or background execution. Never claim provider access or host activation without a real result.
-9. If multiple projects/tickets remain genuinely plausible, ask one concise clarification. If a source/connector fails, try another authorized route and continue independent safe work.
+9. If a provider is missing, preserve UNKNOWN/BLOCKED and continue independent work. If multiple projects/tickets remain genuinely plausible, ask one concise clarification.

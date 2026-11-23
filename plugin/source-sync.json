@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "consumer": "chatgpt",
+  "source_repository": "leminhphap-improvement/ai-workflow-archtiecture",
+  "source_commit_sha": "13e344dc27614dafb61e3e3470e10469da196073",
+  "plugin_version": "0.1.170",
+  "plugin_id": "plugins_6adcacd0c4988191a4f3d33a5bec0d29",
+  "expected_release_id": "pluginrel_6b03c5d2db348191934dda8b2b0e764d",
+  "expected_current_version": "0.1.166",
+  "base_role_count": 30,
+  "extension_role_count": 5,
+  "unique_role_count": 35,
+  "required_artifacts_per_role": [
+    "SKILL.md",
+    "mindset.md",
+    "knowledge.md",
+    "workflow.md"
+  ],
+  "required_role_artifacts": 140,
+  "default_prompt_count": 48,
+  "onboarding_skill": "skills/chatgpt-runtime-onboarding/SKILL.md",
+  "source_blob_shas": {
+    "plugin/overlay/plugin.json": "6be60ceb61c5e4768025f5f50c606073d0bfee84",
+    "plugin/overlay/references/role-registry.json": "aa7cce51285c3fc5667dfc2a2fdde4c0b9f92aa0",
+    "plugin/overlay/references/role-registry.extensions.json": "a891dddce271958d31dc2d6865369e4cf3dc9c89",
+    "plugin/overlay/references/domain-routing.json": "cf85644555566a57d6434781b382161c0893164e",
+    "plugin/overlay/references/professional-capability-catalog.extensions.json": "cbd3a3978ea896c9c368fa759a9537e3fc6c4314"
+  },
+  "excluded_consumer_paths": [
+    ".codex-plugin/plugin.json",
+    ".agent-plugin/plugin.json",
+    ".claude-plugin/plugin.json",
+    "skills/codex-project-bootstrap/SKILL.md",
+    "references/codex-skill-mirror.json"
+  ]
+}

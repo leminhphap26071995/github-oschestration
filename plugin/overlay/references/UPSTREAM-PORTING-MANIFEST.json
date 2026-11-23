@@ -1,0 +1,47 @@
+{
+  "schema_version": "1.0",
+  "package": "unified-project-workflow",
+  "codex_package_version": "0.1.97",
+  "upstream_upw_plugin_version": "0.1.96",
+  "upstream_architecture_revision": "c8a63d2440328e8d1d55cef0eaaa33cdd1104a63",
+  "included_core_skills": [
+    "ai-manager",
+    "ai-owned-e2e-execution",
+    "always-on-guard",
+    "behavior-recovery",
+    "chat-mode-closed-loop",
+    "cicd-full-flow",
+    "context-recovery",
+    "engineering-full-flow",
+    "execution-preflight",
+    "github-actions-run-lifecycle",
+    "goal-anchored-context-integrity",
+    "project-authority-router",
+    "project-ticket-context-isolation",
+    "provider-adapter-routing",
+    "session-continuity",
+    "workflow-contract",
+    "ai-tooling-lifecycle",
+    "professional-capability-discovery",
+    "professional-roles"
+  ],
+  "included_specialist_bundles": [
+    "ai-native-tooling-engineer",
+    "devops-engineer",
+    "professional-capability-architect",
+    "qa-engineer",
+    "security-reviewer",
+    "software-architect"
+  ],
+  "provider_model": "Vendor-neutral core; concern-specific provider adapters; no bundled provider credentials or MCP servers.",
+  "not_bundled": [
+    "provider credentials or MCP server connections",
+    "private project/ticket/checkpoint content",
+    "optional domain packs unrelated to this assessment (for example Game Mod, Academy and other project-specific packs)"
+  ],
+  "notes": [
+    "This is a Codex-compatible distribution derived from the owner-installed UPW v0.1.96 and the canonical AI Workflow Architecture source.",
+    "The optional domain packs remain in the broader UPW ecosystem and may be ported as separate packages without changing this core.",
+    "The consuming repository pins the exact package commit in its marketplace source.sha field; the package does not embed its own commit SHA."
+  ]
+}

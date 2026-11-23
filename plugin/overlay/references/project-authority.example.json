@@ -1,0 +1,39 @@
+{
+  "schema_version": "1.0",
+  "project_id": "example-project",
+  "workstream_type": "engineering",
+  "authorities": {
+    "project_registry": {
+      "provider": "owner-configured",
+      "resource_ref": "project://example-project"
+    },
+    "work_management": {
+      "provider": "jira-or-notion-or-linear",
+      "resource_ref": "work://project/example-project"
+    },
+    "knowledge_base": {
+      "provider": "confluence-or-notion-or-sharepoint",
+      "resource_ref": "knowledge://space/example-project"
+    },
+    "source_control": {
+      "provider": "github-or-gitlab-or-bitbucket",
+      "resource_ref": "source://example/repository"
+    },
+    "ci_cd": {
+      "provider": "github-actions-or-gitlab-ci-or-jenkins",
+      "resource_ref": "pipeline://example-project"
+    },
+    "evidence_store": {
+      "provider": "approved-repository-artifacts-or-object-store",
+      "resource_ref": "evidence://example-project"
+    }
+  },
+  "write_policy": {
+    "read_before_write": true,
+    "read_back_material_writes": true,
+    "dual_write": false
+  },
+  "fallback": {
+    "when_adapter_unavailable": "local-authoritative-files-only; otherwise UNKNOWN"
+  }
+}

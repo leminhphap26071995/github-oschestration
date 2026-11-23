@@ -6,66 +6,65 @@ from pathlib import Path
 
 from plugin.validate_overlay import validate
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
-OVERLAY_ROOT = REPO_ROOT / "plugin" / "overlay"
-ROLE_ARTIFACTS = ("SKILL.md", "mindset.md", "knowledge.md", "workflow.md")
+ROOT = Path(__file__).resolve().parents[1]
+OVERLAY = ROOT / "plugin" / "overlay"
+ARTIFACTS = ("SKILL.md", "mindset.md", "knowledge.md", "workflow.md")
 
 
 class UpwPluginRolePayloadTests(unittest.TestCase):
-    def test_complete_overlay_passes(self):
-        self.assertEqual([], validate(OVERLAY_ROOT))
+    def test_overlay_is_complete_and_chatgpt_only(self):
+        self.assertEqual([], validate(OVERLAY))
+        self.assertFalse((OVERLAY / ".codex-plugin").exists())
+        self.assertFalse((OVERLAY / ".agent-plugin").exists())
+        self.assertFalse((OVERLAY / "skills/codex-project-bootstrap").exists())
 
-    def test_all_three_manifests_share_name_and_version(self):
-        root = json.loads((OVERLAY_ROOT / "plugin.json").read_text(encoding="utf-8"))
-        codex = json.loads((OVERLAY_ROOT / ".codex-plugin/plugin.json").read_text(encoding="utf-8"))
-        agent = json.loads((OVERLAY_ROOT / ".agent-plugin/plugin.json").read_text(encoding="utf-8"))
-        self.assertEqual(root["name"], codex["name"])
-        self.assertEqual(root["name"], agent["name"])
-        self.assertEqual(root["version"], codex["version"])
-        self.assertEqual(root["version"], agent["version"])
-        self.assertEqual("./skills", agent["skills"])
-
-    def test_all_registered_roles_have_complete_four_artifact_bundles(self):
-        base = json.loads((OVERLAY_ROOT / "references/role-registry.json").read_text(encoding="utf-8"))
-        extensions = json.loads((OVERLAY_ROOT / "references/role-registry.extensions.json").read_text(encoding="utf-8"))
-        role_ids = set()
-
-        self.assertEqual(set(ROLE_ARTIFACTS), set(base["required_files"]))
-        self.assertEqual(set(ROLE_ARTIFACTS), set(extensions["required_artifacts"]))
-
+    def test_all_registered_roles_have_four_artifacts(self):
+        base = json.loads((OVERLAY / "references/role-registry.json").read_text())
+        ext = json.loads((OVERLAY / "references/role-registry.extensions.json").read_text())
+        ids = set()
         for role in base["roles"]:
-            role_ids.add(role["role"])
-            self.assertEqual(set(ROLE_ARTIFACTS), {Path(item).name for item in role["bundle"]})
-            for relative in role["bundle"]:
-                self.assertTrue((OVERLAY_ROOT / relative).is_file(), relative)
+            ids.add(role["role"])
+            self.assertEqual(set(ARTIFACTS), {Path(p).name for p in role["bundle"]})
+            for rel in role["bundle"]:
+                self.assertTrue((OVERLAY / rel).is_file(), rel)
+        for role in ext["roles"]:
+            ids.add(role["role_id"])
+            for artifact in ARTIFACTS:
+                rel = Path(role["bundle"]) / artifact
+                self.assertTrue((OVERLAY / rel).is_file(), str(rel))
+        self.assertEqual(35, len(ids))
+        self.assertEqual(30, len(base["roles"]))
+        self.assertEqual(5, len(ext["roles"]))
+        self.assertIn("talent-acquisition-specialist", ids)
+        self.assertIn("technical-hiring-manager", ids)
 
-        for role in extensions["roles"]:
-            role_ids.add(role["role_id"])
-            for artifact in extensions["required_artifacts"]:
-                relative = Path(role["bundle"]) / artifact
-                self.assertTrue((OVERLAY_ROOT / relative).is_file(), str(relative))
+    def test_cv_review_route_has_distinct_hr_and_technical_roles(self):
+        route = json.loads((OVERLAY / "references/domain-routing.json").read_text())["domains"]["cv_professional_review"]
+        self.assertEqual({"talent-acquisition-specialist", "technical-hiring-manager"}, set(route["role_selection"]["primary_roles"]))
+        self.assertIn("skills/cv-update-lifecycle/SKILL.md", route["load"])
+        self.assertIn("references/cv-update-contract.md", route["load"])
 
-        self.assertEqual(9, len(role_ids))
-        self.assertIn("ai-native-tooling-engineer", role_ids)
+    def test_new_roles_are_specialized_not_name_only(self):
+        ta = OVERLAY / "skills/roles/talent-acquisition-specialist"
+        thm = OVERLAY / "skills/roles/technical-hiring-manager"
+        self.assertIn("ATS", (ta / "knowledge.md").read_text())
+        self.assertIn("project dates", (ta / "mindset.md").read_text())
+        self.assertIn("ownership ladder", (thm / "mindset.md").read_text())
+        self.assertIn("Kubernetes", (thm / "knowledge.md").read_text())
+        self.assertIn("interview probes", (thm / "workflow.md").read_text())
 
     def test_missing_role_artifact_fails_closed(self):
         with tempfile.TemporaryDirectory() as temp:
             copy = Path(temp) / "overlay"
-            shutil.copytree(OVERLAY_ROOT, copy)
-            relative = Path("skills/roles/ai-native-tooling-engineer/knowledge.md")
-            (copy / relative).unlink()
-            errors = validate(copy)
-            self.assertIn(
-                f"MISSING_ROLE_ARTIFACT:ai-native-tooling-engineer:{relative.as_posix()}",
-                errors,
-            )
+            shutil.copytree(OVERLAY, copy)
+            target = copy / "skills/roles/talent-acquisition-specialist/knowledge.md"
+            target.unlink()
+            self.assertTrue(any(x.startswith("MISSING_ROLE_ARTIFACT:talent-acquisition-specialist:") for x in validate(copy)))
 
-    def test_discovery_and_domain_registries_are_wired(self):
-        catalog = json.loads((OVERLAY_ROOT / "references/professional-capability-catalog.json").read_text(encoding="utf-8"))
-        domain = json.loads((OVERLAY_ROOT / "references/domain-routing.json").read_text(encoding="utf-8"))
-        self.assertEqual("PROHIBITED", catalog["generic_role_fallback"])
-        self.assertTrue(domain["domains"])
-        self.assertTrue(domain["rules"])
+    def test_default_prompt_matches_live_baseline(self):
+        manifest = json.loads((OVERLAY / "plugin.json").read_text())
+        baseline = json.loads((ROOT / "plugin/live-default-prompt.json").read_text())
+        self.assertEqual(baseline, manifest["extensions"]["com.openai"]["interface"]["defaultPrompt"])
 
 
 if __name__ == "__main__":

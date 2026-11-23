@@ -52,3 +52,7 @@ For these outcomes, acceptance must distinguish discovered, reviewed, installed,
 
 ## Completion gate
 Do not mark planning complete until the deliverable-to-specialist map has no unexplained coverage gaps. Do not claim delivery complete until each applicable deliverable is produced, integrated and verified at its required consumer boundary.
+
+
+## CV and candidate assessment
+For CV/resume outcomes, do not collapse recruiter screening and technical hiring into Interview Trainer or Tech Lead. Route to Talent Acquisition Specialist for ATS/recruiter screening and chronology, Technical Hiring Manager for role/seniority/ownership assessment, Interview Trainer for candidate preparation, and only the domain engineers needed to validate technical claims. Use the claim-level contract in `references/cv-update-contract.md`; do not rewrite a claim before its provenance and evidence are reconciled.

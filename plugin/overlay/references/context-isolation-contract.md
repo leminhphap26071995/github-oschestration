@@ -1,2 +1,9 @@
-# Context Isolation Contract
+# Context Isolation and Task-Scoped Repository Routing
+
 Root CURRENT is an index only. Project and ticket checkpoints are namespaced. Resolve explicit project/ticket; never choose by modification time. Persist outgoing cursor before switching, load destination state and source authority, preserve previous workstream, and reject cross-project checkpoint identity/domain mismatches. Game Mod, VS Code Extension and Career/Interview are independent contexts.
+
+For each task, distinguish `DEFAULT_REPOSITORY` (persistent routing) from the single `ACTIVE_EXECUTION_REPOSITORY` (current task target). Never dual-push or run equivalent CI/CD workflows in parallel across duplicate copies. A temporary task switch does not mutate persistent routing.
+
+Only after explicit `QUOTA_EXHAUSTED`, search suitable private repositories accessible to the authenticated account across personal ownership and all accessible organizations, including outside the source organization. Require verified write permission, non-archived state, project/data fit, compatible automatic workflow and a demonstrably distinct billing owner. Never use `huyquanghan-apps`; do not infer billing ownership from org membership alone. Do not pre-check quota or ask the owner for billing details.
+
+Transfer complete task state with source/destination repo/ref/SHA provenance, preserve history when required, read back destination HEAD, then switch only this task. Keep default routing unchanged. Reconcile upstream once fresh automatic admission is available, push once, verify exact SHA/checks, then mark `SYNCED`; otherwise keep `SYNC_PENDING`.

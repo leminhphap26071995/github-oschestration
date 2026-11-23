@@ -1,4 +1,4 @@
-name: UPW Plugin Manual Release
+name: UPW ChatGPT Plugin Release
 "on":
   push:
     branches: [main]
@@ -7,10 +7,10 @@ name: UPW Plugin Manual Release
 permissions:
   contents: write
 concurrency:
-  group: upw-plugin-creator-update-${{ github.repository }}
+  group: upw-chatgpt-plugin-release-${{ github.repository }}
   cancel-in-progress: false
 jobs:
-  prepare:
+  package:
     if: ${{ contains(github.event.head_commit.message, '[upw-plugin-update]') }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -20,124 +20,123 @@ jobs:
         with:
           ref: ${{ github.sha }}
           persist-credentials: false
-      - name: Detect update request
-        id: request
-        shell: bash
-        run: |
-          if [[ -f .github/upw-plugin-update-request.json ]]; then
-            echo "present=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "present=false" >> "$GITHUB_OUTPUT"
-          fi
       - name: Set up Python
-        if: steps.request.outputs.present == 'true'
         uses: actions/setup-python@v7
         with:
           python-version: "3.12"
-      - name: Validate owner-approved Plugin Creator update request
-        if: steps.request.outputs.present == 'true'
+      - name: Validate owner-approved ChatGPT update request
         shell: bash
         run: |
           set -euo pipefail
-          request=".github/upw-plugin-update-request.json"
-          test -f "$request"
-          jq -e '
-            .approved == true and
-            .requested_by == "repository-owner" and
-            .plugin_id == "plugins_6adcacd0c4988191a4f3d33a5bec0d29" and
-            (.expected_release_id | type == "string" and length > 0) and
-            (.current_version | type == "string" and test("^[0-9]+\\.[0-9]+\\.[0-9]+$"))
-          ' "$request" >/dev/null
           python - <<'PY'
           import json
           from pathlib import Path
-
           request = json.loads(Path(".github/upw-plugin-update-request.json").read_text())
           manifest = json.loads(Path("plugin/overlay/plugin.json").read_text())
-          host_manifest = json.loads(Path("plugin/overlay/.codex-plugin/plugin.json").read_text())
-
-          def version(value):
-              return tuple(int(part) for part in value.split("."))
-
-          current = request["current_version"]
-          target = manifest["version"]
-          if version(target) <= version(current):
-              raise SystemExit(f"VERSION_NOT_NEWER_THAN_PLUGIN_CREATOR: current={current} overlay={target}")
-
-          root_prompt = manifest.get("extensions", {}).get("com.openai", {}).get("interface", {}).get("defaultPrompt")
-          host_prompt = host_manifest.get("interface", {}).get("defaultPrompt")
-          if not isinstance(root_prompt, list) or not root_prompt or root_prompt != host_prompt:
-              raise SystemExit("DEFAULT_PROMPT_MISSING_OR_MANIFESTS_OUT_OF_SYNC")
-
-          print(f"REQUEST_VALID plugin={request['plugin_id']} current={current} target={target}")
+          sync = json.loads(Path("plugin/source-sync.json").read_text())
+          baseline = json.loads(Path("plugin/live-default-prompt.json").read_text())
+          prompt = manifest["extensions"]["com.openai"]["interface"]["defaultPrompt"]
+          def version(v): return tuple(int(x) for x in v.split("."))
+          assert request["approved"] is True
+          assert request["requested_by"] == "repository-owner"
+          assert request["consumer"] == "chatgpt"
+          assert request["plugin_id"] == sync["plugin_id"] == "plugins_6adcacd0c4988191a4f3d33a5bec0d29"
+          assert request["expected_release_id"] == sync["expected_release_id"] == "pluginrel_6b03c5d2db348191934dda8b2b0e764d"
+          assert request["current_version"] == sync["expected_current_version"] == "0.1.166"
+          assert request["target_version"] == manifest["version"] == sync["plugin_version"] == "0.1.170"
+          assert version(manifest["version"]) > version(request["current_version"])
+          assert request["source_repository"] == sync["source_repository"]
+          assert request["source_commit_sha"] == sync["source_commit_sha"]
+          assert len(prompt) == request["expected_default_prompt_count"] == len(baseline) == 48
+          assert prompt == baseline, "DEFAULT_PROMPT_CHANGED_FROM_LIVE_BASELINE"
+          assert request["expected_role_count"] == sync["unique_role_count"] == 35
+          assert request["expected_role_artifact_count"] == sync["required_role_artifacts"] == 140
+          assert set(request["delete_paths"]).issubset(set(sync["excluded_consumer_paths"]))
+          print("OWNER_APPROVED_CHATGPT_REQUEST_VALID")
           PY
-      - name: Validate UPW plugin overlay
-        if: steps.request.outputs.present == 'true'
+      - name: Validate full overlay and role bundles
         run: python plugin/validate_overlay.py --root plugin/overlay
-      - name: Package Plugin Creator overlay and bind provenance
-        if: steps.request.outputs.present == 'true'
-        shell: bash
+      - name: Run release conformance tests
         run: |
-          set -euo pipefail
-          version="$(python -c 'import json; print(json.load(open("plugin/overlay/plugin.json"))["version"])')"
+          python -m unittest discover -s tests -p 'test_upw_plugin_role_payload.py' -v
+          python -m unittest discover -s tests -p 'test_chatgpt_archive_contract.py' -v
+      - name: Package ChatGPT-only archive
+        run: |
           mkdir -p dist
-          archive="dist/UPW-${version}-plugin-creator-overlay.zip"
-          python plugin/package_overlay.py --root plugin/overlay --output "$archive"
-          sha256sum "$archive" | tee dist/SHA256SUMS
+          python plugin/package_overlay.py --root plugin/overlay --output dist/UPW-0.1.170-ChatGPT-plugin.zip
+          sha256sum dist/UPW-0.1.170-ChatGPT-plugin.zip | tee dist/SHA256SUMS
+      - name: Create immutable handoff metadata
+        env:
+          SOURCE_SHA: ${{ github.sha }}
+          RUN_ID: ${{ github.run_id }}
+        run: |
           python - <<'PY'
-          import hashlib, json
+          import hashlib, json, os
           from pathlib import Path
           request = json.loads(Path(".github/upw-plugin-update-request.json").read_text())
-          manifest = json.loads(Path("plugin/overlay/plugin.json").read_text())
-          archive = next(Path("dist").glob("*.zip"))
+          sync = json.loads(Path("plugin/source-sync.json").read_text())
+          archive = Path("dist/UPW-0.1.170-ChatGPT-plugin.zip")
           handoff = {
-              "schema_version": 1,
-              "purpose": "Plugin Creator update handoff; this workflow does not publish the live plugin",
-              "plugin_id": request["plugin_id"],
-              "expected_release_id": request["expected_release_id"],
-              "current_version": request["current_version"],
-              "target_version": manifest["version"],
-              "source_sha": "${{ github.sha }}",
-              "workflow_run_id": "${{ github.run_id }}",
-              "archive": archive.name,
-              "archive_sha256": hashlib.sha256(archive.read_bytes()).hexdigest()
+            "schema_version": 2,
+            "consumer": "chatgpt",
+            "plugin_id": request["plugin_id"],
+            "expected_release_id": request["expected_release_id"],
+            "current_version": request["current_version"],
+            "target_version": request["target_version"],
+            "source_repository": sync["source_repository"],
+            "source_commit_sha": sync["source_commit_sha"],
+            "packaging_repository": os.environ["GITHUB_REPOSITORY"],
+            "packaging_commit_sha": os.environ["SOURCE_SHA"],
+            "workflow_run_id": os.environ["RUN_ID"],
+            "archive": archive.name,
+            "archive_sha256": hashlib.sha256(archive.read_bytes()).hexdigest(),
+            "role_count": sync["unique_role_count"],
+            "role_artifact_count": sync["required_role_artifacts"],
+            "delete_paths": request["delete_paths"],
+            "live_plugin_mutated": False
           }
           Path("dist/plugin-creator-handoff.json").write_text(json.dumps(handoff, indent=2) + "\n")
+          Path("dist/release-notes.md").write_text(
+            "# UPW 0.1.170 — ChatGPT-only plugin\n\n"
+            "- 35 unique professional roles; 140 required role artifacts (four per role).\n"
+            "- Adds Talent Acquisition Specialist and Technical Hiring Manager with distinct role contracts.\n"
+            "- Adds the evidence-first CV Update Lifecycle and claim/provenance contract.\n"
+            "- ChatGPT onboarding is separate from Codex/Claude CLI configuration.\n"
+            "- Archive excludes CLI manifests and Codex-only bootstrap content.\n"
+            "- This release is a package handoff; the live Plugin Creator plugin is not mutated by GitHub Actions.\n\n"
+            f"Canonical source: {sync['source_repository']}@{sync['source_commit_sha']}\n"
+          )
           PY
-      - name: Upload update handoff artifact
-        if: steps.request.outputs.present == 'true'
+      - name: Upload exact handoff artifact
         uses: actions/upload-artifact@v6
         with:
-          name: UPW-plugin-creator-update-${{ github.sha }}
+          name: UPW-0.1.170-ChatGPT-plugin-${{ github.sha }}
           path: |
-            dist/*.zip
+            dist/UPW-0.1.170-ChatGPT-plugin.zip
             dist/SHA256SUMS
             dist/plugin-creator-handoff.json
+            dist/release-notes.md
           if-no-files-found: error
           retention-days: 14
-      - name: Create versioned GitHub Release with package assets
-        if: steps.request.outputs.present == 'true'
+      - name: Publish versioned GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           set -euo pipefail
-          version="$(python -c 'import json; print(json.load(open("plugin/overlay/plugin.json"))["version"])')"
-          tag="upw-v${version}"
+          tag="upw-v0.1.170"
           if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             echo "RELEASE_TAG_ALREADY_EXISTS:$tag" >&2
             exit 1
           fi
           gh release create "$tag" \
-            "dist/UPW-${version}-plugin-creator-overlay.zip" \
-            "dist/SHA256SUMS" \
-            "dist/plugin-creator-handoff.json" \
+            dist/UPW-0.1.170-ChatGPT-plugin.zip \
+            dist/SHA256SUMS \
+            dist/plugin-creator-handoff.json \
             --repo "$GITHUB_REPOSITORY" \
             --target "$GITHUB_SHA" \
-            --title "UPW ${version} — Plugin Creator overlay" \
-            --notes "Validated Plugin Creator overlay built from source commit $GITHUB_SHA. This release packages the overlay only; the live ChatGPT plugin is unchanged until its owner-authorized Plugin Creator update is applied and read back."
-
-      - name: Confirm native Plugin Creator handoff boundary
-        if: steps.request.outputs.present == 'true'
+            --title "UPW 0.1.170 — ChatGPT plugin" \
+            --notes-file dist/release-notes.md
+      - name: Confirm Plugin Creator handoff boundary
         run: |
-          echo "PACKAGE_READY: GitHub Release contains the validated overlay ZIP and provenance. ChatGPT must still apply the owner-authorized native Plugin Creator update with the recorded plugin_id and expected_release_id; this workflow does not mutate the live plugin."
+          echo "PACKAGE_READY: archive and handoff are published. Live Plugin Creator update and ChatGPT runtime readback remain separate acceptance steps."

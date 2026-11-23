@@ -1,39 +1,47 @@
-# Plugin Release Packaging
+# UPW Plugin Release Packaging
 
-## Scope and ownership
+## Consumer boundary
 
-The canonical plugin release source is maintained under `plugin/overlay/`. It contains a versioned overlay for the existing UPW plugin identity. It is not a second plugin and does not replace the Plugin Creator backend as the release authority.
+This repository builds the **ChatGPT Plugin Creator** package only. Codex, Claude Code, VS Code extensions and local CLI configuration are separate consumers and must not be bundled into this ChatGPT archive.
 
-## Role-routing payload completeness — UPW 0.1.168
+The canonical source remains `leminhphap-improvement/ai-workflow-archtiecture`. The public repository contains a sanitized, versioned copy of the ChatGPT overlay and packaging tests. The Plugin Creator backend remains the live release authority.
 
-The 0.1.168 overlay restores the missing professional-routing layer rather than shipping only manifests:
+## UPW 0.1.170 payload
 
-- Root, Codex and Agent manifests are all 0.1.168; the 48 root/Codex default-prompt entries remain byte-for-byte equal to the live 0.1.166 prompt arrays.
-- Four runtime registries are packaged: `role-registry.json`, `role-registry.extensions.json`, `domain-routing.json`, and `professional-capability-catalog.json`.
-- Both routing entry skills are packaged: `professional-capability-discovery/SKILL.md` and `ai-tooling-lifecycle/SKILL.md`.
-- Every unique role advertised by the base and extension registries has all four artifacts: `SKILL.md`, `mindset.md`, `knowledge.md`, and `workflow.md`. The registries contain ten entries and nine unique role IDs because `ai-native-tooling-engineer` is intentionally present in both registries.
-- The nine complete bundles are AI Native Tooling Engineer, DevOps Engineer, Software Architect, QA Engineer, Security Reviewer, Professional Capability Architect, MCP Integration Engineer, VS Code Extension Platform Engineer, and OmniRoute Model Routing Engineer.
-- `plugin/validate_overlay.py` parses all three manifests and both role registries and fails closed on any missing or malformed role artifact, mismatched manifest prompt, invalid discovery contract, or generic-role fallback.
+- ChatGPT root manifest: `plugin.json`.
+- ChatGPT onboarding: `skills/chatgpt-runtime-onboarding/SKILL.md`.
+- CV update lifecycle: `skills/cv-update-lifecycle/SKILL.md` plus `references/cv-update-contract.md`.
+- 35 unique professional roles: 30 base + 5 extension roles.
+- 140 required role artifacts: `SKILL.md`, `mindset.md`, `knowledge.md`, `workflow.md` for every role.
+- New roles: Talent Acquisition Specialist and Technical Hiring Manager. These are distinct from Interview Trainer and Tech Lead.
+- The 48 live default-prompt entries are preserved exactly.
 
-Domain-specific packs remain routed adapters and are not copied into this generic role payload. Their project-specific source and evidence retain their existing source authority.
+## ChatGPT archive rules
 
-Release `upw-v0.1.167` is superseded because its Agent compatibility manifest retained version 0.1.166. Apply only `upw-v0.1.168`, which aligns all three manifests.
+The ZIP root must directly contain `plugin.json`, `references/` and `skills/`. It must not contain an enclosing `plugin/overlay/` directory.
 
-Canonical private source revision: `0b142e75792504f741e2ad0670054f8b70d58734`.
+The archive excludes:
+- `.codex-plugin/`, `.agent-plugin/`, `.claude-plugin/`;
+- Codex/Claude CLI manifests and local bootstrap files;
+- `skills/codex-project-bootstrap/`;
+- `references/codex-skill-mirror.json`;
+- repository-only README, scripts and tests.
 
-## Automatic CI
+Plugin Creator requires detectable plugin content such as a top-level `skills/<name>/SKILL.md`. The packaging tests reopen the ZIP, verify its root layout and reject CLI-only paths. The onboarding path in the root manifest must resolve inside the archive.
 
-`.github/workflows/update-upw-plugin.yml` runs on a push to `main` that changes the owner-approved update request file. It runs only when an owner-approved `.github/upw-plugin-update-request.json` is committed to `main`. It validates the exact UPW Plugin Creator ID, expected current release ID and current live version, then requires the overlay version to be newer and both manifests to preserve the current default prompt. It validates the overlay, creates a ZIP whose root is the plugin root, checks ZIP integrity, computes SHA-256, records source/release provenance and uploads a short-lived handoff artifact. No `workflow_dispatch` is added.
+## Owner-approved update request and CI
 
-The ZIP is an overlay: omitted files are retained by Plugin Creator's update operation. This avoids storing a duplicate full plugin archive in the repository.
+The package workflow runs only on a push to `main` that changes `.github/upw-plugin-update-request.json` and includes `[upw-plugin-update]` in the commit message. It validates the exact plugin ID/current release ID/current version, source commit, role counts and live default-prompt baseline; then runs conformance tests, builds the ZIP, computes SHA-256, records provenance and publishes a versioned GitHub Release.
 
-## Create/update handoff
+The CI package run proves the archive was built and tested. It does **not** update the live Plugin Creator plugin or prove ChatGPT loaded the new skills.
 
-1. Read the live UPW plugin metadata and files through Plugin Creator; record its exact plugin ID, current version and current release ID.
-2. Refresh the repository overlay from the intended current plugin source; preserve plugin identity, default prompts, omitted files, audience and scope.
-3. Set `.github/upw-plugin-update-request.json` with owner approval, exact plugin ID, expected current release ID and current version. Commit it to `main` with `[upw-plugin-update]` in the commit message; both the changed request path and this explicit marker are required to run the preparation job.
-4. Verify artifact source SHA, ZIP integrity, SHA-256 and handoff metadata. The workflow rejects an overlay version that is not newer than the recorded live version or whose manifests do not preserve the default prompt.
-5. Use the native Plugin Creator update action with the exact plugin ID and expected release ID. GitHub Actions cannot invoke that Plugin Creator mutation.
-6. Read back the new release ID/version and every changed file; record the release ID and source SHA in the owning project/ticket checkpoint.
+## Live update handoff
 
-**Boundary:** GitHub Actions can validate and package the plugin but cannot invoke the current ChatGPT Plugin Creator action. The actual create/update remains a separate Plugin Creator operation after artifact review. The GitHub Release is the owner-facing package handoff. A green packaging workflow or GitHub Release does not prove Plugin Creator update, host activation or actual skill invocation.
+1. Read back the live plugin ID, release ID, version and current files.
+2. Apply the exact ZIP through Plugin Creator using the expected release ID.
+3. Delete exact stale CLI-only paths using `delete_paths`; omitted files are retained by overlay semantics.
+4. Read back the new release ID/version, manifest, all role registries and all 140 role artifacts.
+5. Verify the actual ChatGPT consumer can load the ChatGPT onboarding and CV update skill in a fresh runtime.
+6. Update Notion with live release ID, source SHA, package digest, readback evidence and first unmet criterion.
+
+A GitHub Release is not a live plugin update. A live plugin update is not proof of fresh runtime behavior. Keep those states separate.

@@ -64,7 +64,7 @@
         "longDescription": "UPW is a requirements-first workflow for understanding owner intent, defining durable requirements, assigning professional specialists and delivering complete outcomes with consumer-level evidence.",
         "shortDescription": "UPW — owner-goal-first full-outcome execution."
       },
-      "onboardingSkill": "./skills/codex-project-bootstrap/SKILL.md"
+      "onboardingSkill": "./skills/chatgpt-runtime-onboarding/SKILL.md"
     }
   },
   "keywords": [
@@ -80,5 +80,5 @@
     "end-to-end"
   ],
   "name": "unified-project-workflow",
-  "version": "0.1.168"
+  "version": "0.1.170"
 }

@@ -8,15 +8,70 @@
   ],
   "roles": [
     {
-      "role": "ai-native-tooling-engineer",
-      "title": "AI Native Tooling Engineer",
+      "role": "ai-native-engineer",
+      "title": "AI Native Engineer",
       "bundle": [
-        "skills/roles/ai-native-tooling-engineer/SKILL.md",
-        "skills/roles/ai-native-tooling-engineer/mindset.md",
-        "skills/roles/ai-native-tooling-engineer/knowledge.md",
-        "skills/roles/ai-native-tooling-engineer/workflow.md"
+        "skills/roles/ai-native-engineer/SKILL.md",
+        "skills/roles/ai-native-engineer/mindset.md",
+        "skills/roles/ai-native-engineer/knowledge.md",
+        "skills/roles/ai-native-engineer/workflow.md"
       ],
-      "domain": "ai_tooling_lifecycle"
+      "domain": "cross_domain"
+    },
+    {
+      "role": "ba",
+      "title": "Business Analyst",
+      "bundle": [
+        "skills/roles/ba/SKILL.md",
+        "skills/roles/ba/mindset.md",
+        "skills/roles/ba/knowledge.md",
+        "skills/roles/ba/workflow.md"
+      ],
+      "domain": "cross_domain"
+    },
+    {
+      "role": "backend-engineer",
+      "title": "Backend Engineer",
+      "bundle": [
+        "skills/roles/backend-engineer/SKILL.md",
+        "skills/roles/backend-engineer/mindset.md",
+        "skills/roles/backend-engineer/knowledge.md",
+        "skills/roles/backend-engineer/workflow.md"
+      ],
+      "domain": "cross_domain"
+    },
+    {
+      "role": "browser-extension-engineer",
+      "title": "Browser Extension Engineer",
+      "bundle": [
+        "skills/roles/browser-extension-engineer/SKILL.md",
+        "skills/roles/browser-extension-engineer/mindset.md",
+        "skills/roles/browser-extension-engineer/knowledge.md",
+        "skills/roles/browser-extension-engineer/workflow.md"
+      ],
+      "domain": "cross_domain"
+    },
+    {
+      "role": "cloud-engineer",
+      "title": "Cloud Engineer",
+      "bundle": [
+        "skills/roles/cloud-engineer/SKILL.md",
+        "skills/roles/cloud-engineer/mindset.md",
+        "skills/roles/cloud-engineer/knowledge.md",
+        "skills/roles/cloud-engineer/workflow.md"
+      ],
+      "domain": "cross_domain"
+    },
+    {
+      "role": "data-ai-engineer",
+      "title": "Data/AI Engineer",
+      "bundle": [
+        "skills/roles/data-ai-engineer/SKILL.md",
+        "skills/roles/data-ai-engineer/mindset.md",
+        "skills/roles/data-ai-engineer/knowledge.md",
+        "skills/roles/data-ai-engineer/workflow.md"
+      ],
+      "domain": "cross_domain"
     },
     {
       "role": "devops-engineer",
@@ -27,40 +82,132 @@
         "skills/roles/devops-engineer/knowledge.md",
         "skills/roles/devops-engineer/workflow.md"
       ],
-      "domain": "software_delivery"
+      "domain": "cross_domain"
     },
     {
-      "role": "software-architect",
-      "title": "Software Architect",
+      "role": "devsecops-engineer",
+      "title": "DevSecOps Engineer",
       "bundle": [
-        "skills/roles/software-architect/SKILL.md",
-        "skills/roles/software-architect/mindset.md",
-        "skills/roles/software-architect/knowledge.md",
-        "skills/roles/software-architect/workflow.md"
+        "skills/roles/devsecops-engineer/SKILL.md",
+        "skills/roles/devsecops-engineer/mindset.md",
+        "skills/roles/devsecops-engineer/knowledge.md",
+        "skills/roles/devsecops-engineer/workflow.md"
       ],
-      "domain": "architecture"
+      "domain": "cross_domain"
     },
     {
-      "role": "qa-engineer",
-      "title": "QA Engineer",
+      "role": "frontend-engineer",
+      "title": "Frontend Engineer",
       "bundle": [
-        "skills/roles/qa-engineer/SKILL.md",
-        "skills/roles/qa-engineer/mindset.md",
-        "skills/roles/qa-engineer/knowledge.md",
-        "skills/roles/qa-engineer/workflow.md"
+        "skills/roles/frontend-engineer/SKILL.md",
+        "skills/roles/frontend-engineer/mindset.md",
+        "skills/roles/frontend-engineer/knowledge.md",
+        "skills/roles/frontend-engineer/workflow.md"
       ],
-      "domain": "quality"
+      "domain": "cross_domain"
     },
     {
-      "role": "security-reviewer",
-      "title": "Security Reviewer",
+      "role": "game-developer",
+      "title": "Game Developer",
       "bundle": [
-        "skills/roles/security-reviewer/SKILL.md",
-        "skills/roles/security-reviewer/mindset.md",
-        "skills/roles/security-reviewer/knowledge.md",
-        "skills/roles/security-reviewer/workflow.md"
+        "skills/roles/game-developer/SKILL.md",
+        "skills/roles/game-developer/mindset.md",
+        "skills/roles/game-developer/knowledge.md",
+        "skills/roles/game-developer/workflow.md"
       ],
-      "domain": "security"
+      "domain": "game_development",
+      "training": "skills/roles/game-developer/training.md",
+      "match": "user asks to create, build, program, prototype or extend a game/game system"
+    },
+    {
+      "role": "game-modifier",
+      "title": "Game Modifier",
+      "bundle": [
+        "skills/roles/game-modifier/SKILL.md",
+        "skills/roles/game-modifier/mindset.md",
+        "skills/roles/game-modifier/knowledge.md",
+        "skills/roles/game-modifier/workflow.md"
+      ],
+      "domain": "game_mod",
+      "training": "skills/roles/game-modifier/training.md",
+      "match": "user asks to reverse-engineer, inspect, patch, replace assets in or modify an existing game"
+    },
+    {
+      "role": "interview-trainer",
+      "title": "Interview Trainer",
+      "bundle": [
+        "skills/roles/interview-trainer/SKILL.md",
+        "skills/roles/interview-trainer/mindset.md",
+        "skills/roles/interview-trainer/knowledge.md",
+        "skills/roles/interview-trainer/workflow.md"
+      ],
+      "domain": "career_training"
+    },
+    {
+      "role": "learning-coach",
+      "title": "Learning Coach",
+      "bundle": [
+        "skills/roles/learning-coach/SKILL.md",
+        "skills/roles/learning-coach/mindset.md",
+        "skills/roles/learning-coach/knowledge.md",
+        "skills/roles/learning-coach/workflow.md"
+      ],
+      "domain": "career_training"
+    },
+    {
+      "role": "learning-experience-designer",
+      "title": "Learning Experience Designer",
+      "bundle": [
+        "skills/roles/learning-experience-designer/SKILL.md",
+        "skills/roles/learning-experience-designer/mindset.md",
+        "skills/roles/learning-experience-designer/knowledge.md",
+        "skills/roles/learning-experience-designer/workflow.md"
+      ],
+      "domain": "career_training"
+    },
+    {
+      "role": "mentor",
+      "title": "Mentor",
+      "bundle": [
+        "skills/roles/mentor/SKILL.md",
+        "skills/roles/mentor/mindset.md",
+        "skills/roles/mentor/knowledge.md",
+        "skills/roles/mentor/workflow.md"
+      ],
+      "domain": "career_training"
+    },
+    {
+      "role": "mlops-engineer",
+      "title": "MLOps Engineer",
+      "bundle": [
+        "skills/roles/mlops-engineer/SKILL.md",
+        "skills/roles/mlops-engineer/mindset.md",
+        "skills/roles/mlops-engineer/knowledge.md",
+        "skills/roles/mlops-engineer/workflow.md"
+      ],
+      "domain": "cross_domain"
+    },
+    {
+      "role": "pm",
+      "title": "Project Manager",
+      "bundle": [
+        "skills/roles/pm/SKILL.md",
+        "skills/roles/pm/mindset.md",
+        "skills/roles/pm/knowledge.md",
+        "skills/roles/pm/workflow.md"
+      ],
+      "domain": "cross_domain"
+    },
+    {
+      "role": "product-manager",
+      "title": "Product Manager",
+      "bundle": [
+        "skills/roles/product-manager/SKILL.md",
+        "skills/roles/product-manager/mindset.md",
+        "skills/roles/product-manager/knowledge.md",
+        "skills/roles/product-manager/workflow.md"
+      ],
+      "domain": "cross_domain"
     },
     {
       "role": "professional-capability-architect",
@@ -71,7 +218,134 @@
         "skills/roles/professional-capability-architect/knowledge.md",
         "skills/roles/professional-capability-architect/workflow.md"
       ],
-      "domain": "professional_capability_discovery"
+      "domain": "cross_domain",
+      "match": "substantive outcome spans unfamiliar/multiple disciplines, a required specialist is missing, or deliverables need professional capability decomposition"
+    },
+    {
+      "role": "qa-engineer",
+      "title": "QA Engineer",
+      "bundle": [
+        "skills/roles/qa-engineer/SKILL.md",
+        "skills/roles/qa-engineer/mindset.md",
+        "skills/roles/qa-engineer/knowledge.md",
+        "skills/roles/qa-engineer/workflow.md"
+      ],
+      "domain": "cross_domain"
+    },
+    {
+      "role": "qa-lead",
+      "title": "QA Lead",
+      "bundle": [
+        "skills/roles/qa-lead/SKILL.md",
+        "skills/roles/qa-lead/mindset.md",
+        "skills/roles/qa-lead/knowledge.md",
+        "skills/roles/qa-lead/workflow.md"
+      ],
+      "domain": "cross_domain"
+    },
+    {
+      "role": "research-lead",
+      "title": "Research Lead",
+      "bundle": [
+        "skills/roles/research-lead/SKILL.md",
+        "skills/roles/research-lead/mindset.md",
+        "skills/roles/research-lead/knowledge.md",
+        "skills/roles/research-lead/workflow.md"
+      ],
+      "domain": "cross_domain"
+    },
+    {
+      "role": "security-reviewer",
+      "title": "Security Reviewer",
+      "bundle": [
+        "skills/roles/security-reviewer/SKILL.md",
+        "skills/roles/security-reviewer/mindset.md",
+        "skills/roles/security-reviewer/knowledge.md",
+        "skills/roles/security-reviewer/workflow.md"
+      ],
+      "domain": "cross_domain"
+    },
+    {
+      "role": "software-architect",
+      "title": "Software Architect",
+      "bundle": [
+        "skills/roles/software-architect/SKILL.md",
+        "skills/roles/software-architect/mindset.md",
+        "skills/roles/software-architect/knowledge.md",
+        "skills/roles/software-architect/workflow.md"
+      ],
+      "domain": "cross_domain"
+    },
+    {
+      "role": "solution-architect",
+      "title": "Solution Architect",
+      "bundle": [
+        "skills/roles/solution-architect/SKILL.md",
+        "skills/roles/solution-architect/mindset.md",
+        "skills/roles/solution-architect/knowledge.md",
+        "skills/roles/solution-architect/workflow.md"
+      ],
+      "domain": "cross_domain"
+    },
+    {
+      "role": "solution-architect-mentor",
+      "title": "Solution Architect Mentor",
+      "bundle": [
+        "skills/roles/solution-architect-mentor/SKILL.md",
+        "skills/roles/solution-architect-mentor/mindset.md",
+        "skills/roles/solution-architect-mentor/knowledge.md",
+        "skills/roles/solution-architect-mentor/workflow.md"
+      ],
+      "domain": "cross_domain",
+      "match": "architecture decision mentoring and design challenge; paired with solution-architect for delivery design"
+    },
+    {
+      "role": "sre-engineer",
+      "title": "SRE Engineer",
+      "bundle": [
+        "skills/roles/sre-engineer/SKILL.md",
+        "skills/roles/sre-engineer/mindset.md",
+        "skills/roles/sre-engineer/knowledge.md",
+        "skills/roles/sre-engineer/workflow.md"
+      ],
+      "domain": "cross_domain"
+    },
+    {
+      "role": "talent-acquisition-specialist",
+      "title": "Talent Acquisition Specialist",
+      "domain": "career_training",
+      "match": "CV screening, recruiter evaluation, candidate positioning, ATS readability, employment chronology, seniority and credential risk",
+      "bundle": [
+        "skills/roles/talent-acquisition-specialist/SKILL.md",
+        "skills/roles/talent-acquisition-specialist/mindset.md",
+        "skills/roles/talent-acquisition-specialist/knowledge.md",
+        "skills/roles/talent-acquisition-specialist/workflow.md"
+      ]
+    },
+    {
+      "role": "tech-lead",
+      "title": "Tech Lead",
+      "bundle": [
+        "skills/roles/tech-lead/SKILL.md",
+        "skills/roles/tech-lead/mindset.md",
+        "skills/roles/tech-lead/knowledge.md",
+        "skills/roles/tech-lead/workflow.md"
+      ],
+      "domain": "cross_domain"
+    },
+    {
+      "role": "technical-hiring-manager",
+      "title": "Technical Hiring Manager",
+      "domain": "career_training",
+      "match": "technical CV assessment, engineering seniority calibration, ownership and technical evidence against a real role",
+      "bundle": [
+        "skills/roles/technical-hiring-manager/SKILL.md",
+        "skills/roles/technical-hiring-manager/mindset.md",
+        "skills/roles/technical-hiring-manager/knowledge.md",
+        "skills/roles/technical-hiring-manager/workflow.md"
+      ]
     }
-  ]
+  ],
+  "pm_distinction": "pm = Project Manager; product-manager = Product Manager",
+  "review_rule": "A role name does not spawn an agent. A review is independent only with a distinct observer/session and observable evidence; same-session is SINGLE_SESSION_CROSSCHECK."
 }

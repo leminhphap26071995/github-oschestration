@@ -1,0 +1,124 @@
+{
+  "schema_version": "1.0",
+  "extends": "references/professional-capability-catalog.json",
+  "domains": [
+    {
+      "domain_id": "ai_tooling_lifecycle",
+      "label": "AI tooling lifecycle",
+      "deliverables": [
+        "source and compatibility review",
+        "skill/tool/plugin integration map",
+        "installation plan and approvals",
+        "installed resource provenance",
+        "invocation and rollback evidence"
+      ],
+      "roles": [
+        "ai-native-tooling-engineer",
+        "mcp-integration-engineer"
+      ],
+      "acceptance": [
+        "exact source/version verified",
+        "host approval recorded",
+        "consumer loads the skill/tool",
+        "actual invocation verified"
+      ]
+    },
+    {
+      "domain_id": "vscode_extension_platform",
+      "label": "VS Code extension platform",
+      "deliverables": [
+        "contribution-point map",
+        "extension-host integration",
+        "SecretStorage and trust boundary",
+        "VSIX and update artifact",
+        "real VS Code E2E evidence"
+      ],
+      "roles": [
+        "vscode-extension-platform-engineer"
+      ],
+      "acceptance": [
+        "manifest paths resolve",
+        "extension activates",
+        "Agent/Skill is callable",
+        "packaged VSIX and UI behavior verified"
+      ]
+    },
+    {
+      "domain_id": "model_routing_gateway",
+      "label": "Model gateway and routing",
+      "deliverables": [
+        "provider/model inventory",
+        "routing/fallback design",
+        "CLI/UI/API configuration",
+        "tool-call compatibility matrix",
+        "runtime route receipt"
+      ],
+      "roles": [
+        "omniroute-model-routing-engineer"
+      ],
+      "acceptance": [
+        "/v1/models verified",
+        "actual routed inference verified",
+        "tool-call path verified where required",
+        "secrets remain protected"
+      ]
+    },
+    {
+      "domain_id": "visual_asset_production",
+      "label": "Visual and game-art production",
+      "deliverables": [
+        "visual requirements and reference-role map",
+        "source-backed identity/asset sheets",
+        "immutable layout and editable-layer contract",
+        "per-asset generation briefs",
+        "deterministic composition and typography",
+        "artifact-level visual QA receipt"
+      ],
+      "roles": [
+        "game-art-director"
+      ],
+      "acceptance": [
+        "every reference has an explicit role",
+        "immutable owner requirements preserved",
+        "source-defined identities are evidence-backed",
+        "exact geometry/text uses deterministic composition when required",
+        "actual exported dimensions and content are verified"
+      ]
+    },
+    {
+      "domain_id": "career_cv_review",
+      "label": "Evidence-first CV review and publishing",
+      "deliverables": [
+        "canonical CV source lock",
+        "employment and project chronology audit",
+        "claim-to-evidence ledger",
+        "HR/ATS screening assessment",
+        "technical hiring assessment",
+        "domain-specific claim review",
+        "approved content revision",
+        "exact PDF build and verification receipt"
+      ],
+      "roles": [
+        "talent-acquisition-specialist",
+        "technical-hiring-manager",
+        "interview-trainer",
+        "tech-lead",
+        "devops-engineer",
+        "cloud-engineer",
+        "devsecops-engineer",
+        "sre-engineer",
+        "qa-lead",
+        "qa-engineer"
+      ],
+      "acceptance": [
+        "every material claim has an authentic evidence reference and provenance class",
+        "employment chronology and project dates are separate and reconciled",
+        "HR screening and technical hiring perspectives are both present",
+        "same-session versus independent review is labelled truthfully",
+        "no unsupported metrics, ownership, seniority or credentials",
+        "approved template and renderer hashes remain unchanged",
+        "exact PDF and build artifact are verified by SHA before distribution"
+      ]
+    }
+  ]
+}

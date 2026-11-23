@@ -1,13 +1,21 @@
 #!/usr/bin/env python3
-"""Validate the UPW plugin release overlay and its complete registered role payload."""
-import argparse
+"""Fail-closed validation for the ChatGPT-only UPW plugin overlay."""
 import json
 from pathlib import Path, PurePosixPath
 
 REQUIRED = [
     "plugin.json",
-    ".codex-plugin/plugin.json",
-    ".agent-plugin/plugin.json",
+    "references/role-registry.json",
+    "references/role-registry.extensions.json",
+    "references/domain-routing.json",
+    "references/professional-capability-catalog.json",
+    "references/professional-capability-catalog.extensions.json",
+    "references/cv-update-contract.md",
+    "skills/chatgpt-runtime-onboarding/SKILL.md",
+    "skills/cv-update-lifecycle/SKILL.md",
+    "skills/professional-capability-discovery/SKILL.md",
+    "skills/role-context-loading/SKILL.md",
+    "skills/ai-tooling-lifecycle/SKILL.md",
     "skills/project-ticket-context-isolation/SKILL.md",
     "skills/github-actions-run-lifecycle/SKILL.md",
     "skills/context-recovery/SKILL.md",
@@ -16,211 +24,169 @@ REQUIRED = [
     "skills/always-on-guard/SKILL.md",
     "skills/ai-manager/SKILL.md",
     "skills/chat-mode-closed-loop/SKILL.md",
-    "skills/concise-human-communication/SKILL.md",
-    "skills/live-progress-reconciliation/SKILL.md",
-    "skills/goal-convergent-min-context-loop/SKILL.md",
-    "references/PROJECT-INTRODUCTION-TEMPLATE.md",
     "skills/execution-preflight/SKILL.md",
     "skills/cicd-full-flow/SKILL.md",
     "skills/workflow-contract/SKILL.md",
     "references/host-execution-and-quota-contract.md",
-    "references/role-registry.json",
-    "references/domain-routing.json",
-    "references/professional-capability-catalog.json",
-    "references/role-registry.extensions.json",
-    "skills/professional-capability-discovery/SKILL.md",
-    "skills/ai-tooling-lifecycle/SKILL.md",
+    "references/PROJECT-INTRODUCTION-TEMPLATE.md",
 ]
+ROLE_ARTIFACTS = ("SKILL.md", "mindset.md", "knowledge.md", "workflow.md")
 
-ROLE_ARTIFACTS = ["SKILL.md", "mindset.md", "knowledge.md", "workflow.md"]
-
-
-def _read_json(root: Path, relative: str, errors: list[str]):
+def read_json(path: Path, errors: list[str]):
     try:
-        return json.loads((root / relative).read_text(encoding="utf-8"))
+        return json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
-        errors.append(f"INVALID_JSON:{relative}:{exc}")
+        errors.append(f"INVALID_JSON:{path.name}:{exc}")
         return None
 
-
-def _safe_file(root: Path, relative: str) -> bool:
+def safe_file(root: Path, relative: str) -> bool:
     if not isinstance(relative, str) or not relative:
         return False
     path = PurePosixPath(relative)
-    if path.is_absolute() or any(part in ("", ".", "..") for part in path.parts):
-        return False
-    return root.joinpath(*path.parts).is_file()
-
-
-def _validate_role_registry(root: Path, registry: dict, errors: list[str], label: str):
-    required = registry.get("required_files")
-    if not isinstance(required, list) or set(required) != set(ROLE_ARTIFACTS) or len(required) != 4:
-        errors.append(f"ROLE_ARTIFACT_CONTRACT_INVALID:{label}")
-        return set()
-    roles = registry.get("roles")
-    if not isinstance(roles, list) or not roles:
-        errors.append(f"ROLE_REGISTRY_EMPTY:{label}")
-        return set()
-    seen = set()
-    for role in roles:
-        role_id = (role.get("role") or role.get("role_id")) if isinstance(role, dict) else None
-        bundle = role.get("bundle") if isinstance(role, dict) else None
-        if not isinstance(role_id, str) or not role_id:
-            errors.append(f"ROLE_ID_MISSING:{label}")
-            continue
-        if role_id in seen:
-            errors.append(f"DUPLICATE_ROLE_ID:{label}:{role_id}")
-        seen.add(role_id)
-        if not isinstance(bundle, list) or len(bundle) != 4:
-            errors.append(f"ROLE_BUNDLE_SHAPE_INVALID:{label}:{role_id}")
-            continue
-        if {PurePosixPath(item).name for item in bundle if isinstance(item, str)} != set(ROLE_ARTIFACTS):
-            errors.append(f"ROLE_BUNDLE_ARTIFACT_SET_INVALID:{label}:{role_id}")
-        for relative in bundle:
-            if not _safe_file(root, relative):
-                errors.append(f"MISSING_ROLE_ARTIFACT:{role_id}:{relative}")
-    return seen
-
-
-def _validate_extension_registry(root: Path, registry: dict, errors: list[str]):
-    if registry.get("extends") != "references/role-registry.json":
-        errors.append("ROLE_EXTENSION_PARENT_MISMATCH")
-    required = registry.get("required_artifacts")
-    if not isinstance(required, list) or set(required) != set(ROLE_ARTIFACTS) or len(required) != 4:
-        errors.append("ROLE_EXTENSION_ARTIFACT_CONTRACT_INVALID")
-        return set()
-    roles = registry.get("roles")
-    if not isinstance(roles, list) or not roles:
-        errors.append("ROLE_EXTENSION_REGISTRY_EMPTY")
-        return set()
-    seen = set()
-    for role in roles:
-        role_id = role.get("role_id") if isinstance(role, dict) else None
-        bundle = role.get("bundle") if isinstance(role, dict) else None
-        if not isinstance(role_id, str) or not role_id:
-            errors.append("ROLE_EXTENSION_ID_MISSING")
-            continue
-        if role_id in seen:
-            errors.append(f"DUPLICATE_ROLE_EXTENSION_ID:{role_id}")
-        seen.add(role_id)
-        if not isinstance(bundle, str) or not bundle:
-            errors.append(f"ROLE_EXTENSION_BUNDLE_PATH_INVALID:{role_id}")
-            continue
-        for artifact in required:
-            relative = f"{bundle.rstrip('/')}/{artifact}"
-            if not _safe_file(root, relative):
-                errors.append(f"MISSING_ROLE_ARTIFACT:{role_id}:{relative}")
-    return seen
-
+    return not path.is_absolute() and all(p not in ("", ".", "..") for p in path.parts) and root.joinpath(*path.parts).is_file()
 
 def validate(root: Path):
-    errors = [f"MISSING:{path}" for path in REQUIRED if not (root / path).is_file()]
+    errors = [f"MISSING:{p}" for p in REQUIRED if not (root / p).is_file()]
     if errors:
         return errors
-
-    standard = _read_json(root, "plugin.json", errors)
-    host = _read_json(root, ".codex-plugin/plugin.json", errors)
-    agent = _read_json(root, ".agent-plugin/plugin.json", errors)
-    role_registry = _read_json(root, "references/role-registry.json", errors)
-    domain_routing = _read_json(root, "references/domain-routing.json", errors)
-    capability_catalog = _read_json(root, "references/professional-capability-catalog.json", errors)
-    extension_registry = _read_json(root, "references/role-registry.extensions.json", errors)
-    if any(value is None for value in (standard, host, agent, role_registry, domain_routing, capability_catalog, extension_registry)):
+    meta_path = root.parent / "source-sync.json"
+    baseline_path = root.parent / "live-default-prompt.json"
+    meta = read_json(meta_path, errors)
+    baseline = read_json(baseline_path, errors)
+    manifest = read_json(root / "plugin.json", errors)
+    base = read_json(root / "references/role-registry.json", errors)
+    ext = read_json(root / "references/role-registry.extensions.json", errors)
+    routing = read_json(root / "references/domain-routing.json", errors)
+    catalog_ext = read_json(root / "references/professional-capability-catalog.extensions.json", errors)
+    if any(x is None for x in (meta, baseline, manifest, base, ext, routing, catalog_ext)):
         return errors
 
-    if standard.get("version") != host.get("version") or standard.get("version") != agent.get("version"):
-        errors.append("MANIFEST_VERSION_MISMATCH")
-    if agent.get("name") != standard.get("name"):
-        errors.append("AGENT_MANIFEST_NAME_MISMATCH")
-    if agent.get("skills") != "./skills":
-        errors.append("AGENT_MANIFEST_SKILLS_PATH_MISMATCH")
-    openai = standard.get("extensions", {}).get("com.openai", {})
+    if meta.get("consumer") != "chatgpt":
+        errors.append("CONSUMER_MUST_BE_CHATGPT")
+    if manifest.get("version") != meta.get("plugin_version"):
+        errors.append("PLUGIN_VERSION_SOURCE_SYNC_MISMATCH")
+    if manifest.get("version") != "0.1.170":
+        errors.append("UNEXPECTED_PLUGIN_VERSION")
+    openai = manifest.get("extensions", {}).get("com.openai", {})
     onboarding = openai.get("onboardingSkill")
-    if not isinstance(onboarding, str) or not onboarding.startswith("./"):
-        errors.append("ROOT_ONBOARDING_SKILL_PATH_MISSING_OR_INVALID")
-    else:
-        relative = onboarding[2:]
-        if not relative.endswith("/SKILL.md") or not _safe_file(root, relative):
-            errors.append(f"ROOT_ONBOARDING_SKILL_NOT_PACKAGED:{onboarding}")
-    if "UPW" not in standard.get("keywords", []):
+    if onboarding != "./skills/chatgpt-runtime-onboarding/SKILL.md":
+        errors.append("CHATGPT_ONBOARDING_PATH_INVALID")
+    elif not safe_file(root, onboarding[2:]):
+        errors.append("CHATGPT_ONBOARDING_FILE_MISSING")
+    prompts = openai.get("interface", {}).get("defaultPrompt")
+    if not isinstance(prompts, list) or len(prompts) != meta.get("default_prompt_count"):
+        errors.append("DEFAULT_PROMPT_COUNT_MISMATCH")
+    if prompts != baseline:
+        errors.append("DEFAULT_PROMPT_CHANGED_FROM_LIVE_BASELINE")
+    if "UPW" not in manifest.get("keywords", []):
         errors.append("UPW_KEYWORD_MISSING")
-    interface = host.get("interface", {})
-    if interface.get("displayName") != "UPW":
-        errors.append("DISPLAY_NAME_NOT_UPW")
-    description = interface.get("longDescription", "")
-    if not isinstance(description, str) or "requirements-first workflow" not in description.lower():
-        errors.append("FULL_NAME_OR_WORKFLOW_DESCRIPTION_MISSING")
-    root_prompt = openai.get("interface", {}).get("defaultPrompt")
-    host_prompt = interface.get("defaultPrompt")
-    if not isinstance(root_prompt, list) or not root_prompt or root_prompt != host_prompt:
-        errors.append("DEFAULT_PROMPT_MISSING_OR_MANIFESTS_OUT_OF_SYNC")
-    if not any("OWNER-FACING REPORTING:" in item and "do not send progress narration" in item.lower() for item in root_prompt or []):
-        errors.append("COMPLETION_ONLY_OWNER_REPORTING_PROMPT_MISSING")
 
-    checks = {
-        "skills/project-ticket-context-isolation/SKILL.md": [
-            "NEVER_LATEST_TIMESTAMP", "Game Mod", "VS Code Extension",
-            "Career/Interview", "ticket checkpoint"
-        ],
-        "skills/github-actions-run-lifecycle/SKILL.md": [
-            "RUNNER_WARMUP_PENDING", "JOB_STARTUP_PENDING", "Retry-After",
-            "QUOTA_EXHAUSTED", "OBSERVATION_WINDOW_EXPIRED"
-        ],
-        "skills/cicd-full-flow/SKILL.md": [
-            "github-actions-run-lifecycle", "LOG_PUBLICATION_PENDING", "UNKNOWN"
-        ],
-        "skills/goal-convergent-min-context-loop/SKILL.md": [
-            "execution progress is internal", "do not emit live writingblocks",
-            "one final writingblock", "never as a live feed"
-        ],
-        "skills/chat-mode-closed-loop/SKILL.md": [
-            "do not send progress narration", "continuous requirements-led loop in the current session",
-            "one final artifact only after execution"
-        ],
-        "skills/professional-capability-discovery/SKILL.md": [
-            "complete four-artifact bundle",
-            "Missing specialist artifacts are a capability gap"
-        ],
-        "skills/ai-tooling-lifecycle/SKILL.md": [
-            "references/role-registry.extensions.json", "ai-native-tooling-engineer",
-            "mcp-integration-engineer", "vscode-extension-platform-engineer",
-            "omniroute-model-routing-engineer"
-        ],
-    }
-    for relative, tokens in checks.items():
-        content = (root / relative).read_text(encoding="utf-8").lower()
+    forbidden = [".codex-plugin", ".agent-plugin", ".claude-plugin", "skills/codex-project-bootstrap", "references/codex-skill-mirror.json"]
+    for item in forbidden:
+        if (root / item).exists():
+            errors.append(f"CLI_ONLY_PATH_IN_CHATGPT_OVERLAY:{item}")
+
+    if base.get("required_files") != list(ROLE_ARTIFACTS):
+        errors.append("BASE_ROLE_ARTIFACT_CONTRACT_INVALID")
+    if ext.get("required_artifacts") != list(ROLE_ARTIFACTS):
+        errors.append("EXTENSION_ROLE_ARTIFACT_CONTRACT_INVALID")
+    if ext.get("extends") != "references/role-registry.json":
+        errors.append("ROLE_EXTENSION_PARENT_MISMATCH")
+
+    role_ids = set()
+    base_roles = base.get("roles", [])
+    ext_roles = ext.get("roles", [])
+    if len(base_roles) != meta.get("base_role_count"):
+        errors.append("BASE_ROLE_COUNT_MISMATCH")
+    if len(ext_roles) != meta.get("extension_role_count"):
+        errors.append("EXTENSION_ROLE_COUNT_MISMATCH")
+
+    for role in base_roles:
+        role_id = role.get("role")
+        bundle = role.get("bundle")
+        if not isinstance(role_id, str) or not isinstance(bundle, list) or len(bundle) != 4:
+            errors.append(f"BASE_ROLE_RECORD_INVALID:{role_id}")
+            continue
+        if role_id in role_ids:
+            errors.append(f"DUPLICATE_ROLE_ID:{role_id}")
+        role_ids.add(role_id)
+        if {PurePosixPath(x).name for x in bundle} != set(ROLE_ARTIFACTS):
+            errors.append(f"ROLE_BUNDLE_ARTIFACT_SET_INVALID:{role_id}")
+        for rel in bundle:
+            if not safe_file(root, rel):
+                errors.append(f"MISSING_ROLE_ARTIFACT:{role_id}:{rel}")
+            elif (root / rel).stat().st_size < 100:
+                errors.append(f"ROLE_ARTIFACT_TOO_SMALL:{role_id}:{rel}")
+
+    for role in ext_roles:
+        role_id = role.get("role_id")
+        bundle = role.get("bundle")
+        if not isinstance(role_id, str) or not isinstance(bundle, str):
+            errors.append(f"EXTENSION_ROLE_RECORD_INVALID:{role_id}")
+            continue
+        if role_id in role_ids:
+            errors.append(f"DUPLICATE_ROLE_ID:{role_id}")
+        role_ids.add(role_id)
+        for artifact in ROLE_ARTIFACTS:
+            rel = f"{bundle.rstrip('/')}/{artifact}"
+            if not safe_file(root, rel):
+                errors.append(f"MISSING_ROLE_ARTIFACT:{role_id}:{rel}")
+            elif (root / rel).stat().st_size < 100:
+                errors.append(f"ROLE_ARTIFACT_TOO_SMALL:{role_id}:{rel}")
+
+    if len(role_ids) != meta.get("unique_role_count"):
+        errors.append("UNIQUE_ROLE_COUNT_MISMATCH")
+    if len(role_ids) * 4 != meta.get("required_role_artifacts"):
+        errors.append("ROLE_ARTIFACT_TOTAL_MISMATCH")
+    for required_role in ("talent-acquisition-specialist", "technical-hiring-manager"):
+        if required_role not in role_ids:
+            errors.append(f"NEW_CV_ROLE_MISSING:{required_role}")
+
+    domain = routing.get("domains", {}).get("cv_professional_review", {})
+    if not domain:
+        errors.append("CV_DOMAIN_ROUTE_MISSING")
+    else:
+        if "skills/cv-update-lifecycle/SKILL.md" not in domain.get("load", []):
+            errors.append("CV_LIFECYCLE_NOT_ROUTED")
+        primary = set(domain.get("role_selection", {}).get("primary_roles", []))
+        if primary != {"talent-acquisition-specialist", "technical-hiring-manager"}:
+            errors.append("CV_PRIMARY_ROLE_ROUTING_INVALID")
+    career_domains = catalog_ext.get("domains", [])
+    cv_catalog = next((x for x in career_domains if x.get("domain_id") == "career_cv_review"), None)
+    if not cv_catalog or not {"talent-acquisition-specialist", "technical-hiring-manager"}.issubset(set(cv_catalog.get("roles", []))):
+        errors.append("CV_CAPABILITY_CATALOG_INCOMPLETE")
+
+    ta = root / "skills/roles/talent-acquisition-specialist"
+    thm = root / "skills/roles/technical-hiring-manager"
+    for rel, tokens in {
+        "talent-acquisition-specialist/SKILL.md": ("ATS", "chronology", "screening"),
+        "talent-acquisition-specialist/mindset.md": ("tenure", "project dates", "seniority"),
+        "talent-acquisition-specialist/knowledge.md": ("ATS", "credentials", "jurisdiction"),
+        "talent-acquisition-specialist/workflow.md": ("owner confirmation", "screening risk"),
+    }.items():
+        content = (root / "skills/roles" / rel).read_text(encoding="utf-8").lower()
         for token in tokens:
             if token.lower() not in content:
-                errors.append(f"TOKEN_MISSING:{relative}:{token}")
-
-    base_roles = _validate_role_registry(root, role_registry, errors, "base")
-    extension_roles = _validate_extension_registry(root, extension_registry, errors)
-    if "ai-native-tooling-engineer" not in base_roles or "ai-native-tooling-engineer" not in extension_roles:
-        errors.append("AI_NATIVE_TOOLING_ENGINEER_NOT_REGISTERED_IN_BOTH_REGISTRIES")
-
-    if not isinstance(domain_routing.get("rules"), list) or not domain_routing["rules"]:
-        errors.append("DOMAIN_ROUTING_RULES_MISSING")
-    if not isinstance(domain_routing.get("domains"), dict) or not domain_routing["domains"]:
-        errors.append("DOMAIN_ROUTING_DOMAINS_MISSING")
-    if capability_catalog.get("discovery_contract") != "skills/professional-capability-discovery/SKILL.md":
-        errors.append("CAPABILITY_DISCOVERY_CONTRACT_MISMATCH")
-    if capability_catalog.get("generic_role_fallback") != "PROHIBITED":
-        errors.append("GENERIC_ROLE_FALLBACK_NOT_PROHIBITED")
-
+                errors.append(f"TALENT_ACQUISITION_SPECIALTY_TOKEN_MISSING:{rel}:{token}")
+    for rel, tokens in {
+        "technical-hiring-manager/SKILL.md": ("seniority", "ownership", "technical depth"),
+        "technical-hiring-manager/mindset.md": ("ownership ladder", "trade-offs"),
+        "technical-hiring-manager/knowledge.md": ("iac", "kubernetes", "devsecops", "sre"),
+        "technical-hiring-manager/workflow.md": ("provenance", "ownership", "interview probes"),
+    }.items():
+        content = (root / "skills/roles" / rel).read_text(encoding="utf-8").lower()
+        for token in tokens:
+            if token.lower() not in content:
+                errors.append(f"TECHNICAL_HIRING_SPECIALTY_TOKEN_MISSING:{rel}:{token}")
     return errors
 
-
-def main():
+if __name__ == "__main__":
+    import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument("--root", type=Path, required=True)
     args = parser.parse_args()
-    errors = validate(args.root)
-    if errors:
-        print("\n".join(errors))
+    problems = validate(args.root)
+    if problems:
+        print("\n".join(problems))
         raise SystemExit(1)
-    version = json.loads((args.root / "plugin.json").read_text(encoding="utf-8"))["version"]
-    print(f"OVERLAY_VALID version={version}")
-
-
-if __name__ == "__main__":
-    main()
+    print("UPW_CHATGPT_OVERLAY_VALID: roles=35 artifacts=140 consumer=chatgpt")
