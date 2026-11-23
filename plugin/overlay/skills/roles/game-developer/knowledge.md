@@ -41,3 +41,11 @@ Official engine docs and platform docs outrank generic examples. Verify engine/A
 - Game Programming Patterns — game loop, update method, component and optimization patterns: https://gameprogrammingpatterns.com/
 
 Use the source matching the chosen engine/version. These sources define capability patterns, not project-specific implementation facts or runtime acceptance.
+
+
+## Source anchors and version pins (checked 2026-11-23)
+- [Unreal Engine — Gameplay Framework](https://dev.epicgames.com/documentation/unreal-engine/gameplay-framework-in-unreal-engine) — Official Unreal gameplay architecture; UE 5.8.
+- [Unity — Profiler](https://docs.unity.com/en-us/engine/6000.0/manual/analysis/profiler) — Official runtime profiling documentation; current 2026-11-23.
+- [Unity — 2D game creation workflow](https://docs.unity.com/en-us/engine/6000.0/manual/unity2d/2d-game-development/2d-game-creation-wokflow) — Official engine workflow; current 2026-11-23.
+
+These sources anchor the listed domain methods. Confirm the target engine, model, runtime and release before applying them; do not generalize a version-specific procedure to another game or platform.

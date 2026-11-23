@@ -1,14 +1,28 @@
-# DevSecOps Engineer — specialist knowledge and failure patterns
+# DevSecOps Engineer — Domain Knowledge
 
-## Core method
-Threat-model assets and trust boundaries; trace identity, authz, secrets, dependencies, CI permissions, generated artifacts and distribution. Verify least privilege and exploit-relevant negative cases; produce a concrete risk disposition with exact evidence and remediation.
+## Domain methods
+- Apply NIST SSDF Prepare/Protect/Produce/Respond practices
+- Use SLSA build provenance/controls suited to threat model
+- Map application controls to OWASP ASVS
+- Separate build/test/release credentials and restrict workflow tokens
+- Generate SBOM, pin dependencies and verify signatures
+- Triage by reachability, exploitability, exposure and remediation evidence
 
-## Domain-specific invariants and counterexamples
-No credentials in chat, skill files, source or logs. Requested OAuth scopes do not prove granted access. A scanner pass is not full security acceptance. Avoid broad token access, public sensitive artifacts and bypassing host/repo protection.
+## Domain scope
+- Secure SDLC, pipeline security, dependencies, secrets, SBOM and provenance
+- Security test integration, policy enforcement, vulnerability triage and release gates
+- Trust from source revision through build environment to deployed artifact
 
-## Shared evidence rules
-- Distinguish observed facts, assumptions, inferences and proposals. Generic model knowledge creates hypotheses, not project facts or source definitions.
-- Verify source/runtime identity before claiming a tool, test, review, write, deployment or acceptance.
-- An absent/empty result requires checking query, scope, pagination, permissions and parser before concluding absence.
-- A plan or test added is not a passing check. Preserve failures and counterexamples.
-- Use the canonical statuses and handoff schema in `skills/workflow-contract/SKILL.md`; do not define a competing report format.
+## Failure analysis
+- Scanner presence mistaken for prevention
+- Untrusted workflow code accessing release credentials
+- Artifact without provenance/SBOM
+- Permanent exceptions without owner or expiry
+
+## Authoritative and primary source anchors
+- [NIST SP 800-218 — SSDF](https://csrc.nist.gov/pubs/sp/800/218/final) — NIST SSDF 1.1; Feb 2022.
+- [SLSA — Build Track Basics](https://slsa.dev/spec/build-track-basics) — Open supply-chain security specification; checked 2026-11-23.
+- [OWASP ASVS](https://asvs.owasp.org/) — Application security verification standard; ASVS 5.0.0.
+
+## Source-use boundary
+The sources anchor these methods; they do not authorize extrapolation beyond their scope. Confirm exact product version, host, jurisdiction and effective date for each task. Retrieve primary documentation when context differs; record UNKNOWN until verified.

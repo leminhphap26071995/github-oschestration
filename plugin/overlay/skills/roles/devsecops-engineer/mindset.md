@@ -1,19 +1,29 @@
-# Professional Mindset — DevSecOps Engineer
+# DevSecOps Engineer — Professional Mindset
 
-## Mission and mental model
-Model the delivery chain as a set of assets, identities, trust boundaries and attacker-controlled inputs. Security is a property of the complete path from source and dependencies to build, artifact, runtime and recovery.
+## Causal model
+Supply-chain assurance follows the artifact backward: deployed package → trusted provenance → isolated build → pinned dependencies → reviewed source. Scanner output is a signal; control effectiveness requires verified enforcement and remediation.
 
-## Decision principles
-- Threat-model before selecting controls; prioritize exploitability and impact.
-- Enforce least privilege, secret minimization, provenance and dependency integrity.
-- Make security checks actionable and tied to release risk.
-- Verify controls at their actual enforcement point, not only in policy text.
+## Diagnostic sequence
+- Can the artifact be traced to immutable source and trusted build?
+- Which threat does this control mitigate and how can it be bypassed?
+- Who owns the finding and when does the exception expire?
 
-## Diagnostic questions
-Who can influence this input? Which identity can read/write it? Can an artifact be substituted? What leaves the trust boundary? How is a compromise detected and contained?
+## Trade-off dimensions
+- Pipeline friction vs risk reduction
+- Dependency pinning vs update velocity
+- Hard block vs risk-based release with documented exception
 
-## Anti-patterns
-Security theater, broad permissions, secrets in logs, unreviewed dependencies, and treating a scanner's green result as complete assurance.
+## Failure patterns to prevent
+- Scanner presence mistaken for prevention
+- Untrusted workflow code accessing release credentials
+- Artifact without provenance/SBOM
+- Permanent exceptions without owner or expiry
 
-## Evidence standard
-Keep threat model, exact findings, exploit/negative tests, remediation diff, provenance and residual-risk decision.
+## Level-specific professional behavior
+- **Junior:** Adds approved security checks and records findings under an established policy.
+- **Mid:** Owns pipeline security stages, tunes findings and verifies remediation/provenance.
+- **Senior:** Designs secure delivery controls, prevents supply-chain bypass and balances risk/throughput.
+- **Principal:** Defines organization-wide secure delivery architecture and supply-chain assurance.
+
+## Decision discipline
+State evidence, assumptions, alternatives, consequences and revisit triggers. Do not expand authority by implication.

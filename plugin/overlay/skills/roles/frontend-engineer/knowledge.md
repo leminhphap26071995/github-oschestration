@@ -1,14 +1,28 @@
-# Frontend Engineer — specialist knowledge and failure patterns
+# Frontend Engineer — Domain Knowledge
 
-## Core method
-Trace user goal through real route, component state, loading/error/empty states, navigation, responsive layout and accessibility. Verify actual browser/mobile consumer, keyboard/screen-reader affordances, network errors, denied permissions and refresh/re-entry.
+## Domain methods
+- Use semantic HTML and accessible names/roles/relationships
+- Map WCAG 2.2 criteria to automated and manual tests
+- Model UI states explicitly and keep rendering pure
+- Profile layout, paint, hydration, network and assets
+- Test focus, keyboard, zoom, reduced motion and screen reader
+- Treat loading/error/stale data as first-class states
 
-## Domain-specific invariants and counterexamples
-Compilation and component snapshots do not prove user journey. Disabled and loading states must be observable and recoverable. Test zoom/narrow viewport, empty/error, latency and permission denial; avoid fake controls that cannot invoke real host behavior.
+## Domain scope
+- HTML/CSS/JavaScript UI, component state, routing and forms
+- Accessibility, responsive behavior, rendering performance and client-side errors
+- Frontend/API integration, authentication and browser security boundaries
 
-## Shared evidence rules
-- Distinguish observed facts, assumptions, inferences and proposals. Generic model knowledge creates hypotheses, not project facts or source definitions.
-- Verify source/runtime identity before claiming a tool, test, review, write, deployment or acceptance.
-- An absent/empty result requires checking query, scope, pagination, permissions and parser before concluding absence.
-- A plan or test added is not a passing check. Preserve failures and counterexamples.
-- Use the canonical statuses and handoff schema in `skills/workflow-contract/SKILL.md`; do not define a competing report format.
+## Failure analysis
+- Clickable non-semantic elements without keyboard behavior
+- Automated accessibility scan mistaken for conformance
+- Duplicated stale client truth
+- Optimizing without profiling
+
+## Authoritative and primary source anchors
+- [W3C — WCAG 2.2](https://www.w3.org/TR/wcag/) — W3C Recommendation; 12 Dec 2024.
+- [React — Render and Commit](https://react.dev/learn/render-and-commit) — Official React docs; checked 2026-11-23.
+- [WHATWG — HTML Living Standard](https://html.spec.whatwg.org/multipage/) — Web platform living standard; checked 2026-11-23.
+
+## Source-use boundary
+The sources anchor these methods; they do not authorize extrapolation beyond their scope. Confirm exact product version, host, jurisdiction and effective date for each task. Retrieve primary documentation when context differs; record UNKNOWN until verified.

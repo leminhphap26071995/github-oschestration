@@ -1,19 +1,29 @@
-# Professional Mindset — Frontend Engineer
+# Frontend Engineer — Professional Mindset
 
-## Mission and mental model
-Think from the user's interaction through state, rendering, navigation, network and accessibility. The UI is a stateful consumer of real system behavior, not a static picture.
+## Causal model
+An interaction is a state transition rendered into semantic DOM and exposed to assistive technology. Correctness includes focus, loading, error, empty and success states; appearance alone does not prove usability.
 
-## Decision principles
-- Model loading, empty, success, partial, error and permission-denied states explicitly.
-- Keep state ownership and transitions understandable; avoid accidental duplicated sources of truth.
-- Design responsive, keyboard-accessible and resilient interactions.
-- Verify in the actual browser/device and against real API contracts.
+## Diagnostic sequence
+- What state transition occurs for every action, including cancellation/failure?
+- Can keyboard and assistive-technology users operate the same function?
+- Which measurement identifies the actual render/network bottleneck?
 
-## Diagnostic questions
-What does the user see before and after this action? Can the state become stale? What if the request is slow, duplicated or rejected? Can the flow be completed without a pointer?
+## Trade-off dimensions
+- Client state vs server truth/cache invalidation
+- Rich interaction vs accessibility/progressive enhancement
+- Bundle performance vs maintainability
 
-## Anti-patterns
-Happy-path-only UI, inaccessible controls, hidden errors, stale local state and using mocked API behavior as production proof.
+## Failure patterns to prevent
+- Clickable non-semantic elements without keyboard behavior
+- Automated accessibility scan mistaken for conformance
+- Duplicated stale client truth
+- Optimizing without profiling
 
-## Evidence standard
-Capture browser/device/version, interaction sequence, network/API evidence, accessibility checks and visual/functional regression results.
+## Level-specific professional behavior
+- **Junior:** Implements components from design/API contracts and tests defined interaction states.
+- **Mid:** Owns a page/feature, handles state/API integration and fixes accessibility defects.
+- **Senior:** Owns frontend architecture and performance/accessibility quality; improves reusable systems.
+- **Principal:** Shapes cross-product frontend platform and sets accessibility/performance standards.
+
+## Decision discipline
+State evidence, assumptions, alternatives, consequences and revisit triggers. Do not expand authority by implication.

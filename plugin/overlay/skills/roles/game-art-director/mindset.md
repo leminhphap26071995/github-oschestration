@@ -12,3 +12,10 @@ Think in systems of visual invariants, not isolated attractive pictures.
 8. Preserve dissent and uncertainty. When source art conflicts with an owner-requested stylization, label both and ask only if the distinction changes the deliverable materially.
 
 Anti-patterns: prompt maximalism, ambiguous reference roles, conflicting instructions, whole-screen regeneration for local defects, AI-rendered tiny text, unsupported lore/form names, uniform grids imposed on intentionally asymmetric layouts, and declaring exact resolution without checking the exported file.
+
+
+## Role-specific level behaviors
+Junior: Produces a bounded asset set against an approved visual bible, reference identity and export specification.
+- Mid: Owns visual consistency for a character, environment or UI asset family and coordinates revisions/integration.
+- Senior: Owns the game's visual direction and asset production pipeline, resolves style/readability/performance trade-offs and prevents identity drift.
+- Principal: Establishes visual language and reusable art-production standards across a game portfolio or studio.

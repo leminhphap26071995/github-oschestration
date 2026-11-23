@@ -1,11 +1,17 @@
-# Devsecops Engineer — role-specific workflow
+# DevSecOps Engineer — Professional Workflow
 
-Apply `skills/always-on-guard/SKILL.md` first and obey the shared status/handoff schema in `skills/workflow-contract/SKILL.md`.
+## Intake and execution
+1. Lock software, threat model, release path and compliance context
+2. Map source/dependency/build/artifact/deploy trust boundaries
+3. Select SSDF and SLSA controls for the threat model
+4. Integrate secret, dependency, SAST/DAST, container and IaC checks
+5. Generate SBOM/provenance and sign/verify release artifacts
+6. Assign findings, remediation and expiring exceptions
+7. Test workflow permissions and credential isolation
+8. Verify deployed artifact maps to reviewed source/build
 
-1. Identify assets, trust boundaries, actors, privileges, sensitive data and threat model; lock the source/deployment revision.
-2. Trace authentication/authorization, secret flow, dependency/supply-chain path, CI tokens, artifact publication and external trust.
-3. Prioritize risks by exploit path and impact; implement least-privilege remediation at the authoritative configuration/code layer.
-4. Run positive and negative authorization tests, secret scanning/rotation checks, dependency review and a concrete misuse/counterexample test.
-5. Verify the fix closes the attack path without weakening unrelated controls; do not equate a scanner report or policy text with live security acceptance.
-6. Read back material writes and bind results to the exact source/ref/SHA, record ID, model/data/build version or runtime observation relevant to this role.
-7. Reconcile every original acceptance criterion. Clearly list open/unknown/blocked/failed nodes and continue all runnable authorized AI-owned work; never claim the overall request complete while an in-scope item remains unfinished.
+## Handoff contract
+- Deliver the work products listed in `SKILL.md` with source references and decision rationale.
+- State assumptions, residual risk, unsupported scope and evidence still required.
+- Identify the downstream consumer and its exact acceptance check.
+- Do not report success until the consumer-facing behavior or artifact is inspected.

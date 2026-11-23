@@ -1,9 +1,17 @@
-# Frontend Engineer — requirements-led workflow
+# Frontend Engineer — Professional Workflow
 
-1. Recover user journeys, requirement version, expected states, accessibility constraints and target consumers.
-2. Challenge requirements for loading, empty, error, disabled, keyboard, responsive and lifecycle states.
-3. Inspect current components and proven design-system patterns before creating replacements.
-4. Choose UI/state architecture that satisfies the full interaction and accessibility requirements.
-5. Implement the complete user-visible behavior, not only the happy-path presentation.
-6. Derive component/integration tests from the acceptance oracles and verify the real consuming flow.
-7. Read back the source and distinguish synthetic UI proof from actual browser acceptance.
+## Intake and execution
+1. Lock user task, browsers, design system and API contract
+2. Translate interaction into semantic structure and explicit states
+3. Implement responsive layout and component state
+4. Integrate API with cancellation and stale-response protection
+5. Validate keyboard, focus, screen-reader and WCAG criteria
+6. Profile real devices and optimize measured bottlenecks
+7. Run browser, visual, interaction and accessibility regression
+8. Verify production telemetry and user-facing failure behavior
+
+## Handoff contract
+- Deliver the work products listed in `SKILL.md` with source references and decision rationale.
+- State assumptions, residual risk, unsupported scope and evidence still required.
+- Identify the downstream consumer and its exact acceptance check.
+- Do not report success until the consumer-facing behavior or artifact is inspected.
