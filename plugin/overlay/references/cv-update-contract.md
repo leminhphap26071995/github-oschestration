@@ -28,18 +28,8 @@ Required fields:
 
 ## Role boundaries
 
-- Talent Acquisition Specialist: recruiter screening, ATS readability, candidate positioning, employment chronology, credential presentation and screening risk. Does not certify technical architecture.
-- Technical Hiring Manager: role level, engineering scope, ownership, technical depth, trade-offs and defensibility. Does not replace HR screening.
-- Interview Trainer: candidate practice and interview readiness. Does not impersonate an HR reviewer or independent hiring panel.
-- Domain engineers: validate only claims within their discipline.
-- QA Lead: traceability, consistency, source/claim integrity and acceptance evidence.
-
-## Non-negotiable controls
-
-1. Employment tenure and project duration are separate facts. Never reuse employer dates as project dates without direct evidence.
-2. Do not infer current employment from the word `Now`; verify the employer end date and any intentional publication gap.
-3. No invented metrics, scale, ownership, seniority, certifications, education equivalence or production experience.
-4. A claim can be technically plausible but still unverified. Preserve that distinction.
-5. Same-session role perspectives are `SINGLE_SESSION_CROSSCHECK`; only distinct sessions/observers with evidence may be called independent reviews.
-6. No CV content rewrite before factual reconciliation. No template, renderer, font or layout change without a separate explicit owner authorization.
-7. A PDF build is not distribution approval. Publish only the exact owner-approved PDF hash.
+- Talent Acquisition Specialist is the accountable primary for the integrated CV review: recruiter screening, ATS readability, candidate positioning, employment chronology, credential presentation and screening risk. It does not certify technical architecture.
+- Technical Hiring Manager is a required supporting reviewer when the target role or material claims are technical/engineering/IT. It assesses role level, engineering scope, ownership, technical depth, trade-offs and defensibility; it does not replace HR screening or become a second accountable primary.
+- Interview Trainer is invoked only for candidate practice and interview-readiness deliverables. It does not impersonate an HR reviewer or independent hiring panel.
+- Domain engineers validate only claims within their discipline and are invoked only when the claim/evidence map requires them.
+- QA Lead owns traceability, consistency, source/claim integrity and acceptance evidence. Same-session perspectives remain SINGLE_SESSION_CROSSCHECK.
