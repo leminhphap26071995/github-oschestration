@@ -22,3 +22,7 @@
 5. A Senior must show ownership and trade-off consequences, not merely execute complex tasks.
 6. A Principal must demonstrate cross-system influence and reusable standards, not verbosity or broad tool familiarity.
 7. Never infer an individual's capability from the role bundle. Bundle quality and human competency are separate evidence.
+
+
+## Bundle placement rule
+The shared level ladder belongs here once. A role `SKILL.md` points to this contract; its `mindset.md` contains only that profession's observable level behaviors. Do not duplicate generic level-authority prose inside specialist bundles.

@@ -19,7 +19,7 @@ Additional artifacts such as `training.md`, `acceptance.md` or `capability-evide
 7. Each knowledge file cites at least two relevant primary/authoritative sources, with edition/version/date and jurisdiction when applicable.
 8. Distinguish standards, regulations, vendor documentation, professional practice and local project evidence.
 9. General model knowledge may suggest search terms only. It is never a domain source, professional method or evidence. Missing knowledge is UNKNOWN.
-10. Shared cross-role policies live in the universal core; do not duplicate generic prose in specialist knowledge.
+10. Shared cross-role policies live in the universal core. Specialist files must not duplicate the generic level ladder, decision-discipline prose or source-use boundary; only role-specific level behaviors and domain knowledge belong in the bundle.
 
 ## Promotion and regression
 - Validate all registry roles and required artifacts.

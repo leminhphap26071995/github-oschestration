@@ -22,6 +22,3 @@
 - [OpenAI Plugins — Skills](https://developers.openai.com/plugins/concepts/skills) — Official OpenAI platform docs; checked 2026-11-23.
 - [OpenAI Plugins — MCP server](https://developers.openai.com/plugins/concepts/mcp-server) — Official OpenAI platform docs; checked 2026-11-23.
 - [OpenAI — Build skills](https://developers.openai.com/plugins/build/skills) — Official OpenAI platform docs; checked 2026-11-23.
-
-## Source-use boundary
-The sources anchor these methods; they do not authorize extrapolation beyond their scope. Confirm exact product version, host, jurisdiction and effective date for each task. Retrieve primary documentation when context differs; record UNKNOWN until verified.

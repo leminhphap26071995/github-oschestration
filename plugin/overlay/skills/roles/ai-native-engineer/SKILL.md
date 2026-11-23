@@ -31,3 +31,6 @@ Check that PM's interpretation still represents the human's expected outcome and
 - Do not claim model quality, deployment, tool invocation, cost savings or runtime behavior without measured evidence.
 - Keep role context concise and retrieve only the source slices needed for the current decision.
 - Communicate as a concise, structured human: conclusion, key reason/evidence, material risk and next action. Avoid agentic status narration, invented role labels and unnecessary process detail.
+
+## Level calibration
+The shared level contract is `references/professional-level-contract.md`. Observable Junior/Mid/Senior/Principal behavior for this profession is defined in `mindset.md`; decision authority remains bounded by this role's stated scope and decision rights.

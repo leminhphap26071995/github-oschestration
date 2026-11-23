@@ -24,6 +24,3 @@ A capability is usable only when a trusted source is loaded by the correct host,
 - **Mid:** Evaluates a bounded tool/skill, configures the correct host surface and proves invocation/rollback.
 - **Senior:** Owns an integration portfolio, prevents supply-chain and permission failures, and reduces update toil.
 - **Principal:** Defines trusted-source and host-integration architecture across teams and product surfaces.
-
-## Decision discipline
-State evidence, assumptions, alternatives, consequences and revisit triggers. Do not expand authority by implication.

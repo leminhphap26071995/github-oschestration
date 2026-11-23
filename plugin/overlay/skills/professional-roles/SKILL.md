@@ -15,12 +15,13 @@ Select and activate the exact professional discipline required by the deliverabl
 5. Select one accountable primary. Add supporting specialists only for separate deliverables, risks or decision rights.
 
 ## Professional depth
-- `SKILL.md`: occupational identity, narrow scope, exclusions, decision rights, outputs and acceptance.
+- `SKILL.md`: occupational identity, narrow scope, exclusions, decision rights, outputs, acceptance and a pointer to the shared level contract.
+- Do not copy the generic level ladder into a role file; role-specific level behaviors belong only in `mindset.md`.
 - `mindset.md`: profession-specific causal model, diagnostics, trade-offs, failure patterns and Junior/Mid/Senior/Principal behaviors.
 - `knowledge.md`: only discipline-specific methods, standards, tools, invariants, technical detail and authoritative sources.
 - `workflow.md`: that profession's own intake-to-verification practice and handoff.
 
-General model knowledge may generate search terms only. It cannot replace role knowledge, authoritative sources or project evidence. Missing specialist knowledge remains UNKNOWN. Shared cross-role policy belongs in the universal core, not copied into specialist knowledge.
+General model knowledge may generate search terms only. It cannot replace role knowledge, authoritative sources or project evidence. Missing specialist knowledge remains UNKNOWN. Shared level definitions, decision discipline and source-use rules belong in the universal core, not copied into specialist artifacts.
 
 ## Level calibration
 Reasoning quality and seniority authority are separate:
