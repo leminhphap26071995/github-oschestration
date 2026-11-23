@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "status": "UPDATED",
+  "plugin_id": "plugins_6adcacd0c4988191a4f3d33a5bec0d29",
+  "previous_release_id": "pluginrel_6b04694129688191961486d2dcf16ddd",
+  "previous_version": "0.1.172",
+  "new_release_id": "pluginrel_6b046a1dc9b481918fff28dedd31a0ef",
+  "new_version": "0.1.173",
+  "source_repository": "leminhphap-improvement/ai-workflow-archtiecture",
+  "source_commit_sha": "7bd91e8a83a112425f3ef6bb79c161c85afc1b06",
+  "packaging_repository": "leminhphap26071995/github-oschestration",
+  "packaging_commit_sha": "c948805d72c6d9402628fbd5be1ee6863f8c457d",
+  "artifact_id": 14838917043,
+  "outer_artifact_sha256": "ea06bc5451e4eb4f84a769fbb6161bd863c287b4a3b0a92faed3c97d7fb5a544",
+  "inner_archive_sha256": "2da2403df20c76f680696d875173bef093462d065fea6a0cd8047bbe6e56015c",
+  "package_files": 203,
+  "roles": 35,
+  "role_artifacts": 140,
+  "default_prompt_entries": 48,
+  "deleted_paths": [
+    ".agent-plugin/plugin.json"
+  ],
+  "rejected_delete_paths": [
+    ".codex-plugin/plugin.json"
+  ],
+  "rejection_reason": "Generated from retained source; host-managed and not deletable through Plugin Creator.",
+  "retained_generated_paths": [
+    ".codex-plugin/plugin.json"
+  ],
+  "live_plugin_mutated": true
+}

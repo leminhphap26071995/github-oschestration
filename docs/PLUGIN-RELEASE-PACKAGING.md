@@ -47,3 +47,11 @@ The CI package run proves the archive was built and tested. It does **not** upda
 7. Update Notion with live release ID, source SHA, package digest, blocker, readback evidence and first unmet criterion.
 
 GitHub is the backup builder/source mirror only; ChatGPT-native Plugin Creator remains the primary executor and publisher. A GitHub Release is not a live plugin update. A live plugin update is not proof of fresh runtime behavior. Keep source, package, live release/readback and runtime activation separate.
+
+
+## Live Plugin Creator update receipt — 0.1.173
+
+- Release: `pluginrel_6b046a1dc9b481918fff28dedd31a0ef`.
+- The ChatGPT-native Plugin Creator update was executed by ChatGPT using the verified GitHub backup archive.
+- `.agent-plugin/plugin.json` was removed. `.codex-plugin/plugin.json` was rejected by Plugin Creator as generated from retained source; it remains host-managed and was not part of the uploaded ChatGPT-only archive.
+- The live file inventory and selected source files were read back; 35 roles and 140 role artifacts were confirmed.

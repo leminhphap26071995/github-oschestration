@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "approved": true,
+  "approved": false,
   "requested_by": "repository-owner",
   "consumer": "chatgpt",
   "plugin_id": "plugins_6adcacd0c4988191a4f3d33a5bec0d29",
@@ -13,12 +13,18 @@
   "expected_role_count": 35,
   "expected_role_artifact_count": 140,
   "delete_paths": [
-    ".agent-plugin/plugin.json",
-    ".codex-plugin/plugin.json"
+    ".agent-plugin/plugin.json"
   ],
   "chatgpt_native_attempted": true,
   "fallback_reason": "CHATGPT_HOST_CANNOT_PACKAGE_COMPLETE_OVERLAY",
   "chatgpt_native_blocker": "ChatGPT has no supported local packaging route for the connector-only 203-file overlay in this host. Plugin Creator archive retrieval is not mountable into the execution filesystem, and the private package_overlay.py creates only a manifest regression artifact. Use the sanitized GitHub package builder for the complete archive; ChatGPT remains responsible for Plugin Creator publication and readback.",
-  "request_revision": 4,
-  "build_request_reason": "Owner-authorized GitHub backup build for version 0.1.173; includes exact removal of two stale CLI sidecars. ChatGPT will publish and verify via Plugin Creator."
+  "request_revision": 5,
+  "build_request_reason": "Completed: GitHub built the backup archive; ChatGPT published through Plugin Creator and read back the new release.",
+  "status": "completed",
+  "actual_live_release_id": "pluginrel_6b046a1dc9b481918fff28dedd31a0ef",
+  "actual_live_version": "0.1.173",
+  "rejected_delete_paths": [
+    ".codex-plugin/plugin.json"
+  ],
+  "delete_rejection_reason": "Plugin Creator reports this path is generated from retained source; it is platform-managed and cannot be deleted through delete_paths."
 }
