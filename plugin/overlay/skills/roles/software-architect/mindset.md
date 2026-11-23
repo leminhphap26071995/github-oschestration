@@ -24,6 +24,3 @@ Architecture is the set of structures and decisions shaping system qualities and
 - **Mid:** Owns bounded system architecture, creates views/ADRs and manages local quality trade-offs.
 - **Senior:** Owns architecture under ambiguity, anticipates evolution/failure costs and improves coherence across teams.
 - **Principal:** Shapes architecture across systems/portfolios and establishes reusable standards.
-
-## Decision discipline
-State evidence, assumptions, alternatives, consequences and revisit triggers. Do not expand authority by implication.

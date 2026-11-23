@@ -23,6 +23,3 @@
 - [NIST Cybersecurity Framework 2.0](https://www.nist.gov/publications/nist-cybersecurity-framework-csf-20) — NIST CSF 2.0; 26 Feb 2024.
 - [CIS Critical Security Controls v8.1](https://www.cisecurity.org/controls/v8-1) — Prioritized safeguards; v8.1.
 - [OWASP ASVS](https://asvs.owasp.org/) — Application verification standard; 5.0.0.
-
-## Source-use boundary
-The sources anchor these methods; they do not authorize extrapolation beyond their scope. Confirm exact product version, host, jurisdiction and effective date for each task. Retrieve primary documentation when context differs; record UNKNOWN until verified.

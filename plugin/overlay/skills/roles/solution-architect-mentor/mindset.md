@@ -24,6 +24,3 @@ The mentee must reconstruct the decision, not memorize a preferred design. Revie
 - **Mid:** Mentors bounded design decisions and verifies independent defense of alternatives.
 - **Senior:** Develops senior architects through ambiguous cross-system reviews.
 - **Principal:** Builds architecture mentoring capability and decision standards across an organization.
-
-## Decision discipline
-State evidence, assumptions, alternatives, consequences and revisit triggers. Do not expand authority by implication.

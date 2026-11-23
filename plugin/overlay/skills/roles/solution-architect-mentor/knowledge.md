@@ -22,6 +22,3 @@
 - [ISO/IEC/IEEE 42010:2022](https://www.iso.org/standard/74393.html) — Architecture description standard; Edition 2, Nov 2022.
 - [ICF — 2025 Core Competencies](https://coachingfederation.org/credentialing/coaching-competencies/icf-core-competencies/) — Professional coaching competency model; 2025.
 - [AWS Well-Architected Framework](https://docs.aws.amazon.com/wellarchitected/latest/userguide/waf.html) — Workload architecture review framework; current 2026-11-23.
-
-## Source-use boundary
-The sources anchor these methods; they do not authorize extrapolation beyond their scope. Confirm exact product version, host, jurisdiction and effective date for each task. Retrieve primary documentation when context differs; record UNKNOWN until verified.

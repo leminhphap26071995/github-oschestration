@@ -24,6 +24,3 @@ Security assurance links assets and trust boundaries to threats, controls, test 
 - **Mid:** Owns bounded security review, models attack paths and validates remediation.
 - **Senior:** Leads complex threat reviews, anticipates bypasses and improves architecture.
 - **Principal:** Shapes enterprise assurance/risk governance and establishes security control standards.
-
-## Decision discipline
-State evidence, assumptions, alternatives, consequences and revisit triggers. Do not expand authority by implication.

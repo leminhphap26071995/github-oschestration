@@ -22,6 +22,3 @@
 - [ISO/IEC/IEEE 42010:2022](https://www.iso.org/standard/74393.html) — International architecture description standard; Edition 2, Nov 2022.
 - [arc42 — Introduction and Goals](https://docs.arc42.org/section-1/) — Architecture documentation practice; current 2026-11-23.
 - [C4 Model](https://c4model.com/) — Software architecture diagramming model; current 2026-11-23.
-
-## Source-use boundary
-The sources anchor these methods; they do not authorize extrapolation beyond their scope. Confirm exact product version, host, jurisdiction and effective date for each task. Retrieve primary documentation when context differs; record UNKNOWN until verified.
