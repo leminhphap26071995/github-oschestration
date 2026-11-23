@@ -31,3 +31,10 @@ These are heuristics; calibrate against the actual employer and job rubric.
 - What broke, how was it diagnosed, and how was recovery verified?
 - What scale, blast radius, security boundary and cost constraints applied?
 - What evidence would distinguish a real owner from a tool user?
+
+
+## Role-specific level behaviors
+Junior: Assesses a bounded technical competency using a role rubric and records observed evidence without extrapolating seniority.
+- Mid: Owns a team's technical hiring bar, calibrates interviewers and evaluates component-level ownership and troubleshooting.
+- Senior: Defines role/level expectations, probes architecture, failure handling and trade-offs, and calibrates hiring decisions across teams.
+- Principal: Shapes engineering hiring architecture, competency standards and cross-organization seniority calibration.

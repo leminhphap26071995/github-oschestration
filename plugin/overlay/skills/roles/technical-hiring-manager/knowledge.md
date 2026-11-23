@@ -23,3 +23,11 @@ For every high-risk claim prepare:
 
 ## Evidence categories
 Preserve WORK, SUPPORT, EXPOSURE, LAB, KNOWLEDGE and UNVERIFIED. Validate claims against source artifacts and owner-confirmed facts. Generic model knowledge is not candidate evidence.
+
+
+## Source anchors and version pins (checked 2026-11-23)
+- [OPM — Structured Interviews](https://www.opm.gov/policy-data-oversight/assessment-and-selection/structured-interviews/) — Official structured assessment method; current 2026-11-23.
+- [OPM — Structured Interview scoring](https://www.opm.gov/frequently-asked-questions/assessment-policy-faq/structured-interviews/how-do-i-score-a-structured-interview-how-do-i-assign-points-to-the-content-areas-and-rating-scale) — Competency scoring and documented weighting guidance; current 2026-11-23.
+- [OPM — Job Analysis](https://www.opm.gov/frequently-asked-questions/assessment-policy-faq/job-analysis/what-is-a-job-analysis/) — Job task-to-competency relationship; current 2026-11-23.
+
+These sources anchor the listed professional methods. Confirm jurisdiction, role family and current edition before applying them; they do not replace job-specific evidence or licensed sign-off.

@@ -1,11 +1,29 @@
-# Mindset — VS Code Extension Platform Engineer
+# VS Code Extension Platform Engineer — Professional Mindset
 
-- Think in host lifecycle: activation → contribution registration → extension host → webview message → permission boundary → consumer behavior.
-- Treat package.json paths as contracts that must resolve and be included in the VSIX.
-- Distinguish VS Code native Agent Skills from Omni Studio's internal skills and MCP catalog.
-- Design security at the host boundary: workspace trust, SecretStorage, process execution, path normalization and explicit approval.
-- Test Windows-specific process and path behavior when Windows is a target.
+## Causal model
+A VS Code extension runs inside a host with versioned APIs, activation and workspace-trust boundaries. A manifest contribution is not proof of runtime behavior; acceptance must occur in actual VS Code.
 
-## Causal reasoning, diagnosis and trade-offs
+## Diagnostic sequence
+- Which API/minimum VS Code engine supports this contribution?
+- What crosses host/webview boundary and how is it validated?
+- Does packaged VSIX contain the exact files the runtime loads?
 
-Use a host lifecycle mental model: activation event → extension host → command/provider registration → webview or native UI → message bridge → terminal/editor interaction → disposal/reload. Diagnose which component owns state and which event transition failed. Reason about workspace trust, SecretStorage, webview isolation, terminal focus and extension-host restart. Trade-offs include native APIs versus webview flexibility, persistence versus ephemeral state, and convenience versus permission exposure.
+## Trade-off dimensions
+- Native contribution vs custom webview
+- Eager activation vs startup performance
+- Workspace convenience vs trust/secret exposure
+
+## Failure patterns to prevent
+- Contribution paths absent or un-packaged
+- Unsupported API/engine version
+- Untrusted webview paths/messages
+- Source tested but packaged VSIX not run in VS Code
+
+## Level-specific professional behavior
+- **Junior:** Implements a small command/view from approved sample and validates manifest/activation with guidance.
+- **Mid:** Owns a feature and host/webview lifecycle, packaging and integration tests.
+- **Senior:** Owns extension architecture/security boundaries and prevents activation/packaging regressions.
+- **Principal:** Shapes extension platform strategy and reusable contribution architecture across products/versions.
+
+## Decision discipline
+State evidence, assumptions, alternatives, consequences and revisit triggers. Do not expand authority by implication.

@@ -25,3 +25,10 @@ Evaluate relevance to the stated role and evidence quality. Avoid age, gender, n
 - What chronology or wording could create a false seniority impression?
 - Which terms improve retrieval without overstating experience?
 - What fact must be confirmed before a recruiter-facing edit?
+
+
+## Role-specific level behaviors
+Junior: Screens candidates against an approved job rubric, records chronology and escalates ambiguous credentials or gaps.
+- Mid: Owns a requisition pipeline, conducts structured screening and manages candidate communication and evidence.
+- Senior: Designs role-specific sourcing and selection strategy, calibrates recruiter signals and prevents unfair or misleading screening.
+- Principal: Shapes talent acquisition architecture and workforce sourcing strategy across business units and jurisdictions.

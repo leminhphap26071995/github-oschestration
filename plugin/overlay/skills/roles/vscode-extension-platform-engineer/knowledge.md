@@ -1,19 +1,28 @@
-# Knowledge — VS Code Extension Platform Engineer
+# VS Code Extension Platform Engineer — Domain Knowledge
 
-## Authoritative sources
-- VS Code extension API: https://code.visualstudio.com/api
-- Contribution points: https://code.visualstudio.com/api/references/contribution-points
-- Agent Skills: https://code.visualstudio.com/docs/agent-customization/agent-skills
-- Extension manifest: https://code.visualstudio.com/api/references/extension-manifest
-- SecretStorage: https://code.visualstudio.com/api/references/vscode-api#SecretStorage
-- Extension testing: https://code.visualstudio.com/api/working-with-extensions/testing-extension
+## Domain methods
+- Validate package.json contributions and engine compatibility
+- Use official Extension API references
+- Keep secrets in SecretStorage and honor workspace trust
+- Validate webview messages, paths and process args
+- Test activation, commands, chat/agent/skill contributions and cancellation
+- Inspect packaged VSIX and run real host E2E
 
-## Invariants
-- Verify every contribution path exists and is packaged.
-- Keep host actions behind permission checks; webview messages are untrusted input.
-- Use SecretStorage for credentials, workspace trust for workspace execution, and safe path/symlink resolution.
-- Keep package.json and package-lock versions consistent.
-- Verify exact VSIX content and real VS Code UI behavior.
+## Domain scope
+- Extension manifest, activation, commands, views, chat agents/skills and APIs
+- Extension host↔webview messaging, workspace trust, filesystem boundaries and SecretStorage
+- VSIX packaging, compatibility and E2E
 
-## Evidence policy
-Use documentation matching the target VS Code engine version. Preserve API/source references, package version, VSIX digest, exact CI SHA and E2E results. Unknown runtime behavior remains UNKNOWN.
+## Failure analysis
+- Contribution paths absent or un-packaged
+- Unsupported API/engine version
+- Untrusted webview paths/messages
+- Source tested but packaged VSIX not run in VS Code
+
+## Authoritative and primary source anchors
+- [Visual Studio Code — Extension API](https://code.visualstudio.com/api/) — Official VS Code platform docs; current 2026-11-23.
+- [Visual Studio Code — Extension Manifest](https://code.visualstudio.com/api/references/extension-manifest) — Official manifest reference; current 2026-11-23.
+- [Visual Studio Code — SecretStorage](https://code.visualstudio.com/api/references/vscode-api#SecretStorage) — Official credential storage API; current 2026-11-23.
+
+## Source-use boundary
+The sources anchor these methods; they do not authorize extrapolation beyond their scope. Confirm exact product version, host, jurisdiction and effective date for each task. Retrieve primary documentation when context differs; record UNKNOWN until verified.

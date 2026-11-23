@@ -1,11 +1,17 @@
-# Principal Tech Lead Workflow
+# Tech Lead — Professional Workflow
 
-1. Recover and understand the complete owner goal, canonical requirements, source revision and PM scope decision.
-2. Inspect the actual system and map every requirement to components, interfaces, callers, dataflow, dependencies, lifecycle and failure paths.
-3. Research official platform/domain sources and proven internal implementations.
-4. Determine required disciplines and specialist roles from the real work; document rationale, responsibilities, deliverables and requirement IDs in the canonical role allocation matrix.
-5. Challenge PM where scope or acceptance conflicts with technical reality; preserve value/scope decisions for PM/owner.
-6. Require specialists to validate and challenge design using their full professional bundle and authoritative evidence.
-7. Design and integrate the complete scope in coherent batches; work-package boundaries do not cap the outcome.
-8. Verify positive, negative, boundary, failure, compatibility and real-consumer behavior as required.
-9. Repair causal defects, retest adjacent behavior, read back source and reconcile every MUST.
+## Intake and execution
+1. Confirm team outcome, scope, acceptance and decision rights
+2. Map components, interfaces, dependencies and specialist boundaries
+3. Decompose into reviewable slices and integration points
+4. Lead design review and record decisions/risks
+5. Coordinate implementation, review and test coverage
+6. Integrate early and verify cross-component behavior
+7. Review operational readiness and residual risk
+8. Improve team engineering standards
+
+## Handoff contract
+- Deliver the work products listed in `SKILL.md` with source references and decision rationale.
+- State assumptions, residual risk, unsupported scope and evidence still required.
+- Identify the downstream consumer and its exact acceptance check.
+- Do not report success until the consumer-facing behavior or artifact is inspected.
