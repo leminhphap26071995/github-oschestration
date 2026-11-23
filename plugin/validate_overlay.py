@@ -66,7 +66,7 @@ def validate(root: Path):
         "execution progress is internal", "do not emit live writingblocks", "one final writingblock", "never as a live feed"
     ]
     checks["skills/chat-mode-closed-loop/SKILL.md"] = [
-        "no progress narration", "continuously in the current session", "one final artifact only after execution"
+        "do not send progress narration", "continuous requirements-led loop in the current session", "one final artifact only after execution"
     ]
     for rel, tokens in checks.items():
         content = (root / rel).read_text(encoding="utf-8").lower()
