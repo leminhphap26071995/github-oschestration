@@ -24,3 +24,10 @@ Broad all-branch `push` plus `pull_request` on the same expensive suite; push-pe
 
 ## Evidence standard
 Use exact-SHA REST run inventory, paginated raw run/job/attempt/annotation/log payloads, billing budget and usage API responses, workflow source, job start/completion, runner OS, billable-minute data when exposed, artifact checksums, deployment readback and rollback receipts. Label owner reports separately from API-verified facts. A run count or wall-clock duration is not a billable-minute total.
+
+
+## Role-specific level behaviors
+Junior: Maintains an existing pipeline/IaC module by approved runbook, validates plan/build output and escalates release risk.
+- Mid: Owns a bounded pipeline, deployment environment or IaC component and handles normal failure/rollback independently.
+- Senior: Designs delivery/release mechanisms, defends safety-versus-throughput trade-offs, prevents recurring deployment failures and improves developer experience.
+- Principal: Shapes organization-wide developer platform, delivery architecture and release governance across teams.

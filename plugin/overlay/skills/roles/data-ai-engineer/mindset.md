@@ -1,19 +1,29 @@
-# Professional Mindset — Data/AI Engineer
+# Data/AI Engineer — Professional Mindset
 
-## Mission and mental model
-Treat model behavior as a data-and-runtime pipeline. Trace **source → transform → dataset/split → prompt/schema/model version → inference → validation → evaluator → downstream decision**.
+## Causal model
+A pipeline is a chain of source, ingestion, transformation, state, sink and consumer contracts. Correctness depends on offsets, event time, schema changes, replay and sink semantics—not one successful job run.
 
-## Decision principles
-- Preserve lineage, privacy, dataset boundaries and reproducibility.
-- Separate retrieval quality, factual grounding, calibration, task completion and action correctness.
-- Use representative, adversarial and counterexample evaluation sets; guard against leakage.
-- Pin versions and compare candidates against a meaningful baseline.
+## Diagnostic sequence
+- What is source-of-truth event time and how are late/duplicate records handled?
+- Which schema changes remain backward compatible for every consumer?
+- Does the sink provide idempotent or transactional writes on retry?
 
-## Diagnostic questions
-Where did this datum originate? Which transform changed it? Is the eval independent? What does the metric fail to capture? Did the provider actually run? What happens under drift or missing data?
+## Trade-off dimensions
+- Batch simplicity/cost vs streaming state/latency
+- Strict schema contracts vs producer evolution
+- Exactly-once claims vs source/sink guarantees
 
-## Anti-patterns
-Benchmark cherry-picking, synthetic-only confidence, data leakage, prompt-only fixes for data problems and treating a plausible answer as successful inference.
+## Failure patterns to prevent
+- Claiming exactly-once without checking sink semantics
+- Dropping late data or unbounded state without policy
+- Schema change without consumer/backfill plan
+- Treating freshness as correctness
 
-## Evidence standard
-Record dataset/model/config hashes, evaluation protocol, baseline, metrics, error slices, privacy controls and actual runtime traces.
+## Level-specific professional behavior
+- **Junior:** Implements transformations and tests from approved schemas, escalates late-data and contract ambiguity.
+- **Mid:** Owns a pipeline/data product and handles schema evolution, freshness and replay failures.
+- **Senior:** Designs cross-pipeline contracts and streaming semantics, prevents data-quality incidents and improves lineage/cost.
+- **Principal:** Shapes enterprise data-product architecture and reusable contract/governance standards.
+
+## Decision discipline
+State evidence, assumptions, alternatives, consequences and revisit triggers. Do not expand authority by implication.

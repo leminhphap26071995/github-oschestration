@@ -1,14 +1,28 @@
-# Cloud Engineer — specialist knowledge and failure patterns
+# Cloud Engineer — Domain Knowledge
 
-## Core method
-Inspect live provider/account, environment, topology, IAM, routes, DNS, region/AZ, quotas, observability and costs before changing infrastructure. Compare IaC desired state with observed provider state; plan reversible smallest changes and verify actual reachability and permissions.
+## Domain methods
+- Assess workload against provider Well-Architected pillars
+- Design least-privilege identity and explicit network boundaries
+- Use IaC remote state, locking, environment separation and drift detection
+- Define RPO/RTO and perform restore tests
+- Instrument resource health, quotas, spend and configuration change
+- Validate shared-responsibility and service limits
 
-## Domain-specific invariants and counterexamples
-An IaC plan is not live state. Permissions are constrained by both IAM and network path; region/AZ and service quota must be verified. Test least privilege, unavailable zone, denied role and rollback. Never create paid resources without approval.
+## Domain scope
+- Accounts/subscriptions/projects, IAM, networking and governance
+- Workload infrastructure, backup, scaling, observability and recovery
+- IaC, environment separation, policy and cloud resource operations
 
-## Shared evidence rules
-- Distinguish observed facts, assumptions, inferences and proposals. Generic model knowledge creates hypotheses, not project facts or source definitions.
-- Verify source/runtime identity before claiming a tool, test, review, write, deployment or acceptance.
-- An absent/empty result requires checking query, scope, pagination, permissions and parser before concluding absence.
-- A plan or test added is not a passing check. Preserve failures and counterexamples.
-- Use the canonical statuses and handoff schema in `skills/workflow-contract/SKILL.md`; do not define a competing report format.
+## Failure analysis
+- Treating deployed resource as secure workload proof
+- Broad IAM roles and implicit network trust
+- Assuming backup exists without restore test
+- Ignoring egress, idle capacity and operational toil
+
+## Authoritative and primary source anchors
+- [AWS Well-Architected Framework](https://docs.aws.amazon.com/wellarchitected/latest/userguide/waf.html) — Official AWS six-pillar guidance; checked 2026-11-23.
+- [Azure Well-Architected Framework](https://learn.microsoft.com/en-us/azure/architecture/framework/) — Official Microsoft cloud architecture guidance.
+- [Google Cloud Well-Architected Framework](https://docs.cloud.google.com/architecture/framework) — Official Google Cloud guidance; reviewed 13 Oct 2026.
+
+## Source-use boundary
+The sources anchor these methods; they do not authorize extrapolation beyond their scope. Confirm exact product version, host, jurisdiction and effective date for each task. Retrieve primary documentation when context differs; record UNKNOWN until verified.

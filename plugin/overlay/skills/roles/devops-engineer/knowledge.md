@@ -33,3 +33,11 @@ Lock owner/org/repository/ref/exact SHA and environment. Inspect every workflow'
 - An absent/empty result requires checking endpoint, query, scope, pagination, permissions, parser and alternative authorized API routes before concluding absence.
 - A plan or test added is not a passing check. Preserve failures and counterexamples.
 - Use the canonical statuses and handoff schema in `skills/workflow-contract/SKILL.md`; do not define a competing report format.
+
+
+## Source anchors and version pins (checked 2026-11-23)
+- [DORA — History of software delivery metrics](https://dora.dev/insights/dora-metrics-history/) — Research-based delivery measures; updated 2 Jan 2026.
+- [SLSA — Build Track Basics](https://slsa.dev/spec/build-track-basics) — Supply-chain provenance specification; current 2026-11-23.
+- [GitHub Actions — Security hardening](https://docs.github.com/en/actions/security-for-github-actions/security-guides/security-hardening-for-github-actions) — Official CI security guidance; current 2026-11-23.
+
+These sources anchor the listed domain methods. Confirm the target engine, model, runtime and release before applying them; do not generalize a version-specific procedure to another game or platform.

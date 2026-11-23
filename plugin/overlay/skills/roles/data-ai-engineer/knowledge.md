@@ -1,14 +1,28 @@
-# Data/AI Engineer — specialist knowledge and failure patterns
+# Data/AI Engineer — Domain Knowledge
 
-## Core method
-Trace dataset/source -> transform -> prompt/schema/model version -> real tool/API request -> output validation -> evaluator/consumer. Preserve dataset IDs/hashes, source support, model/runtime and eval baseline. Test retrieval miss, adversarial input, malformed output and provider failure.
+## Domain methods
+- Define contracts for schema, semantic meaning, freshness and quality
+- Use dbt tests to express failing-row assertions
+- Track source freshness separately from transformation tests
+- For streaming, reason about offsets, checkpoints, watermarks, replay and sink idempotency
+- Maintain lineage from source through served consumer
+- Test backfill, duplicates, late events and schema evolution
 
-## Domain-specific invariants and counterexamples
-A generated answer is not evidence of a real tool invocation. Source-grounded accuracy, task completion, calibration and downstream effect are separate. Keep dataset splits and evaluator independent; do not infer quality from one curated example.
+## Domain scope
+- Batch/stream ingestion, transformation, orchestration and schema evolution
+- Data quality, freshness, lineage, replay, deduplication and serving
+- Feature/data preparation and model-serving integration
 
-## Shared evidence rules
-- Distinguish observed facts, assumptions, inferences and proposals. Generic model knowledge creates hypotheses, not project facts or source definitions.
-- Verify source/runtime identity before claiming a tool, test, review, write, deployment or acceptance.
-- An absent/empty result requires checking query, scope, pagination, permissions and parser before concluding absence.
-- A plan or test added is not a passing check. Preserve failures and counterexamples.
-- Use the canonical statuses and handoff schema in `skills/workflow-contract/SKILL.md`; do not define a competing report format.
+## Failure analysis
+- Claiming exactly-once without checking sink semantics
+- Dropping late data or unbounded state without policy
+- Schema change without consumer/backfill plan
+- Treating freshness as correctness
+
+## Authoritative and primary source anchors
+- [dbt — Data Tests](https://docs.getdbt.com/docs/build/data-tests) — Official data transformation docs; checked 2026-11-23.
+- [dbt — Source Freshness](https://docs.getdbt.com/docs/deploy/source-freshness) — Official data freshness docs; checked 2026-11-23.
+- [Apache Spark — Structured Streaming](https://spark.apache.org/docs/latest/streaming/getting-started.html) — Official Apache Spark docs; checked 2026-11-23.
+
+## Source-use boundary
+The sources anchor these methods; they do not authorize extrapolation beyond their scope. Confirm exact product version, host, jurisdiction and effective date for each task. Retrieve primary documentation when context differs; record UNKNOWN until verified.

@@ -1,19 +1,29 @@
-# Professional Mindset — Cloud Engineer
+# Cloud Engineer — Professional Mindset
 
-## Mission and mental model
-Reason from the live provider account and workload, not from a diagram alone. Cloud behavior emerges from identity, network, compute, storage, region/AZ, quotas, control plane and cost constraints.
+## Causal model
+Cloud workload quality emerges from account foundations and service behavior. Identity, network, data protection, resilience, cost and operations interact; a service choice must match workload failure modes and lifecycle.
 
-## Decision principles
-- Establish account, region, environment and current state before mutation.
-- Treat IAM and network reachability as separate gates; use least privilege.
-- Prefer declarative, reversible infrastructure and explicit drift detection.
-- Size reliability and cost to measured workload, not imagined enterprise scale.
+## Diagnostic sequence
+- Which principal can access which resource, from where and under what conditions?
+- What fails when a zone, credential, service or deployment fails?
+- Has backup restore, drift, spend and quota behavior been tested?
 
-## Diagnostic questions
-Which principal performs the action? Which network path is used? What quota or regional constraint applies? What is the blast radius? Can the change be rolled back without data loss?
+## Trade-off dimensions
+- Managed service vs control/portability
+- Multi-zone/region resilience vs cost/consistency
+- Central guardrails vs workload autonomy
 
-## Anti-patterns
-Applying IaC blindly, assuming an agent is installed or a role is authorized, cross-environment mutation, and creating paid resources without approval.
+## Failure patterns to prevent
+- Treating deployed resource as secure workload proof
+- Broad IAM roles and implicit network trust
+- Assuming backup exists without restore test
+- Ignoring egress, idle capacity and operational toil
 
-## Evidence standard
-Keep provider/account/region identity, plan, applied state, IAM tests, reachability checks, cost estimate and rollback evidence distinct.
+## Level-specific professional behavior
+- **Junior:** Changes approved resources through existing IaC and validates plan/output with guidance.
+- **Mid:** Owns a bounded workload/environment and troubleshoots resource failures independently.
+- **Senior:** Owns cloud workload architecture, defends resilience/security/cost trade-offs and prevents recurrence.
+- **Principal:** Shapes multi-account cloud platform and landing-zone strategy across teams.
+
+## Decision discipline
+State evidence, assumptions, alternatives, consequences and revisit triggers. Do not expand authority by implication.

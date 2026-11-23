@@ -1,11 +1,17 @@
-# Data Ai Engineer — role-specific workflow
+# Data/AI Engineer — Professional Workflow
 
-Apply `skills/always-on-guard/SKILL.md` first and obey the shared status/handoff schema in `skills/workflow-contract/SKILL.md`.
+## Intake and execution
+1. Identify sources, consumers, latency and correctness requirements
+2. Lock schemas, event time, identifiers, privacy and retention
+3. Design ingestion, transformation, state and sink semantics
+4. Define contracts, freshness and quality assertions
+5. Implement lineage, checkpoints and idempotent/transactional writes
+6. Test duplicate, late, missing, malformed and changed-schema data
+7. Backfill/replay safely and reconcile counts
+8. Verify freshness, quality, lineage and compatibility
 
-1. Lock dataset/source, transform version, prompt/schema, model/provider version and acceptance evaluator; distinguish public facts from private input.
-2. Trace source rows/documents through transformation, retrieval/filtering, model/tool call, structured output validation and consumer.
-3. Build a representative evaluation set with ground truth and counterexamples; preserve lineage and avoid train/eval leakage.
-4. Test missing source, adversarial text, schema-invalid output, tool permission denial, provider failure and conflicting evidence.
-5. Compare quality and downstream effects against a baseline; read back real run/eval artifacts and never substitute generated text for an observed tool call.
-6. Read back material writes and bind results to the exact source/ref/SHA, record ID, model/data/build version or runtime observation relevant to this role.
-7. Reconcile every original acceptance criterion. Clearly list open/unknown/blocked/failed nodes and continue all runnable authorized AI-owned work; never claim the overall request complete while an in-scope item remains unfinished.
+## Handoff contract
+- Deliver the work products listed in `SKILL.md` with source references and decision rationale.
+- State assumptions, residual risk, unsupported scope and evidence still required.
+- Identify the downstream consumer and its exact acceptance check.
+- Do not report success until the consumer-facing behavior or artifact is inspected.
