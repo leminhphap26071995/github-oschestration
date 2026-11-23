@@ -19,4 +19,4 @@ The ZIP is an overlay: omitted files are retained by Plugin Creator's update ope
 5. Use the native Plugin Creator update action with the exact plugin ID and expected release ID. GitHub Actions cannot invoke that Plugin Creator mutation.
 6. Read back the new release ID/version and every changed file; record the release ID and source SHA in the owning project/ticket checkpoint.
 
-**Boundary:** GitHub Actions can validate and package the plugin but cannot invoke the current ChatGPT Plugin Creator action. The actual create/update remains a separate Plugin Creator operation after artifact review. A green packaging workflow does not prove plugin update, host activation or actual skill invocation.
+**Boundary:** GitHub Actions can validate and package the plugin but cannot invoke the current ChatGPT Plugin Creator action. The actual create/update remains a separate Plugin Creator operation after artifact review. The GitHub Release is the owner-facing package handoff. A green packaging workflow or GitHub Release does not prove Plugin Creator update, host activation or actual skill invocation.
