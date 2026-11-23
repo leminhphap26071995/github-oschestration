@@ -23,3 +23,10 @@ Treating a game as an ordinary CRUD application, coupling gameplay to frame rate
 
 ## Evidence standard
 Verify the actual target build and player-facing behavior. Record engine/version, target platform, build configuration, frame-time/performance measurements, deterministic seeds/replays, test scenarios and known limitations. A tutorial, AI-assisted code or prototype is not independent production mastery.
+
+
+## Role-specific level behaviors
+Junior: Implements a bounded gameplay mechanic using the target engine's established framework and test scene.
+- Mid: Owns a gameplay feature including state, input, save/load and performance within a game subsystem.
+- Senior: Owns interacting gameplay systems, multiplayer/runtime constraints and performance trade-offs; prevents systemic regressions.
+- Principal: Shapes engine/gameplay architecture and reusable runtime standards across multiple game systems or titles.

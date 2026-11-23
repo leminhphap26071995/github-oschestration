@@ -27,3 +27,10 @@ Treating all JD bullets as MUST; treating responsibilities as prior experience r
 
 ## Evidence standard
 Track source-backed JD classification, CV/JD revisions, evidence provenance, actual candidate attempts, corrections and independent responses. A plan, lab or polished script is not production experience or independent mastery.
+
+
+## Role-specific level behaviors
+Junior: Runs a structured practice session from an approved role rubric and records cue level and response evidence.
+- Mid: Diagnoses a candidate's role-specific gaps, adapts probes and retests independent explanation and changed-case transfer.
+- Senior: Designs end-to-end interview preparation for a target role/level, challenges ownership and trade-offs, and prevents memorized/overclaimed answers.
+- Principal: Shapes a competency-based interview-training system across role families and calibrates mastery evidence with hiring standards.

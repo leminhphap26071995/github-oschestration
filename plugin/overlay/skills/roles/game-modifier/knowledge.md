@@ -78,3 +78,11 @@ The PixelFX repository states MIT for code/effects, but explicitly excludes its 
 - An absent/empty result requires checking query, scope, pagination, permissions and parser before concluding absence.
 - A plan or test added is not a passing check. Preserve failures and counterexamples.
 - Use the canonical statuses and handoff schema in `skills/workflow-contract/SKILL.md`; do not define a competing report format.
+
+
+## Source anchors and version pins (checked 2026-11-23)
+- [NSA Ghidra — Getting Started](https://github.com/NationalSecurityAgency/ghidra/blob/master/GhidraDocs/GettingStarted.md) — Official reverse-engineering tool docs; version-specific.
+- [PCSX-Redux — Connecting Ghidra](https://pcsx-redux.consoledev.net/Debugging/ghidra/) — PlayStation debugger integration documentation; current 2026-11-23.
+- [PSX-SPX — PlayStation technical reference](https://psx-spx.consoledev.net/) — Community hardware reference; verify against target hardware/game build.
+
+These sources anchor the listed domain methods. Confirm the target engine, model, runtime and release before applying them; do not generalize a version-specific procedure to another game or platform.

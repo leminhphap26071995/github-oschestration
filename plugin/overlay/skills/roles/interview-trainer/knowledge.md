@@ -38,3 +38,11 @@ Use a concise answer structure: direct claim -> concrete context -> personal act
 
 ## Shared evidence rules
 Distinguish observed facts, assumptions, inferences and proposals. JD terms do not prove experience. A plan or test added is not a passing check. Preserve failures and counterexamples. Use canonical workflow-contract statuses; do not define a competing report schema.
+
+
+## Source anchors and version pins (checked 2026-11-23)
+- [OPM — Structured Interviews](https://www.opm.gov/policy-data-oversight/assessment-and-selection/structured-interviews/) — Official structured interview method; current 2026-11-23.
+- [OPM — Structured Interview Guide](https://www.opm.gov/policy-data-oversight/assessment-and-selection/structured-interviews/guide.pdf) — Job analysis, competency, question, scale and pilot steps; Sep 2008.
+- [CIPD — Selection methods](https://www.cipd.org/uk/knowledge/factsheets/selection-factsheet/) — Professional HR practice guidance; current page checked 2026-11-23.
+
+These sources anchor the listed professional methods. Confirm jurisdiction, role family and current edition before applying them; they do not replace job-specific evidence or licensed sign-off.

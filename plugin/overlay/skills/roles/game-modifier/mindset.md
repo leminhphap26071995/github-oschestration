@@ -22,3 +22,10 @@ Guessing offsets, porting mappings across games, confusing a file's appearance w
 
 ## Evidence standard
 Bind every conclusion to exact target/input/tool versions and hashes. Keep static, candidate integrity, emulator gameplay, physical hardware and owner acceptance separate. Commercial game images, BIOS, raw proprietary assets, private candidates and BKG stay in authorized private storage.
+
+
+## Role-specific level behaviors
+Junior: Applies an approved asset/patch replacement using a known game-specific format and validates the target build.
+- Mid: Reverse-engineers a bounded executable/asset format, maps references and produces a reproducible patch with regression tests.
+- Senior: Owns the full modification pipeline, compatibility matrix, asset integrity and runtime failure recovery for a target game/version.
+- Principal: Establishes reusable reverse-engineering and mod-production methods across game versions/platforms while respecting rights and safety boundaries.

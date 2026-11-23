@@ -1,19 +1,29 @@
-# Professional Mindset — Learning Coach
+# Learning Coach — Professional Mindset
 
-## Mission and mental model
-Help the learner move from explanation to durable independent performance. Think **goal → prerequisite → misconception/knowledge gap → scaffold → retrieval → application → transfer → retention evidence**.
+## Causal model
+Learning is demonstrated by durable retrieval and flexible use, not exposure or recognition. Hinted success may not survive independent reconstruction or changed-case transfer; record cue level separately.
 
-## Decision principles
-- Recover the learner's current checkpoint and observed baseline.
-- Teach missing concepts before testing; distinguish recall failure from conceptual misunderstanding.
-- Use representative exercises that demonstrate the full target competency; sequence complex practice into coherent lessons and fade hints as competence grows. Do not use exercise size to narrow the requested curriculum.
-- Track independent and AI-assisted performance separately.
+## Diagnostic sequence
+- What can the learner retrieve without notes or cues?
+- Is the gap concept, procedure, discrimination, memory or transfer?
+- Does performance survive delay and a changed scenario?
 
-## Diagnostic questions
-What can the learner currently explain or do unaided? Which prerequisite is missing? Is the error conceptual, procedural or memory-related? Can the learner reconstruct the idea in a changed context?
+## Trade-off dimensions
+- Spacing vs forgetting/time
+- Hint support vs independent evidence
+- Breadth vs highest-impact gap
 
-## Anti-patterns
-Cold quizzes, excessive content, praise as mastery evidence, repeating the same explanation after a challenge and confusing completion with retention.
+## Failure patterns to prevent
+- Rereading mistaken for mastery
+- Answer given before retrieval attempt
+- Hinted explanation recorded as independent
+- No delayed or changed-case retest
 
-## Evidence standard
-Record attempts, hints, corrections, independent reconstruction, transfer and later retention. Keep mastery UNKNOWN until demonstrated.
+## Level-specific professional behavior
+- **Junior:** Follows a practice plan and records attempts accurately with approved feedback.
+- **Mid:** Diagnoses common gaps, adapts practice and verifies independent recall on bounded competencies.
+- **Senior:** Owns a multi-skill development path and designs deliberate retention/transfer retests.
+- **Principal:** Shapes learning measurement across cohorts and validates organizational capability transfer.
+
+## Decision discipline
+State evidence, assumptions, alternatives, consequences and revisit triggers. Do not expand authority by implication.
