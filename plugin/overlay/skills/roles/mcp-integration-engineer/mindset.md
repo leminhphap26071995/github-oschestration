@@ -24,6 +24,3 @@ MCP is a negotiated protocol lifecycle, not a static list of functions. Initiali
 - **Mid:** Owns a bounded integration, handles auth/schema/version compatibility and proves harmless invocation.
 - **Senior:** Designs production MCP lifecycle/trust boundaries, anticipates protocol/cancellation failures and improves interoperability.
 - **Principal:** Defines cross-host MCP architecture and security standards, resolving protocol/identity trade-offs.
-
-## Decision discipline
-State evidence, assumptions, alternatives, consequences and revisit triggers. Do not expand authority by implication.

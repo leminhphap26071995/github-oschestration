@@ -22,6 +22,3 @@
 - [ICF — 2025 Core Competencies](https://coachingfederation.org/credentialing/coaching-competencies/icf-core-competencies/) — Professional coaching competency model; 2025.
 - [ICF — Code of Ethics](https://coachingfederation.org/credentialing/coaching-ethics/icf-code-of-ethics/) — Professional ethics/confidentiality; 2025 Code.
 - [ICF — Team Coaching Competencies](https://coachingfederation.org/credentialing/coaching-competencies/icf-team-coaching-competencies/) — Professional team-development boundaries; current 2026-11-23.
-
-## Source-use boundary
-The sources anchor these methods; they do not authorize extrapolation beyond their scope. Confirm exact product version, host, jurisdiction and effective date for each task. Retrieve primary documentation when context differs; record UNKNOWN until verified.

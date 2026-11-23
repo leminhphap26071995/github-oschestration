@@ -23,6 +23,3 @@
 - [Model Context Protocol Specification](https://modelcontextprotocol.io/specification) — Open protocol specification; pin negotiated version.
 - [OpenAI — MCP tools/connectors](https://developers.openai.com/api/docs/guides/tools-connectors-mcp) — Official OpenAI MCP client docs; checked 2026-11-23.
 - [LiteLLM — MCP configuration](https://docs.litellm.ai/docs/mcp_config_reference) — Gateway implementation docs; checked 2026-11-23.
-
-## Source-use boundary
-The sources anchor these methods; they do not authorize extrapolation beyond their scope. Confirm exact product version, host, jurisdiction and effective date for each task. Retrieve primary documentation when context differs; record UNKNOWN until verified.

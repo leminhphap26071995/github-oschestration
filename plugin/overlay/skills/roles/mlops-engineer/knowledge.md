@@ -23,6 +23,3 @@
 - [Google Cloud — MLOps continuous delivery](https://docs.cloud.google.com/architecture/mlops-continuous-delivery-and-automation-pipelines-in-machine-learning) — Official architecture guidance; last reviewed 28 Aug 2024.
 - [MLflow — Model Registry](https://www.mlflow.org/docs/latest/registry/) — Official model lifecycle docs; checked 2026-11-23.
 - [NIST — AI Risk Management Framework](https://www.nist.gov/itl/ai-risk-management-framework) — AI RMF 1.0 lifecycle risk framework.
-
-## Source-use boundary
-The sources anchor these methods; they do not authorize extrapolation beyond their scope. Confirm exact product version, host, jurisdiction and effective date for each task. Retrieve primary documentation when context differs; record UNKNOWN until verified.

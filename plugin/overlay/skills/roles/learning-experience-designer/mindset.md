@@ -24,6 +24,3 @@ Instructional quality is constructive alignment: the outcome determines practice
 - **Mid:** Owns course/module design, selects methods and validates learner performance.
 - **Senior:** Owns program learning architecture and resolves transfer/accessibility trade-offs.
 - **Principal:** Shapes enterprise learning strategy and connects capability systems to organizational outcomes.
-
-## Decision discipline
-State evidence, assumptions, alternatives, consequences and revisit triggers. Do not expand authority by implication.

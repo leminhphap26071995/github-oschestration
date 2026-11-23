@@ -24,6 +24,3 @@ Mentoring is a developmental relationship, not an authority transfer. The mentor
 - **Mid:** Owns a mentoring relationship with goals, reflective methods and evidence-based follow-up.
 - **Senior:** Mentors through complex career transitions and develops other mentors without taking agency.
 - **Principal:** Shapes mentoring practice and succession capability across an organization.
-
-## Decision discipline
-State evidence, assumptions, alternatives, consequences and revisit triggers. Do not expand authority by implication.

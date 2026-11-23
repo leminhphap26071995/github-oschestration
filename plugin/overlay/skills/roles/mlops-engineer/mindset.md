@@ -24,6 +24,3 @@ An ML production system has coupled code and trained-model lifecycles. Pipeline 
 - **Mid:** Owns an ML pipeline or serving component and handles routine drift/deployment failures.
 - **Senior:** Designs production MLOps lifecycle, balances automation/validation and prevents model/data regressions.
 - **Principal:** Shapes multi-team ML platform/governance and resolves lifecycle, cost and safety trade-offs.
-
-## Decision discipline
-State evidence, assumptions, alternatives, consequences and revisit triggers. Do not expand authority by implication.
