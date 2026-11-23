@@ -27,7 +27,7 @@ Recover exact JD/CV version, confirmed stage/timing, hiring deadline, assessment
 7. Keep application, preparation and recruiter communication moving in parallel where feasible.
 
 ## Evidence and ethics
-Keep WORK, SUPPORT, LAB, KNOWLEDGE and UNVERIFIED distinct. JD terms do not prove experience. Never invent employment, ownership, incidents, scale, metrics, credentials, references, outcomes or recruiter facts. AI-assisted/scripted fluency is not independent performance. Respect employer assessment rules and confidentiality.
+Keep WORK, SUPPORT, EXPOSURE, PRACTICE, LAB, KNOWLEDGE and UNVERIFIED distinct. PRACTICE is hands-on non-employment practice; LAB is a bounded exercise. Neither proves professional production ownership. JD terms do not prove experience. Never invent employment, ownership, incidents, scale, metrics, credentials, references, outcomes or recruiter facts. AI-assisted/scripted fluency is not independent performance. Respect employer assessment rules and confidentiality.
 
 ## Required bundle
 Load `mindset.md`, `knowledge.md` and `workflow.md` with this file; follow `skills/always-on-guard/SKILL.md` and `skills/workflow-contract/SKILL.md`.

@@ -1,5 +1,5 @@
 {
-  "version": "1.1",
+  "version": "1.2",
   "authority": "Notion Universal Project Routing Registry for persistent project selection; live technical source for technical facts and acceptance",
   "rules": [
     "explicit one-off target applies to current task only unless owner asks to persist it",
@@ -293,6 +293,7 @@
         ],
         "supporting_roles": [
           "interview-trainer",
+          "ba",
           "tech-lead",
           "devops-engineer",
           "cloud-engineer",
@@ -301,7 +302,7 @@
           "qa-lead",
           "qa-engineer"
         ],
-        "selection_rule": "One accountable primary per CV review: Talent Acquisition Specialist. Technical Hiring Manager is a required supporting reviewer when the target role or material claims are technical/engineering/IT; otherwise invoke only domain specialists required by evidence and deliverables. Load all four artifacts for every invoked role.",
+        "selection_rule": "One accountable primary per CV review: Talent Acquisition Specialist. Technical Hiring Manager is a required supporting reviewer when the target role or material claims are technical/engineering/IT. Business Analyst is conditional when chronology, project/employer attribution or claim/evidence mapping spans multiple or conflicting sources. Interview Trainer is conditional only for interview-readiness or practice deliverables. Invoke other domain specialists only when the evidence and deliverables require them; load all four artifacts for every invoked role.",
         "required_supporting_roles": [
           "technical-hiring-manager"
         ],
@@ -316,10 +317,14 @@
         "Technical hiring assessment recorded when the target role or material claims are technical/engineering/IT.",
         "no unsupported metrics, ownership, seniority, credentials or production claims",
         "template and renderer remain unchanged unless owner explicitly authorizes a separate change",
-        "exact PDF, source SHA, content blob SHA and artifact digest verified before release"
+        "exact PDF, source SHA, content blob SHA and artifact digest verified before release",
+        "source conflicts recorded and resolved with evidence/owner confirmation or excluded before rewrite",
+        "overall IT tenure, specialty tenure, employer tenure and project duration assessed separately",
+        "technology claims mapped to WORK/SUPPORT/EXPOSURE/PRACTICE/LAB/KNOWLEDGE/UNVERIFIED",
+        "exact PDF text compared against the approved claim ledger and template lock"
       ],
       "special_rules": [
-        "Interview Trainer coaches candidate readiness; it does not substitute for HR/Talent Acquisition screening.",
+        "Interview Trainer is conditional: invoke only for interview-readiness, practice or candidate narrative deliverables; it does not substitute for HR/Talent Acquisition screening.",
         "Talent Acquisition Specialist evaluates recruiter/ATS screening and employment chronology; it does not certify deep technical truth.",
         "Technical Hiring Manager evaluates technical scope, seniority, ownership and defensibility; it does not replace HR screening.",
         "Separate employment tenure from project-specific dates; never copy employer dates into project dates without evidence.",
@@ -327,7 +332,8 @@
         "Do not rewrite disputed claims before factual reconciliation and owner authorization.",
         "A built PDF is not an approved or distributed CV; release requires explicit owner approval for the exact PDF hash.",
         "Talent Acquisition Specialist is the accountable primary; Technical Hiring Manager is a supporting reviewer, not a second accountable primary.",
-        "Same-session role perspectives must be recorded as SINGLE_SESSION_CROSSCHECK, never independent hiring-panel sign-off."
+        "Same-session role perspectives must be recorded as SINGLE_SESSION_CROSSCHECK, never independent hiring-panel sign-off.",
+        "Business Analyst is conditional for multi-source chronology, project/employer attribution and claim/evidence reconciliation; it structures source conflicts but never decides candidate facts or overrides owner confirmation."
       ]
     }
   }

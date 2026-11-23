@@ -46,7 +46,9 @@ jobs:
           assert request["target_version"] == manifest["version"] == sync["plugin_version"]
           assert version(manifest["version"]) > version(request["current_version"])
           assert request["source_repository"] == sync["source_repository"]
+          assert request["source_ref"] == sync["source_ref"] and bool(sync["source_ref"])
           assert request["source_commit_sha"] == sync["source_commit_sha"]
+          assert len(sync["source_blob_shas"]) == sync["chatgpt_payload_file_count"] == 200
           assert len(prompt) == request["expected_default_prompt_count"] == len(baseline) == 48
           assert prompt == baseline, "DEFAULT_PROMPT_CHANGED_FROM_LIVE_BASELINE"
           assert request["expected_role_count"] == sync["unique_role_count"] == 35
@@ -93,6 +95,7 @@ jobs:
             "current_version": request["current_version"],
             "target_version": os.environ["VERSION"],
             "source_repository": sync["source_repository"],
+            "source_ref": sync["source_ref"],
             "source_commit_sha": sync["source_commit_sha"],
             "packaging_repository": os.environ["GITHUB_REPOSITORY"],
             "packaging_commit_sha": os.environ["SOURCE_SHA"],
@@ -109,7 +112,9 @@ jobs:
             f"# UPW {os.environ['VERSION']} — ChatGPT-only plugin\n\n"
             "- 35 unique professional roles; 140 required role artifacts (four per role).\n"
             "- Adds Talent Acquisition Specialist and Technical Hiring Manager with distinct role contracts.\n"
-            "- Adds the evidence-first CV Update Lifecycle and claim/provenance contract.\n"
+            "- Adds CV source authority, conflict-register, specialty-tenure and renderer-to-PDF verification gates.\n"
+            "- Preserves WORK/SUPPORT/EXPOSURE/PRACTICE/LAB/KNOWLEDGE provenance; Business Analyst is conditional for multi-source reconciliation.\n"
+            "- Interview Trainer is conditional for interview-preparation deliverables; Talent Acquisition remains primary.\n"
             "- ChatGPT onboarding is separate from Codex/Claude CLI configuration.\n"
             "- Archive excludes CLI manifests and Codex-only bootstrap content.\n"
             "- This release is a package handoff; the live Plugin Creator plugin is not mutated by GitHub Actions.\n\n"

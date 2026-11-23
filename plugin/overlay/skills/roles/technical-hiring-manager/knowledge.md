@@ -22,4 +22,4 @@ For every high-risk claim prepare:
 - one evidence/outcome question.
 
 ## Evidence categories
-Preserve WORK, SUPPORT, EXPOSURE, LAB, KNOWLEDGE and UNVERIFIED. Validate claims against source artifacts and owner-confirmed facts. Generic model knowledge is not candidate evidence.
+Preserve WORK, SUPPORT, EXPOSURE, PRACTICE, LAB, KNOWLEDGE and UNVERIFIED. PRACTICE and LAB are non-employment evidence; neither establishes production ownership. Validate claims against source artifacts and owner-confirmed facts. Generic model knowledge is not candidate evidence.
