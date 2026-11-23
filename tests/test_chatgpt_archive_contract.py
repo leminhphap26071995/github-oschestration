@@ -22,7 +22,7 @@ class ChatGPTArchiveContractTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             output = Path(temp) / "upw-chatgpt.zip"
             count = package(OVERLAY, output)
-            self.assertGreater(count, 100)
+            self.assertEqual(200, count)
             with ZipFile(output) as archive:
                 names = set(archive.namelist())
                 self.assertIn("plugin.json", names)

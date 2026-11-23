@@ -38,11 +38,26 @@ class UpwPluginRolePayloadTests(unittest.TestCase):
         self.assertIn("talent-acquisition-specialist", ids)
         self.assertIn("technical-hiring-manager", ids)
 
-    def test_cv_review_route_has_distinct_hr_and_technical_roles(self):
+    def test_cv_review_route_has_one_accountable_primary_and_required_technical_support(self):
         route = json.loads((OVERLAY / "references/domain-routing.json").read_text())["domains"]["cv_professional_review"]
-        self.assertEqual({"talent-acquisition-specialist", "technical-hiring-manager"}, set(route["role_selection"]["primary_roles"]))
+        selection = route["role_selection"]
+        self.assertEqual(["talent-acquisition-specialist"], selection["primary_roles"])
+        self.assertEqual(["technical-hiring-manager"], selection["required_supporting_roles"])
+        self.assertIn("technical-hiring-manager", selection["required_supporting_role_conditions"])
         self.assertIn("skills/cv-update-lifecycle/SKILL.md", route["load"])
         self.assertIn("references/cv-update-contract.md", route["load"])
+
+    def test_chatgpt_native_role_loading_is_not_ci_gated(self):
+        content = (OVERLAY / "skills/role-context-loading/SKILL.md").read_text()
+        self.assertIn("ChatGPT-native role selection is not gated by GitHub Actions", content)
+        self.assertIn("CI-generated execution path", content)
+        self.assertIn("required_supporting_roles", content)
+
+    def test_cv_lifecycle_assigns_primary_and_supporting_roles(self):
+        content = (OVERLAY / "skills/cv-update-lifecycle/SKILL.md").read_text()
+        self.assertIn("Talent Acquisition Specialist — accountable primary", content)
+        self.assertIn("Technical Hiring Manager — required supporting reviewer", content)
+        self.assertIn("SINGLE_SESSION_CROSSCHECK", content)
 
     def test_new_roles_are_specialized_not_name_only(self):
         ta = OVERLAY / "skills/roles/talent-acquisition-specialist"

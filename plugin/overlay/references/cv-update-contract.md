@@ -28,11 +28,11 @@ Required fields:
 
 ## Role boundaries
 
-- Talent Acquisition Specialist: recruiter screening, ATS readability, candidate positioning, employment chronology, credential presentation and screening risk. Does not certify technical architecture.
-- Technical Hiring Manager: role level, engineering scope, ownership, technical depth, trade-offs and defensibility. Does not replace HR screening.
-- Interview Trainer: candidate practice and interview readiness. Does not impersonate an HR reviewer or independent hiring panel.
-- Domain engineers: validate only claims within their discipline.
-- QA Lead: traceability, consistency, source/claim integrity and acceptance evidence.
+- Talent Acquisition Specialist is the accountable primary for the integrated CV review: recruiter screening, ATS readability, candidate positioning, employment chronology, credential presentation and screening risk. It does not certify technical architecture.
+- Technical Hiring Manager is a required supporting reviewer when the target role or material claims are technical/engineering/IT. It assesses role level, engineering scope, ownership, technical depth, trade-offs and defensibility; it does not replace HR screening or become a second accountable primary.
+- Interview Trainer is invoked only for candidate practice and interview-readiness deliverables. It does not impersonate an HR reviewer or independent hiring panel.
+- Domain engineers validate only claims within their discipline and are invoked only when the claim/evidence map requires them.
+- QA Lead owns traceability, consistency, source/claim integrity and acceptance evidence. Same-session perspectives remain SINGLE_SESSION_CROSSCHECK.
 
 ## Non-negotiable controls
 

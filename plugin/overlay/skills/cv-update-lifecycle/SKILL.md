@@ -23,16 +23,15 @@ Use only `WORK`, `SUPPORT`, `EXPOSURE`, `LAB`, `KNOWLEDGE`, `UNVERIFIED`. Do not
 
 Check employment chronology separately from project dates. Reconcile employer start/end dates, gaps, overlapping roles, project-specific dates, employer attribution, education, certifications and current-employment wording. Never copy employment dates into project dates or infer that `Now` is correct.
 
-## 4. Assign distinct professional perspectives
-- **Talent Acquisition Specialist**: recruiter screening, ATS readability, candidate positioning, chronology, credential presentation and HR risk.
-- **Technical Hiring Manager**: role fit, seniority, engineering scope, decision rights, architecture/operations ownership, technical depth and interview defensibility.
-- **Interview Trainer**: candidate readiness, interview narratives and likely follow-up questions; not a substitute for HR.
-- **Tech Lead**: engineering ownership, delivery boundaries and technical quality.
-- **DevOps / Cloud / DevSecOps / SRE specialists**: validate only the claims in their respective disciplines.
-- **QA Lead / QA Engineer**: claim-source traceability, consistency, build tests and PDF acceptance.
+## 4. Assign accountable and supporting professional perspectives
+- **Talent Acquisition Specialist — accountable primary:** recruiter screening, ATS readability, candidate positioning, chronology, credential presentation and HR risk. Owns the integrated CV review and does not certify technical architecture.
+- **Technical Hiring Manager — required supporting reviewer for technical CVs:** role fit, seniority, engineering scope, decision rights, architecture/operations ownership, technical depth and interview defensibility. Invoke when the target role or material claims are technical, engineering, cloud, DevOps, security, SRE or IT; this role is not a second accountable primary.
+- **Interview Trainer:** candidate readiness, interview narratives and likely follow-up questions; invoke only when interview preparation is requested.
+- **Tech Lead:** engineering ownership, delivery boundaries and technical quality; invoke when target claims require this assessment.
+- **DevOps / Cloud / DevSecOps / SRE specialists:** validate only claims in their respective disciplines when evidence or risk requires them.
+- **QA Lead / QA Engineer:** claim-source traceability, consistency, build tests and PDF acceptance.
 
 Load the complete four-artifact bundle for every role actually invoked. A role label is not an independent worker. If all perspectives occur in one ChatGPT session, record `SINGLE_SESSION_CROSSCHECK`; never call it an independent HR or hiring-panel sign-off.
-
 ## 5. Review before rewrite
 - Separate factual conflicts, evidence gaps, wording risks and presentation issues.
 - Do not silently correct dates, project ownership, credentials or metrics.

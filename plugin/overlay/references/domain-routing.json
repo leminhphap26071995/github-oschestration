@@ -289,8 +289,7 @@
       ],
       "role_selection": {
         "primary_roles": [
-          "talent-acquisition-specialist",
-          "technical-hiring-manager"
+          "talent-acquisition-specialist"
         ],
         "supporting_roles": [
           "interview-trainer",
@@ -302,13 +301,19 @@
           "qa-lead",
           "qa-engineer"
         ],
-        "selection_rule": "Invoke only roles required by the claims and deliverables; every invoked role loads all four artifacts."
+        "selection_rule": "One accountable primary per CV review: Talent Acquisition Specialist. Technical Hiring Manager is a required supporting reviewer when the target role or material claims are technical/engineering/IT; otherwise invoke only domain specialists required by evidence and deliverables. Load all four artifacts for every invoked role.",
+        "required_supporting_roles": [
+          "technical-hiring-manager"
+        ],
+        "required_supporting_role_conditions": {
+          "technical-hiring-manager": "Invoke when the target role or material claims are technical, engineering, cloud, DevOps, security, SRE or IT."
+        }
       },
       "gates": [
         "canonical repository, branch, HEAD and CV content blob verified",
         "employment chronology and project dates reconciled independently",
         "claim-to-evidence ledger complete with provenance preserved",
-        "HR screening and technical hiring assessment both recorded",
+        "Technical hiring assessment recorded when the target role or material claims are technical/engineering/IT.",
         "no unsupported metrics, ownership, seniority, credentials or production claims",
         "template and renderer remain unchanged unless owner explicitly authorizes a separate change",
         "exact PDF, source SHA, content blob SHA and artifact digest verified before release"
@@ -320,7 +325,9 @@
         "Separate employment tenure from project-specific dates; never copy employer dates into project dates without evidence.",
         "Same-session role perspectives are SINGLE_SESSION_CROSSCHECK, not independent professional sign-off.",
         "Do not rewrite disputed claims before factual reconciliation and owner authorization.",
-        "A built PDF is not an approved or distributed CV; release requires explicit owner approval for the exact PDF hash."
+        "A built PDF is not an approved or distributed CV; release requires explicit owner approval for the exact PDF hash.",
+        "Talent Acquisition Specialist is the accountable primary; Technical Hiring Manager is a supporting reviewer, not a second accountable primary.",
+        "Same-session role perspectives must be recorded as SINGLE_SESSION_CROSSCHECK, never independent hiring-panel sign-off."
       ]
     }
   }
