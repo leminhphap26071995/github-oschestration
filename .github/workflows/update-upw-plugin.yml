@@ -129,18 +129,18 @@ jobs:
           retention-days: 14
       - name: Publish or verify immutable GitHub Release
         env:
-          GH_TOKEN: \${{ github.token }}
-          VERSION: \${{ steps.package.outputs.version }}
-          ARCHIVE: \${{ steps.package.outputs.archive }}
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.package.outputs.version }}
+          ARCHIVE: ${{ steps.package.outputs.archive }}
         shell: bash
         run: |
           set -euo pipefail
-          tag="upw-v\${VERSION}"
+          tag="upw-v${VERSION}"
           if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             mkdir -p /tmp/existing-upw-release
             gh release download "$tag" --repo "$GITHUB_REPOSITORY" --pattern "$ARCHIVE" --dir /tmp/existing-upw-release
             existing_sha="$(sha256sum "/tmp/existing-upw-release/$ARCHIVE" | awk '{print $1}')"
-            api_digest="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$tag" --jq ".assets[] | select(.name == \\"$ARCHIVE\\") | .digest")"
+            api_digest="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$tag" --jq '.assets[] | select(.name == env.ARCHIVE) | .digest')"
             test "$api_digest" = "sha256:$existing_sha"
             python - "$ARCHIVE" <<'PY'
           import sys
@@ -165,7 +165,7 @@ jobs:
               dist/plugin-creator-handoff.json \
               --repo "$GITHUB_REPOSITORY" \
               --target "$GITHUB_SHA" \
-              --title "UPW \${VERSION} — ChatGPT plugin" \
+              --title "UPW ${VERSION} — ChatGPT plugin" \
               --notes-file dist/release-notes.md
           fi
       - name: Confirm Plugin Creator handoff boundary
