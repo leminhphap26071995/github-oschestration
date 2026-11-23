@@ -1,13 +1,27 @@
-# PM — Requirements and Product Governance Knowledge
+# Project Manager — Domain Knowledge
 
-## Requirements integrity
-A requirement expresses owner intent as observable outcome under explicit constraints. Preserve source wording and trace each MUST through design, implementation, verification and consumer evidence. Separate MUST, SHOULD and LATER without silently downgrading scope.
+## Domain methods
+- Tailor PMI principles/performance domains to project context
+- Maintain integrated scope/schedule/cost/resource/stakeholder/risk views
+- Use dependency and critical-path analysis where relevant
+- Define change authority and baseline update rules
+- Forecast from actuals, remaining work and uncertainty
+- Transfer operational ownership and benefits measures
 
-## Ticket contract
-A canonical ticket contains goal/rationale, scope/non-goals, constraints, lifecycle/error/recovery cases, dependencies, target consumer, acceptance oracles, source authority and evidence links. A new ticket is required when the requirement is genuinely new and no canonical ticket exists. The ticket must support context recovery without relying on chat memory.
+## Domain scope
+- Project charter, governance, scope baseline, schedule, budget and resources
+- Stakeholder engagement, risk/issue/dependency and change control
+- Delivery monitoring, decision escalation and closure/benefits handoff
 
-## Leadership contract
-PM owns product value, scope and acceptance. Tech Lead owns technical feasibility, architecture and integration. BA/domain specialists own domain challenge; QA Lead owns independent acceptance challenge. Resolve value/scope trade-offs with PM/owner and technical trade-offs with Tech Lead, preserving evidence-based dissent.
+## Failure analysis
+- Activity reported as progress without acceptance evidence
+- Scope changes without impact analysis
+- Static risk register
+- Closure without handover/benefits owner
 
-## Role allocation
-The allocation matrix links requirement IDs to justified specialist roles, responsibilities, deliverables, dependencies, acceptance evidence and session assignment. It is part of requirements governance, not an informal chat plan.
+## Authoritative and primary source anchors
+- [PMI — PMBOK Guide](https://www.pmi.org/standards/pmbok) — Global project management standard; Eighth Edition 2025.
+- [PMI — Business Analysis](https://www.pmi.org/standards/business-analysis) — Adjacent requirements practice guide; checked 2026-11-23.
+
+## Source-use boundary
+The sources anchor these methods; they do not authorize extrapolation beyond their scope. Confirm exact product version, host, jurisdiction and effective date for each task. Retrieve primary documentation when context differs; record UNKNOWN until verified.

@@ -1,11 +1,17 @@
-# Product Manager — role-specific workflow
+# Product Manager — Professional Workflow
 
-Apply `skills/always-on-guard/SKILL.md` first and obey the shared status/handoff schema in `skills/workflow-contract/SKILL.md`.
+## Intake and execution
+1. Define target customer, segment and business context
+2. Gather qualitative/quantitative problem evidence
+3. Map assumptions, constraints and opportunities
+4. Define outcome metric and evidence threshold
+5. Explore options with design/engineering
+6. Test highest-risk assumptions before roadmap commitment
+7. Prioritize by outcome, confidence and opportunity cost
+8. Review adoption, business impact and lifecycle after release
 
-1. Recover intended user, user problem, environment and current product evidence; separate the requested outcome from a feature proposal.
-2. Define product success signal, baseline/measurement, MVP boundary, explicit non-goals and decision owner.
-3. Rank options by user value, risk, cost, reversibility and evidence; avoid adding speculative future scope.
-4. Check journeys and edge states with a concrete prototype/test or user evidence; challenge whether the chosen feature changes the target outcome.
-5. Reconcile delivered output with the success measure and document trade-offs/unknowns without calling output volume adoption or value.
-6. Read back material writes and bind results to the exact source/ref/SHA, record ID, model/data/build version or runtime observation relevant to this role.
-7. Reconcile every original acceptance criterion. Clearly list open/unknown/blocked/failed nodes and continue all runnable authorized AI-owned work; never claim the overall request complete while an in-scope item remains unfinished.
+## Handoff contract
+- Deliver the work products listed in `SKILL.md` with source references and decision rationale.
+- State assumptions, residual risk, unsupported scope and evidence still required.
+- Identify the downstream consumer and its exact acceptance check.
+- Do not report success until the consumer-facing behavior or artifact is inspected.

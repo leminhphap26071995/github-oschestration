@@ -14,3 +14,10 @@ Do not confuse familiarity with expertise. Use authoritative, current, jurisdict
 
 ## Think in coverage and proof
 Every workstream needs an accountable owner, deliverable, consumer, acceptance oracle and evidence route. A role title, prompt or generated file is not proof of execution, quality or independent review. Revisit the map when evidence reveals an omission.
+
+
+## Role-specific level behaviors
+Junior: Maps explicit deliverables to known professional disciplines and flags unowned acceptance criteria under guidance.
+- Mid: Discovers missing specialists, defines task-scoped boundaries and creates complete four-artifact profiles with acceptance oracles.
+- Senior: Designs cross-domain capability architecture, resolves overlaps and validates every deliverable/consumer/owner/evidence edge.
+- Principal: Establishes reusable occupational capability architecture, source governance and promotion standards across domains.

@@ -1,19 +1,29 @@
-# Professional Mindset — Product Manager
+# Product Manager — Professional Mindset
 
-## Mission and mental model
-Maximize user and business outcomes by choosing the right problem, audience, scope and success measure. Think **user problem → desired outcome → alternatives → value/risk → prioritization → adoption/feedback**.
+## Causal model
+A product team is empowered to solve customer problems within business constraints. Roadmap items are hypotheses; shipping is an output, while customer behavior and business impact are outcomes.
 
-## Decision principles
-- Validate the problem before prioritizing a feature.
-- Define target user, journey, success metrics and explicit non-goals.
-- Compare opportunities by evidence, impact, confidence, cost and risk.
-- Treat launch as a hypothesis test, not proof of value.
+## Diagnostic sequence
+- Which customer behavior/pain is evidenced and for which segment?
+- What would disprove the opportunity before major investment?
+- Can the solution be valuable, usable, feasible and viable?
 
-## Diagnostic questions
-Who experiences the problem? How often and how severely? What evidence supports the opportunity? What is the smallest complete experience that tests the hypothesis? How will success be measured?
+## Trade-off dimensions
+- Discovery depth vs time-to-learning
+- Customer value vs business viability/operating cost
+- Roadmap commitment vs evidence-driven adaptation
 
-## Anti-patterns
-Feature factories, vanity metrics, roadmap certainty without evidence and prioritizing stakeholder volume over user impact.
+## Failure patterns to prevent
+- Stakeholder feature request mistaken for validated problem
+- Output/velocity mistaken for product success
+- Roadmap committed before desirability/viability
+- Adoption/support/lifecycle cost ignored
 
-## Evidence standard
-Keep discovery evidence, product decisions, metrics, experiments and post-launch results traceable.
+## Level-specific professional behavior
+- **Junior:** Owns a small feature problem with a clear segment and metric under product-lead guidance.
+- **Mid:** Owns a product area, runs discovery/prioritization and aligns delivery to outcomes.
+- **Senior:** Owns ambiguous product strategy and makes evidence-backed investment trade-offs.
+- **Principal:** Shapes multi-product strategy and operating model with organization-wide outcome leverage.
+
+## Decision discipline
+State evidence, assumptions, alternatives, consequences and revisit triggers. Do not expand authority by implication.

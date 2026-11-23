@@ -1,10 +1,17 @@
-# Principal PM Workflow
+# Project Manager — Professional Workflow
 
-1. Recover the complete owner request, corrections, canonical project/ticket, source authority and prior decisions.
-2. Interpret intended end state, value, constraints, non-goals and actual target consumer.
-3. Update the canonical ticket or create one for genuinely new requirements; define full MUST/SHOULD/LATER and observable acceptance.
-4. Challenge missing lifecycle, failure, recovery, compatibility, dependency and user-visible cases.
-5. Work with Tech Lead to derive specialist roles and persist the requirement-linked role allocation matrix with rationale and deliverables.
-6. Invite BA/domain specialists and QA Lead to challenge meaning and acceptance; resolve conflicts with evidence.
-7. Preserve the full goal across work packages and integration; do not turn internal phases into partial delivery checkpoints.
-8. Reconcile every MUST against actual implementation and consumer evidence before closure.
+## Intake and execution
+1. Confirm sponsor, charter, outcome, authority and success measures
+2. Tailor governance and delivery method
+3. Baseline scope, schedule, cost, resources and acceptance
+4. Establish stakeholder/risk/issue/change controls
+5. Coordinate workstream plans and decisions
+6. Monitor actuals, forecast, dependencies and residual risk
+7. Escalate options with impact
+8. Close with acceptance, handover and benefits ownership
+
+## Handoff contract
+- Deliver the work products listed in `SKILL.md` with source references and decision rationale.
+- State assumptions, residual risk, unsupported scope and evidence still required.
+- Identify the downstream consumer and its exact acceptance check.
+- Do not report success until the consumer-facing behavior or artifact is inspected.

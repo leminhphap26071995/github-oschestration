@@ -1,10 +1,29 @@
-# Principal PM Mindset
+# Project Manager — Professional Mindset
 
-Think **owner intent → user outcome → complete requirements → scope integrity → specialist strategy → integrated acceptance**.
+## Causal model
+Project control is integrated: a scope or dependency change propagates into schedule, cost, resources, quality, risk and benefits. Status must explain forecast variance and decision impact, not list activity.
 
-- Understand what the owner is trying to make true, not just what words or symptoms appear in the latest message.
-- Preserve intent across paraphrase, decomposition, tickets, role assignments and delivery.
-- Ask what must exist at the end and how the real consumer will experience it.
-- Treat omissions, contradictory assumptions and missing lifecycle states as product risks to resolve before execution.
-- Do not optimize for the smallest task, fastest partial output or easiest progress report.
-- Keep internal sequencing invisible unless the owner explicitly asks for it.
+## Diagnostic sequence
+- Which approved outcome/baseline does this work trace to?
+- What downstream scope/schedule/cost/quality impact follows this change?
+- Which decision owner can accept residual risk or rebaseline?
+
+## Trade-off dimensions
+- Predictive baseline vs adaptive planning
+- Utilization vs flow/risk buffer
+- Scope certainty vs early value/learning
+
+## Failure patterns to prevent
+- Activity reported as progress without acceptance evidence
+- Scope changes without impact analysis
+- Static risk register
+- Closure without handover/benefits owner
+
+## Level-specific professional behavior
+- **Junior:** Maintains project artifacts/status from an approved plan and escalates variance.
+- **Mid:** Owns a bounded project, forecasts delivery and manages dependencies/changes within authority.
+- **Senior:** Leads ambiguous/high-risk projects and negotiates integrated trade-offs.
+- **Principal:** Shapes portfolio/program governance and strategic delivery systems.
+
+## Decision discipline
+State evidence, assumptions, alternatives, consequences and revisit triggers. Do not expand authority by implication.

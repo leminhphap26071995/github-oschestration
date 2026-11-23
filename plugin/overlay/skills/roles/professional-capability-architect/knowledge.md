@@ -30,3 +30,11 @@ Distinguish source-informed role method, AI-assisted execution, independent demo
 - Inventing professional standards or using stale jurisdictional guidance.
 - Assigning roles without deliverables, consumers or acceptance.
 - Creating excessive role lists without causal dependencies.
+
+
+## Source anchors and version pins (checked 2026-11-23)
+- [ESCO — European Skills, Competences, Qualifications and Occupations](https://esco.ec.europa.eu/en) — Official EU occupational/skills classification; current 2026-11-23.
+- [IIBA — Business Analysis Competency Model](https://www.iiba.org/professional-development/business-analysis-competency-model) — Professional competency model; current 2026-11-23.
+- [UPW — Professional Capability Discovery](skills://plugins/unified-project-workflow/professional-capability-discovery/skill.md) — Canonical local method contract; version loaded in this task.
+
+These sources anchor the listed professional methods. Confirm jurisdiction, role family and current edition before applying them; they do not replace job-specific evidence or licensed sign-off.
