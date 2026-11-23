@@ -156,11 +156,16 @@ def validate(root: Path):
         mindset = bundle / "mindset.md"
         knowledge = bundle / "knowledge.md"
         workflow = bundle / "workflow.md"
+        skill = bundle / "SKILL.md"
+        if skill.is_file():
+            skill_body = skill.read_text(encoding="utf-8")
+            if "## Level authority" in skill_body: errors.append(f"GENERIC_LEVEL_LADDER_DUPLICATED:{role_id}")
+            if "## Level calibration" not in skill_body: errors.append(f"LEVEL_CONTRACT_POINTER_MISSING:{role_id}")
         if mindset.is_file():
             body = mindset.read_text(encoding="utf-8").lower()
             if not all(level in body for level in ("junior", "mid", "senior", "principal")):
                 errors.append(f"ROLE_LEVEL_BEHAVIOR_MISSING:{role_id}")
-            if "## Decision discipline" in body:errors.append(f"GENERIC_DECISION_DISCIPLINE_DUPLICATED:{role_id}")
+            if "## decision discipline" in body:errors.append(f"GENERIC_DECISION_DISCIPLINE_DUPLICATED:{role_id}")
         if knowledge.is_file():
             body = knowledge.read_text(encoding="utf-8")
             if len(re.findall(r"https?://", body)) < 2:
