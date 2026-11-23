@@ -21,6 +21,3 @@
 ## Authoritative and primary source anchors
 - [National Academies — How People Learn II](https://www.nationalacademies.org/read/24783/chapter/7) — Learning-science synthesis; 2018.
 - [CAST — UDL Guidelines 3.0](https://udlguidelines.cast.org/more/about-guidelines-3-0/) — Research-informed learning design; checked 2026-11-23.
-
-## Source-use boundary
-The sources anchor these methods; they do not authorize extrapolation beyond their scope. Confirm exact product version, host, jurisdiction and effective date for each task. Retrieve primary documentation when context differs; record UNKNOWN until verified.

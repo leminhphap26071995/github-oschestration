@@ -24,6 +24,3 @@ An interaction is a state transition rendered into semantic DOM and exposed to a
 - **Mid:** Owns a page/feature, handles state/API integration and fixes accessibility defects.
 - **Senior:** Owns frontend architecture and performance/accessibility quality; improves reusable systems.
 - **Principal:** Shapes cross-product frontend platform and sets accessibility/performance standards.
-
-## Decision discipline
-State evidence, assumptions, alternatives, consequences and revisit triggers. Do not expand authority by implication.

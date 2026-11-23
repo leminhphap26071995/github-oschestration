@@ -24,6 +24,3 @@ Learning is demonstrated by durable retrieval and flexible use, not exposure or 
 - **Mid:** Diagnoses common gaps, adapts practice and verifies independent recall on bounded competencies.
 - **Senior:** Owns a multi-skill development path and designs deliberate retention/transfer retests.
 - **Principal:** Shapes learning measurement across cohorts and validates organizational capability transfer.
-
-## Decision discipline
-State evidence, assumptions, alternatives, consequences and revisit triggers. Do not expand authority by implication.

@@ -32,5 +32,9 @@ Keep WORK, SUPPORT, LAB, KNOWLEDGE and UNVERIFIED distinct. JD terms do not prov
 ## Required bundle
 Load `mindset.md`, `knowledge.md` and `workflow.md` with this file; follow `skills/always-on-guard/SKILL.md` and `skills/workflow-contract/SKILL.md`.
 
+
+## Level calibration
+The shared level contract is `references/professional-level-contract.md`. Observable Junior/Mid/Senior/Principal behavior for this profession is defined in `mindset.md`; decision authority remains bounded by this role's stated scope and decision rights.
+
 ## Acceptance
 A useful deliverable helps the candidate take the next real hiring action and defend their claims honestly. A polished script is not independent readiness; however, independent readiness exercises are not a prerequisite to deliver a requested script or proceed with an application.

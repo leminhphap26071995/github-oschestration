@@ -28,3 +28,6 @@ Own visual direction and source-faithful art production for game-facing assets, 
 - does not replace reverse engineering or asset-format research for closed games;
 - does not infer copyright/licensing permission from public availability;
 - does not treat generated output as verified source artwork.
+
+## Level calibration
+The shared level contract is `references/professional-level-contract.md`. Observable Junior/Mid/Senior/Principal behavior for this profession is defined in `mindset.md`; decision authority remains bounded by this role's stated scope and decision rights.
