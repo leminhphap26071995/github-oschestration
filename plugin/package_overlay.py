@@ -3,7 +3,7 @@
 import argparse
 import json
 from pathlib import Path, PurePosixPath
-from zipfile import ZIP_DEFLATED, ZipFile
+from zipfile import ZIP_DEFLATED, ZipFile, ZipInfo
 
 EXCLUDED_PREFIXES = (".codex-plugin/", ".agent-plugin/", ".claude-plugin/", "skills/codex-project-bootstrap/")
 EXCLUDED_FILES = { "references/codex-skill-mirror.json", ".upw-overlay-files.json", "README.md" }
@@ -16,7 +16,7 @@ def package(root: Path, output: Path):
         raise SystemExit("CHATGPT_ONBOARDING_PATH_INVALID")
     output.parent.mkdir(parents=True, exist_ok=True)
     written = []
-    with ZipFile(output, "w", ZIP_DEFLATED) as archive:
+    with ZipFile(output, "w", ZIP_DEFLATED, compresslevel=9) as archive:
         candidates = [root / "plugin.json"]
         for directory in ("references", "skills"):
             candidates.extend(p for p in (root / directory).rglob("*") if p.is_file())
@@ -29,7 +29,11 @@ def package(root: Path, output: Path):
                 raise SystemExit(f"UNSAFE_ARCHIVE_PATH:{relative}")
             if not (relative == "plugin.json" or relative.startswith("references/") or relative.startswith("skills/")):
                 raise SystemExit(f"UNEXPECTED_ARCHIVE_PATH:{relative}")
-            archive.write(path, relative)
+            info = ZipInfo(relative, date_time=(2020, 1, 1, 0, 0, 0))
+            info.compress_type = ZIP_DEFLATED
+            info.create_system = 3
+            info.external_attr = (0o100644 & 0xFFFF) << 16
+            archive.writestr(info, path.read_bytes())
             written.append(relative)
     with ZipFile(output) as archive:
         if archive.testzip() is not None:

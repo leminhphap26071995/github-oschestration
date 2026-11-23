@@ -10,6 +10,14 @@ OVERLAY = ROOT / "plugin" / "overlay"
 
 
 class ChatGPTArchiveContractTests(unittest.TestCase):
+    def test_archive_is_deterministic(self):
+        with tempfile.TemporaryDirectory() as temp:
+            first = Path(temp) / "first.zip"
+            second = Path(temp) / "second.zip"
+            package(OVERLAY, first)
+            package(OVERLAY, second)
+            self.assertEqual(first.read_bytes(), second.read_bytes())
+
     def test_archive_root_and_consumer_boundary(self):
         with tempfile.TemporaryDirectory() as temp:
             output = Path(temp) / "upw-chatgpt.zip"
