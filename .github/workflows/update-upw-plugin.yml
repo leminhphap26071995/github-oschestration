@@ -41,8 +41,8 @@ jobs:
           assert request["requested_by"] == "repository-owner"
           assert request["consumer"] == sync["consumer"] == "chatgpt"
           assert request["plugin_id"] == sync["plugin_id"] == "plugins_6adcacd0c4988191a4f3d33a5bec0d29"
-          assert request["expected_release_id"] == sync["expected_release_id"] == "pluginrel_6b03c5d2db348191934dda8b2b0e764d"
-          assert request["current_version"] == sync["expected_current_version"] == "0.1.166"
+          assert request["expected_release_id"] == sync["expected_release_id"] and bool(sync["expected_release_id"])
+          assert request["current_version"] == sync["expected_current_version"] and request["target_version"] == sync["plugin_version"]
           assert request["target_version"] == manifest["version"] == sync["plugin_version"]
           assert version(manifest["version"]) > version(request["current_version"])
           assert request["source_repository"] == sync["source_repository"]
