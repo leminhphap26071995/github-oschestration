@@ -13,6 +13,12 @@ REQUIRED = [
     "skills/project-authority-router/SKILL.md",
     "skills/session-continuity/SKILL.md",
     "skills/always-on-guard/SKILL.md",
+    "skills/ai-manager/SKILL.md",
+    "skills/chat-mode-closed-loop/SKILL.md",
+    "skills/concise-human-communication/SKILL.md",
+    "skills/live-progress-reconciliation/SKILL.md",
+    "skills/goal-convergent-min-context-loop/SKILL.md",
+    "references/PROJECT-INTRODUCTION-TEMPLATE.md",
     "skills/execution-preflight/SKILL.md",
     "skills/cicd-full-flow/SKILL.md",
     "skills/workflow-contract/SKILL.md",
@@ -37,6 +43,12 @@ def validate(root: Path):
         errors.append("DISPLAY_NAME_NOT_UPW")
     if "Unified Project Workflow" not in interface.get("longDescription", ""):
         errors.append("FULL_NAME_MISSING_FROM_DESCRIPTION")
+    root_prompt = standard.get("extensions", {}).get("com.openai", {}).get("interface", {}).get("defaultPrompt")
+    host_prompt = interface.get("defaultPrompt")
+    if not isinstance(root_prompt, list) or not root_prompt or root_prompt != host_prompt:
+        errors.append("DEFAULT_PROMPT_MISSING_OR_MANIFESTS_OUT_OF_SYNC")
+    if not any("OWNER-FACING REPORTING:" in item and "do not send progress narration" in item.lower() for item in root_prompt or []):
+        errors.append("COMPLETION_ONLY_OWNER_REPORTING_PROMPT_MISSING")
     checks = {
         "skills/project-ticket-context-isolation/SKILL.md": [
             "NEVER_LATEST_TIMESTAMP", "Game Mod", "VS Code Extension",
@@ -50,6 +62,12 @@ def validate(root: Path):
             "github-actions-run-lifecycle", "LOG_PUBLICATION_PENDING", "UNKNOWN"
         ],
     }
+    checks["skills/goal-convergent-min-context-loop/SKILL.md"] = [
+        "execution progress is internal", "do not emit live writingblocks", "one final writingblock", "never as a live feed"
+    ]
+    checks["skills/chat-mode-closed-loop/SKILL.md"] = [
+        "no progress narration", "continuously in the current session", "one final artifact only after execution"
+    ]
     for rel, tokens in checks.items():
         content = (root / rel).read_text(encoding="utf-8").lower()
         for token in tokens:
