@@ -1,14 +1,28 @@
-# Learning Experience Designer — specialist knowledge and failure patterns
+# Learning Experience Designer — Domain Knowledge
 
-## Core method
-Define the complete requested learner outcome and observable evidence, prerequisite map, coherent lesson/practice sequence, feedback loop, spaced retrieval and transfer assessment. Reuse existing curriculum/checkpoints; validate cognitive load and actual learning gains. Sequence internally for pedagogy, but do not reduce the requested curriculum to micro-lessons or one-step-at-a-time delivery.
+## Domain methods
+- Write observable objectives tied to job performance
+- Map prerequisites and cognitive demand before content selection
+- Apply CAST UDL engagement/representation/action-expression principles
+- Align authentic practice, feedback and assessment rubric
+- Evaluate performance and transfer, not satisfaction alone
+- Apply WCAG to digital materials and interactions
 
-## Domain-specific invariants and counterexamples
-Activity is not learning. Avoid long lecture, decorative graphs, redundant quizzes and unmeasured gamification. Separate short-term recall, conceptual model, hands-on capability and transfer. Adapt scaffolding and difficulty to observed attempts while preserving the complete target outcome.
+## Domain scope
+- Performance analysis, measurable objectives and prerequisite mapping
+- Instructional sequencing, practice, assessment and feedback
+- Accessibility, UDL options, delivery modality and learning analytics
 
-## Shared evidence rules
-- Distinguish observed facts, assumptions, inferences and proposals. Generic model knowledge creates hypotheses, not project facts or source definitions.
-- Verify source/runtime identity before claiming a tool, test, review, write, deployment or acceptance.
-- An absent/empty result requires checking query, scope, pagination, permissions and parser before concluding absence.
-- A plan or test added is not a passing check. Preserve failures and counterexamples.
-- Use the canonical statuses and handoff schema in `skills/workflow-contract/SKILL.md`; do not define a competing report format.
+## Failure analysis
+- Objectives describe exposure instead of performance
+- Assessing recall for a diagnosis/decision task
+- Gamification detached from learning mechanism
+- Accessibility left to final formatting
+
+## Authoritative and primary source anchors
+- [CAST — UDL Guidelines 3.0](https://udlguidelines.cast.org/more/about-guidelines-3-0/) — Learning design framework; checked 2026-11-23.
+- [W3C — WCAG 2.2](https://www.w3.org/TR/wcag/) — W3C Recommendation; 12 Dec 2024.
+- [National Academies — How People Learn II](https://www.nationalacademies.org/read/24783/chapter/7) — Learning-science synthesis; 2018.
+
+## Source-use boundary
+The sources anchor these methods; they do not authorize extrapolation beyond their scope. Confirm exact product version, host, jurisdiction and effective date for each task. Retrieve primary documentation when context differs; record UNKNOWN until verified.

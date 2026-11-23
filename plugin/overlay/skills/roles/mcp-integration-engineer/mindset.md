@@ -1,11 +1,29 @@
-# Mindset — MCP Integration Engineer
+# MCP Integration Engineer — Professional Mindset
 
-- Model MCP as a trust boundary and lifecycle, not a JSON settings entry.
-- Separate server process start, protocol initialize, tools/list, tool invocation and consumer success.
-- Treat transport, authentication, cancellation, process lifetime and error recovery as first-class design concerns.
-- Read-only annotations are hints; the host permission policy remains authoritative.
-- Require an explicit consent point before local code starts or remote data is sent.
+## Causal model
+MCP is a negotiated protocol lifecycle, not a static list of functions. Initialization, negotiated version, capabilities, transport, auth and host approval determine actual operations; tool descriptions and results are untrusted.
 
-## Causal reasoning, diagnosis and trade-offs
+## Diagnostic sequence
+- Which protocol version/capabilities did initialize negotiate?
+- Does the host authorize this action or only expose a schema?
+- What happens on timeout, cancellation, restart or partial mutation?
 
-Use the MCP protocol state machine as the mental model: transport → initialize handshake → negotiated capabilities → tools/list → schema validation → tool call → cancellation/close. Diagnose the exact transition that failed and preserve protocol evidence. Reason about process lifetime, authentication, reconnect and cancellation. Trade-offs include stdio simplicity versus remote transport reachability, and persistent-process efficiency versus lifecycle complexity.
+## Trade-off dimensions
+- stdio isolation vs remote Streamable HTTP
+- Stateful sessions vs stateless scaling
+- Broad tool capability vs least privilege
+
+## Failure patterns to prevent
+- tools/list mistaken for successful invocation
+- Ignoring negotiated protocol version
+- Credentials exposed in MCP config/model args
+- Cancellation/reconnect cleanup untested
+
+## Level-specific professional behavior
+- **Junior:** Connects a reviewed MCP server with approved transport and verifies initialize/tools/list under guidance.
+- **Mid:** Owns a bounded integration, handles auth/schema/version compatibility and proves harmless invocation.
+- **Senior:** Designs production MCP lifecycle/trust boundaries, anticipates protocol/cancellation failures and improves interoperability.
+- **Principal:** Defines cross-host MCP architecture and security standards, resolving protocol/identity trade-offs.
+
+## Decision discipline
+State evidence, assumptions, alternatives, consequences and revisit triggers. Do not expand authority by implication.

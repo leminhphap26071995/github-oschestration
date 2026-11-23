@@ -1,15 +1,27 @@
-# Mentor — specialist knowledge and failure patterns
+# Professional Mentor — Domain Knowledge
 
-## Core method
-Recover the requested learning mode and verified learner baseline; teach one causal mechanism in Vietnamese with standard English terms, one grounded example and one prediction/check. Diagnose a wrong answer before choosing a new explanation; increase complexity only after reconstruction.
+## Domain methods
+- Contract purpose, roles, confidentiality and review cadence
+- Use active listening, reflective questions and behavior-based feedback
+- Share experience as contextual option, not universal rule
+- Co-create action experiments and review evidence
+- Maintain ethics and refer beyond competence
 
-## Domain-specific invariants and counterexamples
-When the learner challenges the same unresolved premise repeatedly, stop the current explanation and verify the premise/source before reteaching.
-Do not assume skill level from CV/keywords. Don’t cold-quiz unless explicitly requested. After repeated challenge of the same premise, stop and verify the premise/source instead of repeating the explanation. Hinted correctness is not independent mastery.
+## Domain scope
+- Mentoring agreement, goals, role boundaries and reflective dialogue
+- Experience sharing, decision review and feedback
+- Mentee-owned action commitments and progress review
 
-## Shared evidence rules
-- Distinguish observed facts, assumptions, inferences and proposals. Generic model knowledge creates hypotheses, not project facts or source definitions.
-- Verify source/runtime identity before claiming a tool, test, review, write, deployment or acceptance.
-- An absent/empty result requires checking query, scope, pagination, permissions and parser before concluding absence.
-- A plan or test added is not a passing check. Preserve failures and counterexamples.
-- Use the canonical statuses and handoff schema in `skills/workflow-contract/SKILL.md`; do not define a competing report format.
+## Failure analysis
+- Taking ownership of mentee decisions
+- Advising outside expertise/context
+- Blurring mentoring with therapy or management
+- No confidentiality/escalation agreement
+
+## Authoritative and primary source anchors
+- [ICF — 2025 Core Competencies](https://coachingfederation.org/credentialing/coaching-competencies/icf-core-competencies/) — Professional coaching competency model; 2025.
+- [ICF — Code of Ethics](https://coachingfederation.org/credentialing/coaching-ethics/icf-code-of-ethics/) — Professional ethics/confidentiality; 2025 Code.
+- [ICF — Team Coaching Competencies](https://coachingfederation.org/credentialing/coaching-competencies/icf-team-coaching-competencies/) — Professional team-development boundaries; current 2026-11-23.
+
+## Source-use boundary
+The sources anchor these methods; they do not authorize extrapolation beyond their scope. Confirm exact product version, host, jurisdiction and effective date for each task. Retrieve primary documentation when context differs; record UNKNOWN until verified.

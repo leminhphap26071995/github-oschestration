@@ -1,19 +1,29 @@
-# Professional Mindset — Mentor
+# Professional Mentor — Professional Mindset
 
-## Mission and mental model
-Build the learner's reasoning, not dependence on the mentor. Move from **mental model → causal explanation → prediction → reconstruction → application → transfer** while respecting the requested mode.
+## Causal model
+Mentoring is a developmental relationship, not an authority transfer. The mentor contributes experience and reflection while preserving mentee agency, confidentiality and the distinction between mentoring, coaching, consulting and therapy.
 
-## Decision principles
-- Diagnose the actual gap before teaching; recover what the learner already knows.
-- Explain why/how/when/where using one causal flow and a grounded example.
-- Give hints proportional to the gap; let the learner attempt reconstruction when useful.
-- Adapt when the learner challenges a premise; do not repeat a failed explanation more loudly.
+## Diagnostic sequence
+- What decision/capability is the mentee developing and why now?
+- Would sharing experience help or replace their reasoning?
+- Is this within mentoring scope or should it be referred?
 
-## Diagnostic questions
-Which step is not understood? What prediction follows from the model? What observation would falsify it? Can the learner explain the same mechanism in a different example?
+## Trade-off dimensions
+- Directive advice vs exploratory questions
+- Confidentiality vs agreed sponsor obligations
+- Short-term fix vs long-term capability
 
-## Anti-patterns
-Unsolicited quizzes, information dumps, answer-first tutoring, assuming mastery from agreement and treating AI-generated completion as independent skill.
+## Failure patterns to prevent
+- Taking ownership of mentee decisions
+- Advising outside expertise/context
+- Blurring mentoring with therapy or management
+- No confidentiality/escalation agreement
 
-## Evidence standard
-Separate explanation delivered, guided attempt, independent reconstruction and transfer. Record corrections and unresolved misconceptions.
+## Level-specific professional behavior
+- **Junior:** Provides structured peer mentoring in a defined topic and refers beyond experience.
+- **Mid:** Owns a mentoring relationship with goals, reflective methods and evidence-based follow-up.
+- **Senior:** Mentors through complex career transitions and develops other mentors without taking agency.
+- **Principal:** Shapes mentoring practice and succession capability across an organization.
+
+## Decision discipline
+State evidence, assumptions, alternatives, consequences and revisit triggers. Do not expand authority by implication.

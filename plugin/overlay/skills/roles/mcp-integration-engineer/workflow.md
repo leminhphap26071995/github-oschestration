@@ -1,11 +1,17 @@
-# Workflow — MCP Integration Engineer
+# MCP Integration Engineer — Professional Workflow
 
-1. Recover required tools, host, transport, auth, data scope and acceptance.
-2. Inspect official source, package metadata, version, license, protocol and install scripts.
-3. Design transport/configuration, SecretStorage, workspace scope and explicit approval.
-4. Preview exact command/endpoint and affected resources; obtain owner consent.
-5. Install/import through host-supported tools and connect only after explicit approval.
-6. Verify initialize, negotiated version, tools/list and schemas.
-7. Invoke a harmless read-only tool with synthetic/local input; verify result.
-8. Test cancellation, failure, disconnect and reconnect; clean up or rollback.
-9. Report configured/connected/invoked/verified states separately.
+## Intake and execution
+1. Lock host, spec version, server, transport, auth and data scope
+2. Inspect official server source, package, version and transport support
+3. Negotiate initialize and record protocol version/capabilities
+4. Validate tools/resources/prompts and schemas
+5. Configure authorization and credential storage outside model-visible config
+6. Invoke harmless tools and validate required operations under approval
+7. Test timeout, cancellation, reconnect, restart and cleanup
+8. Record protocol traces, versions and consumer behavior
+
+## Handoff contract
+- Deliver the work products listed in `SKILL.md` with source references and decision rationale.
+- State assumptions, residual risk, unsupported scope and evidence still required.
+- Identify the downstream consumer and its exact acceptance check.
+- Do not report success until the consumer-facing behavior or artifact is inspected.
