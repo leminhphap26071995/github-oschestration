@@ -39,11 +39,11 @@ jobs:
           def version(v): return tuple(int(x) for x in v.split("."))
           assert request["approved"] is True
           assert request["requested_by"] == "repository-owner"
-          assert request["consumer"] == "chatgpt"
+          assert request["consumer"] == sync["consumer"] == "chatgpt"
           assert request["plugin_id"] == sync["plugin_id"] == "plugins_6adcacd0c4988191a4f3d33a5bec0d29"
           assert request["expected_release_id"] == sync["expected_release_id"] == "pluginrel_6b03c5d2db348191934dda8b2b0e764d"
           assert request["current_version"] == sync["expected_current_version"] == "0.1.166"
-          assert request["target_version"] == manifest["version"] == sync["plugin_version"] == "0.1.170"
+          assert request["target_version"] == manifest["version"] == sync["plugin_version"]
           assert version(manifest["version"]) > version(request["current_version"])
           assert request["source_repository"] == sync["source_repository"]
           assert request["source_commit_sha"] == sync["source_commit_sha"]
@@ -61,28 +61,37 @@ jobs:
           python -m unittest discover -s tests -p 'test_upw_plugin_role_payload.py' -v
           python -m unittest discover -s tests -p 'test_chatgpt_archive_contract.py' -v
       - name: Package ChatGPT-only archive
+        id: package
+        shell: bash
         run: |
+          set -euo pipefail
+          version="$(python -c 'import json; print(json.load(open("plugin/overlay/plugin.json"))["version"])')"
+          archive="UPW-${version}-ChatGPT-plugin.zip"
           mkdir -p dist
-          python plugin/package_overlay.py --root plugin/overlay --output dist/UPW-0.1.170-ChatGPT-plugin.zip
-          sha256sum dist/UPW-0.1.170-ChatGPT-plugin.zip | tee dist/SHA256SUMS
+          python plugin/package_overlay.py --root plugin/overlay --output "dist/$archive"
+          (cd dist && sha256sum "$archive" > SHA256SUMS)
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "archive=$archive" >> "$GITHUB_OUTPUT"
       - name: Create immutable handoff metadata
         env:
           SOURCE_SHA: ${{ github.sha }}
           RUN_ID: ${{ github.run_id }}
+          VERSION: ${{ steps.package.outputs.version }}
+          ARCHIVE: ${{ steps.package.outputs.archive }}
         run: |
           python - <<'PY'
           import hashlib, json, os
           from pathlib import Path
           request = json.loads(Path(".github/upw-plugin-update-request.json").read_text())
           sync = json.loads(Path("plugin/source-sync.json").read_text())
-          archive = Path("dist/UPW-0.1.170-ChatGPT-plugin.zip")
+          archive = Path("dist") / os.environ["ARCHIVE"]
           handoff = {
             "schema_version": 2,
             "consumer": "chatgpt",
             "plugin_id": request["plugin_id"],
             "expected_release_id": request["expected_release_id"],
             "current_version": request["current_version"],
-            "target_version": request["target_version"],
+            "target_version": os.environ["VERSION"],
             "source_repository": sync["source_repository"],
             "source_commit_sha": sync["source_commit_sha"],
             "packaging_repository": os.environ["GITHUB_REPOSITORY"],
@@ -97,7 +106,7 @@ jobs:
           }
           Path("dist/plugin-creator-handoff.json").write_text(json.dumps(handoff, indent=2) + "\n")
           Path("dist/release-notes.md").write_text(
-            "# UPW 0.1.170 — ChatGPT-only plugin\n\n"
+            f"# UPW {os.environ['VERSION']} — ChatGPT-only plugin\n\n"
             "- 35 unique professional roles; 140 required role artifacts (four per role).\n"
             "- Adds Talent Acquisition Specialist and Technical Hiring Manager with distinct role contracts.\n"
             "- Adds the evidence-first CV Update Lifecycle and claim/provenance contract.\n"
@@ -110,9 +119,9 @@ jobs:
       - name: Upload exact handoff artifact
         uses: actions/upload-artifact@v6
         with:
-          name: UPW-0.1.170-ChatGPT-plugin-${{ github.sha }}
+          name: UPW-${{ steps.package.outputs.version }}-ChatGPT-plugin-${{ github.sha }}
           path: |
-            dist/UPW-0.1.170-ChatGPT-plugin.zip
+            dist/UPW-${{ steps.package.outputs.version }}-ChatGPT-plugin.zip
             dist/SHA256SUMS
             dist/plugin-creator-handoff.json
             dist/release-notes.md
@@ -121,28 +130,31 @@ jobs:
       - name: Publish or verify immutable GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.package.outputs.version }}
+          ARCHIVE: ${{ steps.package.outputs.archive }}
         shell: bash
         run: |
           set -euo pipefail
-          tag="upw-v0.1.170"
-          archive="UPW-0.1.170-ChatGPT-plugin.zip"
-          new_sha="$(sha256sum "dist/$archive" | awk '{print $1}')"
+          tag="upw-v${VERSION}"
+          new_sha="$(sha256sum "dist/$ARCHIVE" | awk '{print $1}')"
           if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             mkdir -p /tmp/existing-upw-release
-            gh release download "$tag" --repo "$GITHUB_REPOSITORY" --pattern "$archive" --dir /tmp/existing-upw-release
+            gh release download "$tag" --repo "$GITHUB_REPOSITORY" --pattern "$ARCHIVE" --dir /tmp/existing-upw-release
             gh release download "$tag" --repo "$GITHUB_REPOSITORY" --pattern "SHA256SUMS" --dir /tmp/existing-upw-release
-            (cd /tmp/existing-upw-release && sha256sum -c SHA256SUMS)
-            existing_sha="$(sha256sum "/tmp/existing-upw-release/$archive" | awk '{print $1}')"
+            expected_sha="$(awk 'NR==1 {print $1}' /tmp/existing-upw-release/SHA256SUMS)"
+            existing_sha="$(sha256sum "/tmp/existing-upw-release/$ARCHIVE" | awk '{print $1}')"
+            test "$expected_sha" = "$existing_sha"
             test "$existing_sha" = "$new_sha"
-            echo "RELEASE_ALREADY_PUBLISHED_WITH_IDENTICAL_ARCHIVE:$new_sha"
+            gh release upload "$tag" "dist/SHA256SUMS" --repo "$GITHUB_REPOSITORY" --clobber
+            echo "RELEASE_ALREADY_PUBLISHED_WITH_IDENTICAL_ARCHIVE_AND_CHECKSUM_FIXED:$new_sha"
           else
             gh release create "$tag" \
-              "dist/$archive" \
+              "dist/$ARCHIVE" \
               dist/SHA256SUMS \
               dist/plugin-creator-handoff.json \
               --repo "$GITHUB_REPOSITORY" \
               --target "$GITHUB_SHA" \
-              --title "UPW 0.1.170 — ChatGPT plugin" \
+              --title "UPW ${VERSION} — ChatGPT plugin" \
               --notes-file dist/release-notes.md
           fi
       - name: Confirm Plugin Creator handoff boundary

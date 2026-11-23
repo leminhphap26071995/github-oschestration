@@ -63,7 +63,7 @@ def validate(root: Path):
 
     if meta.get("consumer") != "chatgpt":
         errors.append("CONSUMER_MUST_BE_CHATGPT")
-    if manifest.get("version") != meta.get("plugin_version") or manifest.get("version") != "0.1.170":
+    if not isinstance(manifest.get("version"), str) or manifest.get("version") != meta.get("plugin_version"):
         errors.append("PLUGIN_VERSION_SOURCE_SYNC_MISMATCH")
     openai = manifest.get("extensions", {}).get("com.openai", {})
     onboarding = openai.get("onboardingSkill")
