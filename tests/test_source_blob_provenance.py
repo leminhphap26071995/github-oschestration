@@ -23,7 +23,7 @@ class SourceBlobProvenanceTests(unittest.TestCase):
                     continue
                 actual_paths.add(relative)
         expected_paths = {path.removeprefix("plugin/overlay/") for path in expected}
-        self.assertEqual(200, len(actual_paths))
+        self.assertEqual(203, len(actual_paths))
         self.assertEqual(actual_paths, expected_paths)
         for source_path, expected_sha in expected.items():
             relative = source_path.removeprefix("plugin/overlay/")
