@@ -1,4 +1,4 @@
-name: UPW ChatGPT Plugin Release
+name: UPW ChatGPT Plugin Backup Package Builder
 "on":
   push:
     branches: [main]
@@ -38,6 +38,9 @@ jobs:
           prompt = manifest["extensions"]["com.openai"]["interface"]["defaultPrompt"]
           def version(v): return tuple(int(x) for x in v.split("."))
           assert request["approved"] is True
+          assert request["chatgpt_native_attempted"] is True
+          assert request["fallback_reason"] == "CHATGPT_HOST_CANNOT_PACKAGE_COMPLETE_OVERLAY"
+          assert len(request["chatgpt_native_blocker"]) >= 80
           assert request["requested_by"] == "repository-owner"
           assert request["consumer"] == sync["consumer"] == "chatgpt"
           assert request["plugin_id"] == sync["plugin_id"] == "plugins_6adcacd0c4988191a4f3d33a5bec0d29"
@@ -102,16 +105,20 @@ jobs:
             "role_count": sync["unique_role_count"],
             "role_artifact_count": sync["required_role_artifacts"],
             "delete_paths": request["delete_paths"],
+            "fallback_reason": request["fallback_reason"],
+            "chatgpt_native_attempted": request["chatgpt_native_attempted"],
+            "chatgpt_native_blocker": request["chatgpt_native_blocker"],
             "live_plugin_mutated": False
           }
           Path("dist/plugin-creator-handoff.json").write_text(json.dumps(handoff, indent=2) + "\n")
           Path("dist/release-notes.md").write_text(
             f"# UPW {os.environ['VERSION']} — ChatGPT-only plugin\n\n"
-            "- 35 unique professional roles; 140 required role artifacts (four per role).\n"
-            "- Adds Talent Acquisition Specialist and Technical Hiring Manager with distinct role contracts.\n"
-            "- Adds the evidence-first CV Update Lifecycle and claim/provenance contract.\n"
+            "- 35 narrow occupational specialist roles; 140 required role artifacts.\n"
+            "- Every role has domain-specific methods, authoritative source anchors and Junior/Mid/Senior/Principal behavior.\n"
+            "- Adds the professional level contract, specialization index and role quality gate.\n"
             "- ChatGPT onboarding is separate from Codex/Claude CLI configuration.\n"
             "- Archive excludes CLI manifests and Codex-only bootstrap content.\n"
+            "- This is the GitHub backup builder; ChatGPT-native Plugin Creator remains the normal update route.\n"
             "- This release is a package handoff; the live Plugin Creator plugin is not mutated by GitHub Actions.\n\n"
             f"Canonical source: {sync['source_repository']}@{sync['source_commit_sha']}\n"
           )

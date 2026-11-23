@@ -6,15 +6,16 @@ This repository builds the **ChatGPT Plugin Creator** package only. Codex, Claud
 
 The canonical source remains `leminhphap-improvement/ai-workflow-archtiecture`. The public repository contains a sanitized, versioned copy of the ChatGPT overlay and packaging tests. The Plugin Creator backend remains the live release authority.
 
-## UPW 0.1.170 payload
+## UPW 0.1.172 specialist payload
 
 - ChatGPT root manifest: `plugin.json`.
 - ChatGPT onboarding: `skills/chatgpt-runtime-onboarding/SKILL.md`.
 - CV update lifecycle: `skills/cv-update-lifecycle/SKILL.md` plus `references/cv-update-contract.md`.
 - 35 unique professional roles: 30 base + 5 extension roles.
 - 140 required role artifacts: `SKILL.md`, `mindset.md`, `knowledge.md`, `workflow.md` for every role.
-- New roles: Talent Acquisition Specialist and Technical Hiring Manager. These are distinct from Interview Trainer and Tech Lead.
-- The 48 live default-prompt entries are preserved exactly.
+- Every role has explicit scope, exclusions, decision rights, domain methods, source anchors, failure patterns and Junior/Mid/Senior/Principal behaviors.
+- Shared references: professional level contract, specialization index and role quality gate.
+- The 48 default-prompt entries remain; the update-routing entry now declares ChatGPT-native primary and GitHub backup.
 
 ## ChatGPT archive rules
 
@@ -31,17 +32,18 @@ Plugin Creator requires detectable plugin content such as a top-level `skills/<n
 
 ## Owner-approved update request and CI
 
-The package workflow runs only on a push to `main` that changes `.github/upw-plugin-update-request.json` and includes `[upw-plugin-update]` in the commit message. It validates the exact plugin ID/current release ID/current version, source commit, role counts and live default-prompt baseline; then runs conformance tests, builds the ZIP, computes SHA-256, records provenance and publishes a versioned GitHub Release.
+The package workflow is a **backup builder**, not the default update route. It runs only on an owner-approved request that records a concrete ChatGPT host blocker, `chatgpt_native_attempted=true`, exact plugin/current release/version, source commit and target version. It validates every source blob SHA, role count, 140 artifacts and the 48-entry prompt baseline; then runs conformance tests, builds the ZIP, computes SHA-256, records the blocker/provenance and publishes a versioned GitHub Release.
 
 The CI package run proves the archive was built and tested. It does **not** update the live Plugin Creator plugin or prove ChatGPT loaded the new skills.
 
 ## Live update handoff
 
-1. Read back the live plugin ID, release ID, version and current files.
-2. Apply the exact ZIP through Plugin Creator using the expected release ID.
-3. Delete exact stale CLI-only paths using `delete_paths`; omitted files are retained by overlay semantics.
-4. Read back the new release ID/version, manifest, all role registries and all 140 role artifacts.
-5. Verify the actual ChatGPT consumer can load the ChatGPT onboarding and CV update skill in a fresh runtime.
-6. Update Notion with live release ID, source SHA, package digest, readback evidence and first unmet criterion.
+1. ChatGPT normally performs source recovery, payload preparation and Plugin Creator update directly.
+2. Use this GitHub builder only when ChatGPT cannot assemble/hand off the complete archive or the native path is unavailable; record the exact blocker.
+3. ChatGPT retrieves the exact artifact and invokes Plugin Creator with the expected release ID whenever that native update action is available.
+4. Delete exact stale consumer paths only when explicitly authorized; omitted files are retained by overlay semantics.
+5. Read back the new release ID/version, manifest, role registry and all 140 role artifacts.
+6. Verify the actual ChatGPT consumer can load the updated role and lifecycle skills in a fresh runtime.
+7. Update Notion with live release ID, source SHA, package digest, blocker, readback evidence and first unmet criterion.
 
-A GitHub Release is not a live plugin update. A live plugin update is not proof of fresh runtime behavior. Keep those states separate.
+GitHub is the backup builder/source mirror only; ChatGPT-native Plugin Creator remains the primary executor and publisher. A GitHub Release is not a live plugin update. A live plugin update is not proof of fresh runtime behavior. Keep source, package, live release/readback and runtime activation separate.
