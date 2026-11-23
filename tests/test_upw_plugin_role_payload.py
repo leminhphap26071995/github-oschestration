@@ -55,13 +55,15 @@ class UpwPluginRolePayloadTests(unittest.TestCase):
 
     def test_missing_role_artifact_fails_closed(self):
         with tempfile.TemporaryDirectory() as temp:
-            copy = Path(temp) / "overlay"
+            parent = Path(temp)
+            copy = parent / "overlay"
             shutil.copytree(OVERLAY, copy)
+            shutil.copy2(ROOT / "plugin/source-sync.json", parent / "source-sync.json")
+            shutil.copy2(ROOT / "plugin/live-default-prompt.json", parent / "live-default-prompt.json")
             target = copy / "skills/roles/talent-acquisition-specialist/knowledge.md"
             target.unlink()
             errors = validate(copy)
-            self.assertTrue(errors)
-            self.assertTrue(any("talent-acquisition-specialist" in error for error in errors))
+            self.assertTrue(any("MISSING_ROLE_ARTIFACT:talent-acquisition-specialist:" in error for error in errors))
 
     def test_default_prompt_matches_live_baseline(self):
         manifest = json.loads((OVERLAY / "plugin.json").read_text())
