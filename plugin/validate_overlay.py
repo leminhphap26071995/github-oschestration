@@ -36,6 +36,14 @@ def validate(root: Path):
         return [f"INVALID_MANIFEST:{exc}"]
     if standard.get("version") != host.get("version"):
         errors.append("MANIFEST_VERSION_MISMATCH")
+    openai = standard.get("extensions", {}).get("com.openai", {})
+    onboarding = openai.get("onboardingSkill")
+    if not isinstance(onboarding, str) or not onboarding.startswith("./"):
+        errors.append("ROOT_ONBOARDING_SKILL_PATH_MISSING_OR_INVALID")
+    else:
+        relative = onboarding[2:]
+        if not relative.endswith("/SKILL.md") or not (root / relative).is_file():
+            errors.append(f"ROOT_ONBOARDING_SKILL_NOT_PACKAGED:{onboarding}")
     if "UPW" not in standard.get("keywords", []):
         errors.append("UPW_KEYWORD_MISSING")
     interface = host.get("interface", {})
