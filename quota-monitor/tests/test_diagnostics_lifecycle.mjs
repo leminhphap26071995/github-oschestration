@@ -407,8 +407,11 @@ test("static-analysis warnings remain distinct from YAML syntax and step executi
 
 test("private billing credentials are isolated to the scheduled monitor and no public artifacts are produced", async () => {
   const workflow = await readFile(".github/workflows/github-actions-quota-monitor.yml", "utf8");
-  const validateJob = workflow.split("  validate:\\n")[1].split("\n  monitor:\n")[0];
-  const monitorJob = workflow.split("  monitor:\\n")[1];
+  const validateMatch = workflow.match(/^  validate:\\r?\\n([\\s\\S]*?)^  monitor:\\r?\\n/m);
+  const monitorMatch = workflow.match(/^  monitor:\\r?\\n([\\s\\S]*)$/m);
+  assert.ok(validateMatch && monitorMatch, "central workflow must expose validate and monitor jobs");
+  const validateJob = validateMatch[1];
+  const monitorJob = monitorMatch[1];
   assert.ok(monitorJob.includes("GITHUB_APP_ID: " + "$" + "{{ secrets.GITHUB_APP_ID }}"));
   assert.ok(monitorJob.includes("GITHUB_APP_PRIVATE_KEY: " + "$" + "{{ secrets.GITHUB_APP_PRIVATE_KEY }}"));
   assert.ok(monitorJob.includes("USER_BILLING_TOKEN: " + "$" + "{{ secrets.USER_BILLING_TOKEN }}"));
