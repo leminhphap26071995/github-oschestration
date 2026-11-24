@@ -118,13 +118,18 @@ function annotationRecord(item) {
   };
 }
 
-async function collectRunJobEvidence({ base, repository, run, token, fetchImpl, observedAt, freshnessMinutes, force = false }) {
+async function collectRunJobEvidence({ base, repository, run, token, fetchImpl, observedAt, freshnessMinutes, triggerLookbackHours, force = false }) {
   const updatedAt = Date.parse(run.updated_at || run.created_at || "");
   const observedTime = Date.parse(observedAt);
   const recentSuccess = run.status === "completed" && run.conclusion === "success" &&
     Number.isFinite(updatedAt) && Number.isFinite(observedTime) &&
     updatedAt <= observedTime + 60_000 && observedTime - updatedAt <= freshnessMinutes * 60_000;
-  if (!recentSuccess && !force) {
+  const recentFailedRun = run.status === "completed" && run.conclusion &&
+    !["success", "skipped", "neutral"].includes(run.conclusion) &&
+    Number.isFinite(updatedAt) && Number.isFinite(observedTime) &&
+    updatedAt <= observedTime + 60_000 &&
+    observedTime - updatedAt <= triggerLookbackHours * 60 * 60_000;
+  if (!recentSuccess && !recentFailedRun && !force) {
     return {
       status: "NOT_REQUIRED", jobs: [], runner_sentinel: null,
       empty_steps_trigger: null, github_hosted_runner_verified: false,
@@ -276,6 +281,7 @@ export async function collectAnnotationReceipts({
         fetchImpl,
         observedAt,
         freshnessMinutes: Number(target.availability_freshness_minutes ?? 30),
+        triggerLookbackHours: Number(target.trigger_lookback_hours ?? 24),
       });
       runs.push({
         id: rawRun.id,
@@ -350,7 +356,6 @@ export async function collectAnnotationReceipts({
       const providerQuota = String(checkRun.app?.slug || "").toLowerCase() === "github-actions" &&
         checkRun.name === "GitHub Actions" &&
         /actions.{0,80}(?:billing|minutes|quota|spending limit)|(?:included minutes|spending limit).{0,80}(?:exhausted|reached|exceeded)|payment method.{0,80}(?:required|failed)|billing.{0,80}(?:hard cap|limit reached)/i.test(outputText);
-      if (annotationCount === 0 && !providerQuota) continue;
       const detailsRun = runs.find(run =>
         checkRun.details_url && String(checkRun.details_url).includes("/actions/runs/" + run.id)
       );
@@ -361,10 +366,15 @@ export async function collectAnnotationReceipts({
       // A check-suite ID can be shared by rerun attempts. Only use it when unique;
       // otherwise require the run ID in details_url to preserve exact attempt identity.
       const correlatedRun = detailsRun || (suiteMatches.length === 1 ? suiteMatches[0] : null);
+      const runnerTrigger = correlatedRun
+        ? correlatedRun.runner_sentinel === true || correlatedRun.empty_steps_trigger === true
+        : runs.some(run => run.runner_sentinel === true || run.empty_steps_trigger === true);
+      const annotationLookupTriggered = annotationCount > 0 || providerQuota || runnerTrigger;
+      if (!annotationLookupTriggered) continue;
       if (!correlatedRun) {
         let unmatchedAnnotations = [];
-        let unmatchedStatus = annotationCount > 0 ? "RETRIEVAL_FAILED" : "NOT_REQUESTED";
-        if (annotationCount > 0) {
+        let unmatchedStatus = annotationLookupTriggered ? "RETRIEVAL_FAILED" : "NOT_REQUESTED";
+        if (annotationLookupTriggered) {
           const unmatchedUrl = new URL(base + "/repos/" + target.repository +
             "/check-runs/" + checkRun.id + "/annotations");
           unmatchedUrl.searchParams.set("per_page", "100");
@@ -373,7 +383,7 @@ export async function collectAnnotationReceipts({
               token: githubToken, fetchImpl
             });
             unmatchedAnnotations = unmatchedPage.items.map(annotationRecord);
-            unmatchedStatus = "RETRIEVED";
+            unmatchedStatus = unmatchedAnnotations.length ? "RETRIEVED" : "RETRIEVED_EMPTY";
           } catch {
             unmatchedStatus = "API_ERROR";
           }
@@ -394,6 +404,11 @@ export async function collectAnnotationReceipts({
           },
           check_run_id: checkRun.id,
           annotations_reported: annotationCount,
+          annotation_lookup_trigger: [
+            ...(annotationCount > 0 ? ["ANNOTATIONS_COUNT_POSITIVE"] : []),
+            ...(providerQuota ? ["PROVIDER_QUOTA_OUTPUT"] : []),
+            ...(runnerTrigger ? ["RUNNER_ID_ZERO_OR_EMPTY_STEPS"] : []),
+          ],
           annotations_status: unmatchedStatus,
           annotations: unmatchedAnnotations,
           reason: "CHECK_RUN_RUN_CORRELATION_UNRESOLVED",
@@ -410,6 +425,7 @@ export async function collectAnnotationReceipts({
           fetchImpl,
           observedAt,
           freshnessMinutes: Number(target.availability_freshness_minutes ?? 30),
+          triggerLookbackHours: Number(target.trigger_lookback_hours ?? 24),
           force: true,
         });
         Object.assign(correlatedRun, {
