@@ -208,6 +208,7 @@ export function deriveQuotaSnapshot({
       job_evidence_status: receipt.source.job_evidence_status,
       check_run_id: receipt.check_run.id,
       annotations_reported: receipt.check_run.annotations_reported,
+      annotation_lookup_trigger: receipt.annotation_lookup_trigger || [],
       observed_at: receipt.observed_at,
       dedupe_key: receipt.dedupe_key,
     });
@@ -390,6 +391,7 @@ export function deriveQuotaSnapshot({
       code: sanitizeEvidence(item.code),
       check_run_id: item.check_run_id ?? null,
       annotations_reported: item.annotations_reported ?? null,
+      annotation_lookup_trigger: item.annotation_lookup_trigger || [],
       runner_sentinel: item.runner_sentinel ?? null,
       empty_steps_trigger: item.empty_steps_trigger ?? null,
     })),
@@ -553,6 +555,7 @@ export async function runMonitor({
               code: "CHECK_RUN_RUN_CORRELATION_UNRESOLVED",
               check_run_id: receipt.check_run_id,
               annotations_reported: receipt.annotations_reported,
+              annotation_lookup_trigger: receipt.annotation_lookup_trigger || [],
               runner_sentinel: receipt.source?.runner_sentinel,
               empty_steps_trigger: receipt.source?.empty_steps_trigger,
             });
