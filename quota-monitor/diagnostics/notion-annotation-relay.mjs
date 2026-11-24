@@ -118,13 +118,11 @@ function annotationRecord(item) {
   };
 }
 
-async function collectRunJobEvidence({ base, repository, run, token, fetchImpl, observedAt, freshnessMinutes }) {
+async function collectRunJobEvidence({ base, repository, run, token, fetchImpl, observedAt, freshnessMinutes, force = false }) {
   const updatedAt = Date.parse(run.updated_at || run.created_at || "");
   const recentSuccess = run.status === "completed" && run.conclusion === "success" &&
     Number.isFinite(updatedAt) && Date.parse(observedAt) - updatedAt <= freshnessMinutes * 60_000;
-  const failedRun = run.status === "completed" && run.conclusion &&
-    !["success", "skipped", "neutral"].includes(run.conclusion);
-  if (!recentSuccess && !failedRun) {
+  if (!recentSuccess && !force) {
     return {
       status: "NOT_REQUIRED", jobs: [], runner_sentinel: false,
       empty_steps_trigger: false, github_hosted_runner_verified: false,
@@ -398,6 +396,26 @@ export async function collectAnnotationReceipts({
           dedupe_key: "gh-checkrun-unmatched:" + target.repository + ":" + headSha + ":" + checkRun.id,
         });
         continue;
+      }
+      if (correlatedRun.job_evidence_status === "NOT_REQUIRED") {
+        const jobEvidence = await collectRunJobEvidence({
+          base,
+          repository: target.repository,
+          run: correlatedRun,
+          token: githubToken,
+          fetchImpl,
+          observedAt,
+          freshnessMinutes: Number(target.availability_freshness_minutes ?? 30),
+          force: true,
+        });
+        Object.assign(correlatedRun, {
+          jobs: jobEvidence.jobs,
+          job_evidence_status: jobEvidence.status,
+          job_evidence_error: jobEvidence.error || null,
+          runner_sentinel: jobEvidence.runner_sentinel,
+          empty_steps_trigger: jobEvidence.empty_steps_trigger,
+          github_hosted_runner_verified: jobEvidence.github_hosted_runner_verified,
+        });
       }
       const receipt = {
         schema_version: 1,
