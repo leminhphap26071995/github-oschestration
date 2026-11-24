@@ -136,3 +136,61 @@ test("publishes Notion comments with stable dedupe keys and skips existing recei
 test("redacts bearer tokens and never treats missing secrets as evidence", () => {
   assert.equal(sanitizeEvidence("Authorization: Bearer ghp_abcdefghijklmnopqrstuvwxyz"), "Authorization: Bearer [REDACTED]");
 });
+
+
+test("collects exact-SHA annotations for same-repository open PR heads when enabled", async () => {
+  const PR_SHA = "b".repeat(40);
+  const calls = [];
+  const fetchImpl = async (url, init = {}) => {
+    const parsed = new URL(url);
+    calls.push(parsed.toString());
+    if (parsed.pathname.endsWith("/branches/main")) return jsonResponse({ commit: { sha: SHA } });
+    if (parsed.pathname.endsWith("/pulls")) {
+      assert.equal(parsed.searchParams.get("state"), "open");
+      return jsonResponse([
+        { number: 47, state: "open", head: { ref: "fix/annotation-relay", sha: PR_SHA, repo: { full_name: "example/private-repo" } } },
+        { number: 48, state: "open", head: { ref: "fork-change", sha: "c".repeat(40), repo: { full_name: "fork/private-repo" } } }
+      ]);
+    }
+    if (parsed.pathname.endsWith("/actions/runs")) {
+      const sha = parsed.searchParams.get("head_sha");
+      if (sha === SHA) return jsonResponse({ workflow_runs: [] });
+      assert.equal(sha, PR_SHA);
+      return jsonResponse({ workflow_runs: [{
+        id: 477, run_attempt: 2, workflow_id: 9, name: "CI",
+        path: ".github/workflows/ci.yml", event: "pull_request", status: "completed",
+        conclusion: "failure", head_sha: PR_SHA
+      }] });
+    }
+    if (parsed.pathname.endsWith("/check-runs")) {
+      const sha = parsed.pathname.split("/").at(-2);
+      if (sha === SHA) return jsonResponse({ check_runs: [] });
+      assert.equal(sha, PR_SHA);
+      return jsonResponse({ check_runs: [{
+        id: 4771, head_sha: PR_SHA, name: "CI", app: { slug: "github-actions" },
+        status: "completed", conclusion: "failure", output: { annotations_count: 1 }
+      }] });
+    }
+    if (parsed.pathname.endsWith("/check-runs/4771/annotations")) {
+      return jsonResponse([{
+        path: ".github/workflows/ci.yml", annotation_level: "failure",
+        title: "Workflow validation", message: "Invalid workflow configuration"
+      }]);
+    }
+    throw new Error("UNEXPECTED_GITHUB_REQUEST " + parsed.pathname);
+  };
+  const config = JSON.parse(TARGETS);
+  config.targets[0].include_open_pull_requests = true;
+  const receipts = await collectAnnotationReceipts({
+    targetsJson: JSON.stringify(config),
+    githubToken: "ghs_test_token_12345678901234567890",
+    fetchImpl
+  });
+  assert.equal(receipts.length, 1);
+  assert.equal(receipts[0].source.branch, "fix/annotation-relay");
+  assert.equal(receipts[0].source.source_ref_type, "OPEN_PULL_REQUEST");
+  assert.equal(receipts[0].source.pull_request_number, 47);
+  assert.equal(receipts[0].source.head_sha, PR_SHA);
+  assert.equal(receipts[0].annotations_status, "RETRIEVED");
+  assert.equal(calls.some(url => url.includes("fork-change")), false);
+});

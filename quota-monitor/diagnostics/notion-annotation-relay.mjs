@@ -27,6 +27,8 @@ function validateTargets(raw) {
     assert(/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(target.repository || ""), "INVALID_TARGET_REPOSITORY");
     assert(/^[A-Za-z0-9._/-]+$/.test(target.branch || "") && !target.branch.includes(".."), "INVALID_TARGET_BRANCH");
     assert(Array.isArray(target.expected_workflows), "INVALID_EXPECTED_WORKFLOWS");
+    assert(target.include_open_pull_requests === undefined || typeof target.include_open_pull_requests === "boolean",
+      "INVALID_INCLUDE_OPEN_PULL_REQUESTS");
   }
   return config.targets;
 }
@@ -119,11 +121,45 @@ export async function collectAnnotationReceipts({
   const receipts = [];
   for (const target of targets) {
     const base = githubApi.replace(/\/$/, "");
+    const targetRefs = [];
     const branchUrl = base + "/repos/" + target.repository + "/branches/" + encodeURIComponent(target.branch);
     const { data: branch } = await requestJson(branchUrl, { token: githubToken, fetchImpl });
-    const headSha = branch?.commit?.sha;
-    assert(/^[a-f0-9]{40}$/i.test(headSha || ""), "TARGET_HEAD_SHA_UNAVAILABLE");
+    const branchSha = branch?.commit?.sha;
+    if (!/^[a-f0-9]{40}$/i.test(branchSha || "")) throw new Error("TARGET_HEAD_SHA_UNAVAILABLE");
+    targetRefs.push({
+      branch: target.branch,
+      headSha: branchSha,
+      sourceRefType: "CONFIGURED_BRANCH",
+      pullRequestNumber: null,
+      pullRequestDiscoveryPages: 0,
+    });
 
+    if (target.include_open_pull_requests === true) {
+      const pullsUrl = new URL(base + "/repos/" + target.repository + "/pulls");
+      pullsUrl.searchParams.set("state", "open");
+      pullsUrl.searchParams.set("per_page", "100");
+      const pullPage = await paginate(pullsUrl, { token: githubToken, fetchImpl });
+      for (const pull of pullPage.items) {
+        const pullHead = pull?.head;
+        const headSha = pullHead?.sha;
+        // Only same-repository PR heads are eligible. Fork code is never followed.
+        if (pull.state !== "open" || pullHead?.repo?.full_name !== target.repository ||
+            !/^[a-f0-9]{40}$/i.test(headSha || "") || typeof pullHead.ref !== "string") continue;
+        targetRefs.push({
+          branch: pullHead.ref,
+          headSha,
+          sourceRefType: "OPEN_PULL_REQUEST",
+          pullRequestNumber: pull.number ?? null,
+          pullRequestDiscoveryPages: pullPage.pageCount,
+        });
+      }
+    }
+
+    const uniqueRefs = [...new Map(targetRefs.map(item =>
+      [item.branch + ":" + item.headSha, item]
+    )).values()];
+    for (const targetRef of uniqueRefs) {
+    const headSha = targetRef.headSha;
     const runsUrl = new URL(base + "/repos/" + target.repository + "/actions/runs");
     runsUrl.searchParams.set("head_sha", headSha);
     runsUrl.searchParams.set("per_page", "100");
@@ -157,7 +193,10 @@ export async function collectAnnotationReceipts({
         observed_at: observedAt,
         source: {
           repository: target.repository,
-          branch: target.branch,
+          branch: targetRef.branch,
+          source_ref_type: targetRef.sourceRefType,
+          pull_request_number: targetRef.pullRequestNumber,
+          pull_request_discovery_pages: targetRef.pullRequestDiscoveryPages,
           head_sha: headSha,
           run_discovery_pages: runPage.pageCount,
           check_run_pages: checkPage.pageCount,
@@ -198,6 +237,7 @@ export async function collectAnnotationReceipts({
       }
       receipt.dedupe_key = "gh-checkrun:" + target.repository + ":" + headSha + ":" + checkRun.id;
       receipts.push(receipt);
+    }
     }
   }
   return receipts;

@@ -145,3 +145,8 @@ Run:
   node --test quota-monitor/tests/test_app_tokens.mjs
   node --test quota-monitor/tests/test_token_permissions.mjs
   node --test quota-monitor/tests/test_diagnostics.mjs
+
+
+## Open pull-request annotation coverage
+
+A target may set `include_open_pull_requests: true` in `PRIVATE_TARGETS_JSON`. The Notion annotation relay then enumerates every open pull request in that target repository, follows only PR heads whose `head.repo.full_name` equals the configured private repository, and collects exact-SHA workflow runs, Check Runs and all annotation pages for those heads in addition to the configured branch. Fork PR heads are deliberately excluded. This setting is required for automatic annotation coverage of feature/PR branches such as a private ticket branch; a configured `main` branch alone does not cover them. The scheduled observer still requires the existing read-only private-target token and Notion publication credentials, and its schedule cadence remains the detection interval.
