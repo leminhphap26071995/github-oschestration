@@ -29,7 +29,7 @@ test('one App mints org tokens and records missing installations without leaking
   const outputTargetsFile = join(root, 'runtime-targets.json');
   const discoveryFile = join(root, 'report', 'organization-discovery.json');
   const githubEnv = join(root, 'github-env');
-  await writeFile(targetsFile, JSON.stringify({ organizations: ['org-a', 'org-not-installed'] }));
+  await writeFile(targetsFile, JSON.stringify({ organizations: ['org-a', 'org-not-installed', 'huyquanghan-apps'], excluded_organizations: [] }));
 
   const originalFetch = globalThis.fetch;
   const calls = [];
@@ -37,9 +37,10 @@ test('one App mints org tokens and records missing installations without leaking
     calls.push({ url: String(url), method: options.method || 'GET', body: options.body });
     if (String(url).includes('/app/installations?')) {
       return new Response(JSON.stringify([
-        { id: 101, account: { login: 'org-a', type: 'Organization' } },
-        { id: 202, account: { login: 'org-b', type: 'Organization' } },
-        { id: 303, account: { login: 'personal-user', type: 'User' } },
+        { id: 101, repository_selection: 'all', account: { login: 'org-a', type: 'Organization' } },
+        { id: 202, repository_selection: 'all', account: { login: 'org-b', type: 'Organization' } },
+        { id: 303, repository_selection: 'all', account: { login: 'huyquanghan-apps', type: 'Organization' } },
+        { id: 404, account: { login: 'personal-user', type: 'User' } },
       ]), { status: 200, headers: { 'content-type': 'application/json' } });
     }
     const match = String(url).match(/\/app\/installations\/(\d+)\/access_tokens$/);
@@ -57,18 +58,30 @@ test('one App mints org tokens and records missing installations without leaking
     });
     assert.equal(result.organization_count, 3);
     assert.equal(result.token_count, 2);
+    assert.equal(result.excluded_installations, 1);
     assert.equal(result.installation_errors[0].error, 'APP_NOT_INSTALLED');
     const targets = JSON.parse(await readFile(outputTargetsFile, 'utf8'));
     assert.deepEqual(targets.organizations, ['org-a', 'org-not-installed', 'org-b']);
+    assert.deepEqual(targets.excluded_organizations, ['huyquanghan-apps']);
     const env = await readFile(githubEnv, 'utf8');
     assert.match(env, /USER_BILLING_TOKEN=user-token-secret/);
     assert.match(env, /"org-a":"installation-token-101"/);
     assert.match(env, /"org-b":"installation-token-202"/);
     assert.ok(calls.some(call => call.method === 'POST' && call.url.endsWith('/app/installations/101/access_tokens')));
+    assert.equal(calls.some(call => call.url.endsWith('/app/installations/303/access_tokens')), false);
+    const mintBody = JSON.parse(calls.find(call => call.url.endsWith('/app/installations/101/access_tokens')).body);
+    assert.deepEqual(mintBody.permissions, {
+      administration: 'read', actions: 'read', checks: 'read', contents: 'read'
+    });
     assert.ok(calls.every(call => !String(call.body || '').includes('user-token-secret')));
     const discoveryText = await readFile(discoveryFile, 'utf8');
     assert.ok(!discoveryText.includes('installation-token-101'));
     assert.ok(!discoveryText.includes('user-token-secret'));
+    const discovery = JSON.parse(discoveryText);
+    assert.equal(discovery.permission_set.actions, 'read');
+    assert.equal(discovery.permission_set.checks, 'read');
+    assert.equal(discovery.permission_set.contents, 'read');
+    assert.equal(discovery.installation_coverage.every(x => x.repository_selection === 'all'), true);
   } finally {
     globalThis.fetch = originalFetch;
     await rm(root, { recursive: true, force: true });
