@@ -120,12 +120,14 @@ function annotationRecord(item) {
 
 async function collectRunJobEvidence({ base, repository, run, token, fetchImpl, observedAt, freshnessMinutes, force = false }) {
   const updatedAt = Date.parse(run.updated_at || run.created_at || "");
+  const observedTime = Date.parse(observedAt);
   const recentSuccess = run.status === "completed" && run.conclusion === "success" &&
-    Number.isFinite(updatedAt) && Date.parse(observedAt) - updatedAt <= freshnessMinutes * 60_000;
+    Number.isFinite(updatedAt) && Number.isFinite(observedTime) &&
+    updatedAt <= observedTime + 60_000 && observedTime - updatedAt <= freshnessMinutes * 60_000;
   if (!recentSuccess && !force) {
     return {
-      status: "NOT_REQUIRED", jobs: [], runner_sentinel: false,
-      empty_steps_trigger: false, github_hosted_runner_verified: false,
+      status: "NOT_REQUIRED", jobs: [], runner_sentinel: null,
+      empty_steps_trigger: null, github_hosted_runner_verified: false,
     };
   }
   const attempt = Number(run.run_attempt || 1);
@@ -155,8 +157,8 @@ async function collectRunJobEvidence({ base, repository, run, token, fetchImpl, 
     return {
       status: jobs.length ? "OK" : "EMPTY",
       jobs,
-      runner_sentinel: runnerSentinel,
-      empty_steps_trigger: emptyStepsTrigger,
+      runner_sentinel: jobs.length ? runnerSentinel : null,
+      empty_steps_trigger: jobs.length ? emptyStepsTrigger : null,
       github_hosted_runner_verified: hostedRunnerVerified,
       page_count: page.pageCount,
     };
@@ -165,8 +167,8 @@ async function collectRunJobEvidence({ base, repository, run, token, fetchImpl, 
       status: "API_ERROR",
       error: sanitizeEvidence(error.message || "JOB_EVIDENCE_UNAVAILABLE"),
       jobs: [],
-      runner_sentinel: false,
-      empty_steps_trigger: false,
+      runner_sentinel: null,
+      empty_steps_trigger: null,
       github_hosted_runner_verified: false,
     };
   }
@@ -385,8 +387,10 @@ export async function collectAnnotationReceipts({
             repository: target.repository,
             head_sha: headSha,
             branch: targetRef.branch,
-            runner_sentinel: runs.some(run => run.runner_sentinel),
-            empty_steps_trigger: runs.some(run => run.empty_steps_trigger),
+            runner_sentinel: runs.some(run => run.runner_sentinel === true) ? true :
+              runs.some(run => run.job_evidence_status === "OK") ? false : null,
+            empty_steps_trigger: runs.some(run => run.empty_steps_trigger === true) ? true :
+              runs.some(run => run.job_evidence_status === "OK") ? false : null,
           },
           check_run_id: checkRun.id,
           annotations_reported: annotationCount,
