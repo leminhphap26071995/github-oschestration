@@ -168,7 +168,7 @@ test("collects exact-SHA annotations for same-repository open PR heads when enab
       if (sha === SHA) return jsonResponse({ workflow_runs: [] });
       assert.equal(sha, PR_SHA);
       return jsonResponse({ workflow_runs: [{
-        id: 477, run_attempt: 2, workflow_id: 9, name: "CI",
+        id: 477, run_attempt: 2, workflow_id: 9, check_suite_id: 701, name: "CI",
         path: ".github/workflows/ci.yml", event: "pull_request", status: "completed",
         conclusion: "failure", head_sha: PR_SHA
       }] });
