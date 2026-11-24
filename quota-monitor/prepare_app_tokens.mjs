@@ -126,6 +126,7 @@ export async function prepare({ targetsFile, outputTargetsFile, discoveryFile, g
     }
   }
 
+  await mkdir(dirname(outputTargetsFile), { recursive: true });
   await writeFile(outputTargetsFile, JSON.stringify({
     schema_version: 3,
     organizations: orgs,
@@ -155,7 +156,10 @@ export async function prepare({ targetsFile, outputTargetsFile, discoveryFile, g
 
   if (githubEnv) {
     const envLines = [];
-    if (userBillingToken) envLines.push('USER_BILLING_TOKEN=' + userBillingToken);
+    if (userBillingToken) {
+      process.stdout.write('::add-mask::' + userBillingToken + String.fromCharCode(10));
+      envLines.push('USER_BILLING_TOKEN=' + userBillingToken);
+    }
     envLines.push('ORG_BILLING_TOKENS_JSON=' + JSON.stringify(tokenMap));
     await appendFile(githubEnv, envLines.join('\n') + '\n');
   }
