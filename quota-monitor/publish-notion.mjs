@@ -224,6 +224,15 @@ export function deriveQuotaSnapshot({
     const ownerProviderExhausted = providerQuotaOwners.has(ownerKey);
     const ownerReportedExhausted = ownerReport?.state === "REPORTED_QUOTA_EXHAUSTED";
     const ownerError = errorState(account);
+    const installation = (discovery.installation_coverage || []).find(item =>
+      String(item.organization || "").toLowerCase() === ownerKey
+    );
+    const installationError = (discovery.installation_errors || []).find(item =>
+      String(item.organization || "").toLowerCase() === ownerKey
+    );
+    const inventoryStatus = account.repository_list_error ||
+      installationError?.error ||
+      (account.scope === "user" || installation?.repository_selection === "all" ? "VERIFIED" : "UNKNOWN");
     let ownerQuotaStatus = "UNKNOWN";
     if (ownerProviderExhausted || orgHardCap) ownerQuotaStatus = "QUOTA_EXHAUSTED";
     else if (ownerReportedExhausted) ownerQuotaStatus = "REPORTED_QUOTA_EXHAUSTED";
@@ -261,6 +270,14 @@ export function deriveQuotaSnapshot({
         usage_status: repo.status || "UNKNOWN",
         usage_totals: repo.totals || null,
         quota_status: quotaStatus,
+        budget_evidence: repoBudget || repoNear ? {
+          scope: (repoBudget || repoNear).scope,
+          entity: (repoBudget || repoNear).entity,
+          budget_amount: (repoBudget || repoNear).budget_amount,
+          observed_net_amount: (repoBudget || repoNear).observed_net_amount,
+          prevent_further_usage: (repoBudget || repoNear).prevent_further_usage,
+          status: (repoBudget || repoNear).status,
+        } : null,
         quota_evidence: repoBudget ? "REPOSITORY_HARD_CAP_REACHED" :
           providerQuotaRepos.has(repoKey) ? "PROVIDER_ANNOTATION" :
           ownerProviderExhausted ? "OWNER_PROVIDER_ANNOTATION" :
@@ -281,7 +298,15 @@ export function deriveQuotaSnapshot({
       actions_usage_status: account.actions_usage_status || "UNKNOWN",
       usage_totals: account.totals || null,
       budget_status: account.budget?.status || "UNKNOWN",
-      repository_inventory_status: account.repository_list_error || "VERIFIED",
+      repository_inventory_status: inventoryStatus,
+      budget_evidence: items.map(item => ({
+        scope: item.scope,
+        entity: item.entity,
+        budget_amount: item.budget_amount,
+        observed_net_amount: item.observed_net_amount,
+        prevent_further_usage: item.prevent_further_usage,
+        status: item.status,
+      })),
       quota_status: ownerQuotaStatus,
       owner_report: ownerReport,
       repositories,
@@ -365,7 +390,7 @@ export function deriveQuotaSnapshot({
 
 export function buildQuotaSummary(snapshot) {
   const ownerStates = snapshot.accounts.map(account =>
-    account.owner + "=" + account.quota_status
+    account.owner + "=" + account.quota_status + "/inventory=" + account.repository_inventory_status
   ).join("; ");
   const repoStates = snapshot.accounts.flatMap(account =>
     account.repositories.map(repo => repo.full_name + "=" + repo.quota_status)
@@ -389,6 +414,7 @@ function snapshotDigest(snapshot) {
     accounts: snapshot.accounts.map(account => ({
       owner: account.owner,
       quota_status: account.quota_status,
+      repository_inventory_status: account.repository_inventory_status,
       repositories: account.repositories.map(repo => ({
         full_name: repo.full_name,
         archived: repo.archived,
