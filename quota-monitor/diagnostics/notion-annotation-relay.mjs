@@ -118,6 +118,61 @@ function annotationRecord(item) {
   };
 }
 
+async function collectRunJobEvidence({ base, repository, run, token, fetchImpl, observedAt, freshnessMinutes }) {
+  const updatedAt = Date.parse(run.updated_at || run.created_at || "");
+  const recentSuccess = run.status === "completed" && run.conclusion === "success" &&
+    Number.isFinite(updatedAt) && Date.parse(observedAt) - updatedAt <= freshnessMinutes * 60_000;
+  const failedRun = run.status === "completed" && run.conclusion &&
+    !["success", "skipped", "neutral"].includes(run.conclusion);
+  if (!recentSuccess && !failedRun) {
+    return {
+      status: "NOT_REQUIRED", jobs: [], runner_sentinel: false,
+      empty_steps_trigger: false, github_hosted_runner_verified: false,
+    };
+  }
+  const attempt = Number(run.run_attempt || 1);
+  const jobsUrl = new URL(base + "/repos/" + repository + "/actions/runs/" +
+    run.id + "/attempts/" + attempt + "/jobs");
+  jobsUrl.searchParams.set("per_page", "100");
+  try {
+    const page = await paginate(jobsUrl, { token, collection: "jobs", fetchImpl });
+    const jobs = page.items.map(job => ({
+      id: job.id,
+      name: sanitizeEvidence(job.name),
+      status: job.status || null,
+      conclusion: job.conclusion || null,
+      runner_id: job.runner_id ?? null,
+      runner_name: sanitizeEvidence(job.runner_name),
+      labels: Array.isArray(job.labels) ? job.labels.map(label => sanitizeEvidence(label)) : [],
+      steps_count: Array.isArray(job.steps) ? job.steps.length : null,
+    }));
+    const runnerSentinel = jobs.some(job => Number(job.runner_id) === 0);
+    const emptyStepsTrigger = jobs.some(job => job.steps_count === 0);
+    const hostedRunnerVerified = run.conclusion === "success" && jobs.some(job =>
+      job.status === "completed" && job.conclusion === "success" &&
+      Number(job.runner_id) > 0 &&
+      job.labels.some(label => /^(ubuntu|windows|macos)-/i.test(label) && !/self-hosted/i.test(label))
+    );
+    return {
+      status: jobs.length ? "OK" : "EMPTY",
+      jobs,
+      runner_sentinel: runnerSentinel,
+      empty_steps_trigger: emptyStepsTrigger,
+      github_hosted_runner_verified: hostedRunnerVerified,
+      page_count: page.pageCount,
+    };
+  } catch (error) {
+    return {
+      status: "API_ERROR",
+      error: sanitizeEvidence(error.message || "JOB_EVIDENCE_UNAVAILABLE"),
+      jobs: [],
+      runner_sentinel: false,
+      empty_steps_trigger: false,
+      github_hosted_runner_verified: false,
+    };
+  }
+}
+
 export async function collectAnnotationReceipts({
   targetsJson,
   githubToken,
@@ -210,21 +265,39 @@ export async function collectAnnotationReceipts({
       runPage = await paginate(runsUrl, { token: githubToken, collection: "workflow_runs", fetchImpl });
       rawRuns = runPage.items;
     }
-    const runs = rawRuns.filter(run => run.head_sha === headSha).map(run => ({
-      id: run.id,
-      run_attempt: run.run_attempt ?? null,
-      workflow_id: run.workflow_id ?? null,
-      check_suite_id: run.check_suite_id ?? null,
-      head_branch: run.head_branch ?? targetRef.branch,
-      name: sanitizeEvidence(run.name),
-      path: sanitizeEvidence(run.path),
-      event: run.event ?? null,
-      status: run.status ?? null,
-      conclusion: run.conclusion ?? null,
-      created_at: run.created_at ?? null,
-      updated_at: run.updated_at ?? null,
-      head_sha: run.head_sha,
-    }));
+    const runs = [];
+    for (const rawRun of rawRuns.filter(run => run.head_sha === headSha)) {
+      const jobEvidence = await collectRunJobEvidence({
+        base,
+        repository: target.repository,
+        run: rawRun,
+        token: githubToken,
+        fetchImpl,
+        observedAt,
+        freshnessMinutes: Number(target.availability_freshness_minutes ?? 30),
+      });
+      runs.push({
+        id: rawRun.id,
+        run_attempt: rawRun.run_attempt ?? null,
+        workflow_id: rawRun.workflow_id ?? null,
+        check_suite_id: rawRun.check_suite_id ?? null,
+        head_branch: rawRun.head_branch ?? targetRef.branch,
+        name: sanitizeEvidence(rawRun.name),
+        path: sanitizeEvidence(rawRun.path),
+        event: rawRun.event ?? null,
+        status: rawRun.status ?? null,
+        conclusion: rawRun.conclusion ?? null,
+        created_at: rawRun.created_at ?? null,
+        updated_at: rawRun.updated_at ?? null,
+        head_sha: rawRun.head_sha,
+        jobs: jobEvidence.jobs,
+        job_evidence_status: jobEvidence.status,
+        job_evidence_error: jobEvidence.error || null,
+        runner_sentinel: jobEvidence.runner_sentinel,
+        empty_steps_trigger: jobEvidence.empty_steps_trigger,
+        github_hosted_runner_verified: jobEvidence.github_hosted_runner_verified,
+      });
+    }
 
     const checkRunsUrl = new URL(base + "/repos/" + target.repository + "/commits/" + headSha + "/check-runs");
     checkRunsUrl.searchParams.set("filter", "all");
@@ -253,6 +326,11 @@ export async function collectAnnotationReceipts({
           workflow_id: run.workflow_id,
           check_suite_id: run.check_suite_id,
           head_branch: run.head_branch,
+          job_evidence_status: run.job_evidence_status,
+          runner_sentinel: run.runner_sentinel,
+          empty_steps_trigger: run.empty_steps_trigger,
+          github_hosted_runner_verified: run.github_hosted_runner_verified,
+          jobs: run.jobs,
           name: run.name,
           path: run.path,
           event: run.event,
@@ -283,14 +361,40 @@ export async function collectAnnotationReceipts({
       // otherwise require the run ID in details_url to preserve exact attempt identity.
       const correlatedRun = detailsRun || (suiteMatches.length === 1 ? suiteMatches[0] : null);
       if (!correlatedRun) {
+        let unmatchedAnnotations = [];
+        let unmatchedStatus = annotationCount > 0 ? "RETRIEVAL_FAILED" : "NOT_REQUESTED";
+        if (annotationCount > 0) {
+          const unmatchedUrl = new URL(base + "/repos/" + target.repository +
+            "/check-runs/" + checkRun.id + "/annotations");
+          unmatchedUrl.searchParams.set("per_page", "100");
+          try {
+            const unmatchedPage = await paginate(unmatchedUrl, {
+              token: githubToken, fetchImpl
+            });
+            unmatchedAnnotations = unmatchedPage.items.map(annotationRecord);
+            unmatchedStatus = "RETRIEVED";
+          } catch {
+            unmatchedStatus = "API_ERROR";
+          }
+        }
         receipts.push({
           schema_version: 1,
           receipt_type: "GITHUB_CHECK_RUN_UNMATCHED",
+          run_correlation_status: "UNMATCHED",
           observed_at: observedAt,
-          source: { repository: target.repository, head_sha: headSha, branch: targetRef.branch },
+          source: {
+            repository: target.repository,
+            head_sha: headSha,
+            branch: targetRef.branch,
+            runner_sentinel: runs.some(run => run.runner_sentinel),
+            empty_steps_trigger: runs.some(run => run.empty_steps_trigger),
+          },
           check_run_id: checkRun.id,
           annotations_reported: annotationCount,
+          annotations_status: unmatchedStatus,
+          annotations: unmatchedAnnotations,
           reason: "CHECK_RUN_RUN_CORRELATION_UNRESOLVED",
+          dedupe_key: "gh-checkrun-unmatched:" + target.repository + ":" + headSha + ":" + checkRun.id,
         });
         continue;
       }
@@ -311,6 +415,9 @@ export async function collectAnnotationReceipts({
           run_event: correlatedRun.event,
           run_conclusion: correlatedRun.conclusion,
           check_suite_id: correlatedRun.check_suite_id,
+          job_evidence_status: correlatedRun.job_evidence_status,
+          runner_sentinel: correlatedRun.runner_sentinel,
+          empty_steps_trigger: correlatedRun.empty_steps_trigger,
           run_discovery_pages: runPage.pageCount,
           check_run_pages: checkPage.pageCount,
           workflow_runs: runs,
@@ -383,7 +490,7 @@ export async function publishAnnotationReceipts({
   let published = 0;
   let skipped = 0;
   for (const receipt of receipts) {
-    if (receipt.receipt_type && receipt.receipt_type !== "GITHUB_CHECK_RUN_ANNOTATION") continue;
+    if (receipt.receipt_type && !["GITHUB_CHECK_RUN_ANNOTATION", "GITHUB_CHECK_RUN_UNMATCHED"].includes(receipt.receipt_type)) continue;
     const serialized = JSON.stringify(receipt, null, 2);
     const chunks = chunkText(serialized);
     const groups = [];
