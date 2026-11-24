@@ -289,7 +289,7 @@ export function deriveQuotaSnapshot({
           repoNear ? "REPOSITORY_BUDGET_NEAR_LIMIT" :
           orgHardCap ? "ORGANIZATION_HARD_CAP_REACHED" :
           orgNearLimit ? "ORGANIZATION_BUDGET_NEAR_LIMIT" :
-          lastSuccess ? "RECENT_SUCCESSFUL_WORKFLOW_RUN" :
+          lastSuccess ? "RECENT_GITHUB_HOSTED_SUCCESSFUL_WORKFLOW_RUN" :
           repoError || ownerError || "NO_RECENT_AVAILABILITY_EVIDENCE",
         last_successful_run: lastSuccess,
       };
@@ -390,8 +390,8 @@ export function deriveQuotaSnapshot({
       code: sanitizeEvidence(item.code),
       check_run_id: item.check_run_id ?? null,
       annotations_reported: item.annotations_reported ?? null,
-      runner_sentinel: item.runner_sentinel ?? false,
-      empty_steps_trigger: item.empty_steps_trigger ?? false,
+      runner_sentinel: item.runner_sentinel ?? null,
+      empty_steps_trigger: item.empty_steps_trigger ?? null,
     })),
   };
 }
