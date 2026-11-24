@@ -8,7 +8,7 @@
   "current_version": "0.1.175",
   "target_version": "0.1.176",
   "source_repository": "leminhphap-improvement/ai-workflow-archtiecture",
-  "source_commit_sha": "81d8bfa050d44ddc35569147b1badad7916b4283",
+  "source_commit_sha": "6b5b3c8d7e6339c7568df687523b5e8c16d7d1f7",
   "expected_default_prompt_count": 48,
   "expected_role_count": 35,
   "expected_role_artifact_count": 140,
@@ -18,6 +18,6 @@
   "chatgpt_native_attempted": true,
   "fallback_reason": "CHATGPT_HOST_CANNOT_PACKAGE_COMPLETE_OVERLAY",
   "chatgpt_native_blocker": "Plugin Creator update_plugin rejected the ChatGPT-host-built root-relative skill overlay archive with INVALID_ARGUMENT despite a successful ZIP integrity check. The live plugin's complete current manifest/payload cannot be materialized into this host's packaging filesystem through the available connector route, so the native host cannot assemble a valid complete archive. Use the existing source-bound GitHub ChatGPT-only package builder as the backup; ChatGPT remains responsible for the live Plugin Creator update and readback.",
-  "request_revision": 9,
-  "build_request_reason": "Owner-authorized 0.1.176 cleanup: remove the verified stale .codex-plugin/plugin.json sidecar from the ChatGPT consumer while preserving the separate CLI source."
+  "request_revision": 10,
+  "build_request_reason": "Owner-authorized 0.1.176: explicit no-runner/empty-steps Notion relay trigger and hard no-progress gate in the default prompt; remove verified stale Codex sidecar."
 }

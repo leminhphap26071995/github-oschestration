@@ -37,7 +37,17 @@ class ActionsAnnotationRelayContractTests(unittest.TestCase):
         manifest = __import__("json").loads((ROOT / "plugin/overlay/plugin.json").read_text(encoding="utf-8"))
         prompt = manifest["extensions"]["com.openai"]["interface"]["defaultPrompt"]
         self.assertEqual(len(prompt), 48)
-        self.assertFalse(any("ACTIONS NO-RUNNER RECOVERY" in item for item in prompt))
+        actions = next(item for item in prompt if item.startswith("ACTIONS EVIDENCE:"))
+        self.assertIn("runner_id=0", actions)
+        self.assertIn("steps=[]", actions)
+        self.assertIn("Notion annotation relay", actions)
+        self.assertIn("NOTION_RELAY_RECEIPT_NOT_FOUND_FOR_EXACT_RUN", actions)
+        self.assertIn("API_METHOD_BLOCKED is transport-only", actions)
+        reporting = next(item for item in prompt if item.startswith("OWNER-FACING REPORTING:"))
+        self.assertIn("Do not send progress narration", reporting)
+        self.assertIn("while any authorized AI-owned requirement remains runnable", reporting)
+        communication = next(item for item in prompt if item.startswith("COMMUNICATION MODES:"))
+        self.assertIn("DEEP_WORK = continuous full requirements execution", communication)
 
 if __name__ == "__main__":
     unittest.main()
