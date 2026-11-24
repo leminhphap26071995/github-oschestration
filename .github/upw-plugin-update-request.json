@@ -19,5 +19,5 @@
   "fallback_reason": "CHATGPT_HOST_CANNOT_PACKAGE_COMPLETE_OVERLAY",
   "chatgpt_native_blocker": "Plugin Creator update_plugin rejected the ChatGPT-host-built root-relative skill overlay archive with INVALID_ARGUMENT despite a successful ZIP integrity check. The live plugin's complete current manifest/payload cannot be materialized into this host's packaging filesystem through the available connector route, so the native host cannot assemble a valid complete archive. Use the existing source-bound GitHub ChatGPT-only package builder as the backup; ChatGPT remains responsible for the live Plugin Creator update and readback.",
   "request_revision": 10,
-  "build_request_reason": "Owner-authorized 0.1.176: explicit no-runner/empty-steps Notion relay trigger and hard no-progress gate in the default prompt; remove verified stale Codex sidecar."
+  "build_request_reason": "Owner-authorized 0.1.176: exact-head conformance rerun after making the Notion-first no-runner trigger and no-progress output gate explicit; remove the verified stale Codex sidecar."
 }
