@@ -65,7 +65,8 @@ test("owner report blocks every repository and UNKNOWN never becomes available",
     source: { repository: "LyonPro/available-app", head_sha: "a".repeat(40) },
     run: {
       id: 101, attempt: 1, path: ".github/workflows/ci.yml", event: "push",
-      status: "completed", conclusion: "success", updated_at: "2026-11-24T17:00:00.000Z"
+      status: "completed", conclusion: "success", github_hosted_runner_verified: true,
+      updated_at: "2026-11-24T17:00:00.000Z"
     }
   }];
   const snapshot = deriveQuotaSnapshot({
@@ -199,6 +200,13 @@ test("runMonitor discovers recent runs without per-repository branch configurati
         status: "completed", conclusion: "success", head_branch: "release/next",
         head_sha: sha, created_at: "2026-11-24T16:55:00.000Z",
         updated_at: "2026-11-24T16:56:00.000Z"
+      }] }), { status: 200 });
+    }
+    if (parsed.hostname === "api.github.com" && parsed.pathname.endsWith("/actions/runs/904/attempts/1/jobs")) {
+      return new Response(JSON.stringify({ jobs: [{
+        id: 9041, name: "CI", status: "completed", conclusion: "success",
+        runner_id: 43, runner_name: "GitHub Actions 43", labels: ["ubuntu-latest"],
+        steps: [{ name: "test", status: "completed", conclusion: "success" }]
       }] }), { status: 200 });
     }
     if (parsed.hostname === "api.github.com" && parsed.pathname.endsWith("/check-runs")) {
