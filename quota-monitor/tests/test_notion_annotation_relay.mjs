@@ -147,9 +147,17 @@ test("collects exact-SHA annotations for same-repository open PR heads when enab
     if (parsed.pathname.endsWith("/branches/main")) return jsonResponse({ commit: { sha: SHA } });
     if (parsed.pathname.endsWith("/pulls")) {
       assert.equal(parsed.searchParams.get("state"), "open");
+      const page = parsed.searchParams.get("page") || "1";
+      if (page === "1") {
+        return jsonResponse([
+          { number: 48, state: "open", head: { ref: "fork-change", sha: "c".repeat(40), repo: { full_name: "fork/private-repo" } } }
+        ], {
+          link: '<https://api.github.com/repos/example/private-repo/pulls?state=open&per_page=100&page=2>; rel="next"'
+        });
+      }
+      assert.equal(page, "2");
       return jsonResponse([
-        { number: 47, state: "open", head: { ref: "fix/annotation-relay", sha: PR_SHA, repo: { full_name: "example/private-repo" } } },
-        { number: 48, state: "open", head: { ref: "fork-change", sha: "c".repeat(40), repo: { full_name: "fork/private-repo" } } }
+        { number: 47, state: "open", head: { ref: "fix/annotation-relay", sha: PR_SHA, repo: { full_name: "example/private-repo" } } }
       ]);
     }
     if (parsed.pathname.endsWith("/actions/runs")) {
@@ -192,5 +200,6 @@ test("collects exact-SHA annotations for same-repository open PR heads when enab
   assert.equal(receipts[0].source.pull_request_number, 47);
   assert.equal(receipts[0].source.head_sha, PR_SHA);
   assert.equal(receipts[0].annotations_status, "RETRIEVED");
-  assert.equal(calls.some(url => url.includes("fork-change")), false);
+  assert.equal(receipts[0].source.pull_request_discovery_pages, 2);
+  assert.equal(calls.some(url => new URL(url).pathname.endsWith("/pulls") && new URL(url).searchParams.get("page") === "2"), true);
 });
