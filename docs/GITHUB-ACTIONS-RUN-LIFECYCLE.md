@@ -60,18 +60,12 @@ A missing receipt or quota restriction does not end independent AI-owned work. C
 
 ## 2026-11-24 correction — no-runner state triggers notion annotation recovery
 
-This exact section is the controlling recovery rule. A raw attempt-scoped job with runner_id: 0, a terminal failed job with steps: [], or a Check Run with annotations_count > 0 triggers immediate Notion-first annotation recovery. These are routing signals, not root-cause classifications, quota evidence, or terminal blockers.
+This is the controlling Notion-first recovery rule. The raw attempt-scoped job field runner_id: 0, terminal job steps: [], or Check Run annotations_count > 0 triggers annotation recovery. These are routing signals only, not root-cause classifications, quota evidence, or terminal blockers.
 
-The following representations are deliberately preserved for exact-source conformance:
-- runner_id: 0
-- steps: []
-- annotations_count > 0
-- empty jobs
-- runner_id=0
-- steps=[]
+Preserve exact identity fields run_attempt and check_run_id, together with repository, ref, head SHA, workflow run ID and attempt. Preserve the source values runner_id: 0, steps: [], annotations_count > 0, empty jobs, runner_id=0 and steps=[].
 
-Immediately correlate the exact repository, ref, head SHA, workflow run ID, attempt and Check Run ID. Query the configured Notion annotation-relay destination and paginate all discussions/comments. Interpret only the exact matching receipt's annotation body. Only an explicit provider-owned Actions billing/payment/spending-cap message or an enforced applicable hard cap proves QUOTA_EXHAUSTED.
+Immediately trigger and query the configured Notion relay; paginate all relevant discussions/comments and correlate the receipt against the exact run identity. Interpret only the matching receipt's annotation body. Only an explicit provider-owned Actions billing/payment/spending-cap message or an enforced applicable hard cap proves QUOTA_EXHAUSTED.
 
-If the exact receipt is absent, record NOTION_RELAY_RECEIPT_NOT_FOUND_FOR_EXACT_RUN. This means the receipt was not found; it does not mean annotations are absent. API_METHOD_BLOCKED is transport-only and must route to the Notion relay; it is never the terminal diagnosis while the relay path remains unexamined or repairable.
+If the exact receipt is absent, record NOTION_RELAY_RECEIPT_NOT_FOUND_FOR_EXACT_RUN. This means the receipt was not found; it does not mean annotations are absent. API_METHOD_BLOCKED is transport-only, does not close the diagnostic branch, and must route to the Notion relay before any terminal classification.
 
 Do not classify runner_id: 0, steps: [], empty jobs, missing logs, blank runner metadata or BlobNotFound as quota exhaustion or as a reason to stop. Preserve PRESENT/NULL/MISSING distinctly. Honor Retry-After on API rate limits and continue other independent AI-owned work.
