@@ -16,6 +16,7 @@ VERSION = "2026-03-10"
 ORG_RE = re.compile(r"^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$")
 UNKNOWN_TOTALS = {k: None for k in
                   ("gross_minutes", "discounted_minutes", "net_minutes", "net_amount")}
+EXCLUDED_ORGS = {"huyquanghan-apps"}
 
 
 def get(token, path):
@@ -29,6 +30,18 @@ def get(token, path):
         with urlopen(req, timeout=30) as response:
             return json.loads(response.read().decode("utf-8")), None
     except HTTPError as exc:
+        body = ""
+        try:
+            body = exc.read().decode("utf-8", errors="replace").lower()
+        except Exception:
+            pass
+        remaining = (exc.headers.get("x-ratelimit-remaining") or "") if exc.headers else ""
+        if exc.code == 429 or remaining == "0" or "rate limit exceeded" in body:
+            return None, "API_RATE_LIMITED"
+        if exc.code == 403:
+            return None, "PERMISSION_DENIED"
+        if exc.code == 404:
+            return None, "NOT_FOUND"
         return None, f"HTTP_{exc.code}"
     except (URLError, TimeoutError):
         return None, "NETWORK_ERROR"
@@ -89,7 +102,8 @@ def items(data):
 
 def total(rows, field, digits=3):
     values = [row.get(field) for row in rows]
-    return None if any(value is None for value in values) else round(sum(values), digits)
+    # An empty response is not proof of zero usage; preserve UNKNOWN.
+    return None if not values or any(value is None for value in values) else round(sum(values), digits)
 
 
 def totals(rows):
@@ -115,16 +129,31 @@ def org_tokens(raw):
     return result
 
 
+def excluded_org_targets(path):
+    data = json.loads(Path(path).read_text(encoding="utf-8"))
+    values = data.get("excluded_organizations", []) if isinstance(data, dict) else []
+    if not isinstance(values, list) or any(
+        not isinstance(org, str) or not ORG_RE.fullmatch(org) for org in values
+    ):
+        raise ValueError("Invalid excluded organization login in targets file")
+    return sorted({org.lower() for org in values} | EXCLUDED_ORGS)
+
+
 def org_targets(path):
     data = json.loads(Path(path).read_text(encoding="utf-8"))
     values = data.get("organizations") if isinstance(data, dict) else None
+    if values is None:
+        values = []
     if not isinstance(values, list):
-        raise ValueError("targets file must contain an organizations array")
+        raise ValueError("targets file organizations must be an array")
+    excluded_set = set(excluded_org_targets(path))
     result = []
     for org in values:
         if not isinstance(org, str) or not ORG_RE.fullmatch(org):
             raise ValueError("Invalid organization login in targets file")
-        if org not in result:
+        if org.lower() not in excluded_set and not any(
+            existing.lower() == org.lower() for existing in result
+        ):
             result.append(org)
     return result
 
@@ -191,7 +220,7 @@ def collect(scope, owner, token, year, month):
     if not token:
         return {
             "scope": scope, "owner": owner, "status": "UNKNOWN",
-            "actions_usage_status": "UNKNOWN",
+            "actions_usage_status": "NOT_CONFIGURED",
             "summary_error": "BILLING_TOKEN_NOT_CONFIGURED",
             "usage_items": [], "totals": UNKNOWN_TOTALS.copy(),
             "repositories": [], "repository_list_error": "BILLING_TOKEN_NOT_CONFIGURED",
@@ -199,76 +228,93 @@ def collect(scope, owner, token, year, month):
                        "error": "BILLING_TOKEN_NOT_CONFIGURED" if scope == "organization" else None,
                        "items": []},
         }
+
+    # Both user and organization usage-summary endpoints accept product=Actions
+    # and an optional repository filter. Empty rows remain UNKNOWN, never zero.
+    summary, summary_error = get(token, path_for(scope, owner, year, month))
+    rows = items(summary) if not summary_error else []
+    actions_usage_status = (
+        summary_error if summary_error else "OK" if rows else "NO_USAGE_ROWS"
+    )
+
     if scope == "user":
-        # The user-level billing usage endpoint reports Copilot usage, not Actions usage.
-        # Do not turn its empty Actions rows into a false zero-consumption signal.
-        summary, summary_error, rows = None, None, []
-        actions_usage_status = "NOT_EXPOSED_BY_USER_BILLING_API"
-        repos, list_error = pages(token, "/user/repos?visibility=all&affiliation=owner&sort=full_name")
+        repos, list_error = pages(
+            token, "/user/repos?visibility=all&affiliation=owner&sort=full_name"
+        )
         repos = [r for r in repos if r.get("owner", {}).get("type") == "User"
                  and r.get("owner", {}).get("login", "").lower() == owner.lower()]
     else:
-        summary, summary_error = get(token, path_for(scope, owner, year, month))
-        rows = items(summary) if not summary_error else []
-        actions_usage_status = "UNKNOWN" if summary_error else "OK"
-        repos, list_error = pages(token, f"/orgs/{owner}/repos?type=all&sort=full_name")
+        repos, list_error = pages(
+            token, f"/orgs/{owner}/repos?type=all&sort=full_name"
+        )
         repos = [r for r in repos if r.get("owner", {}).get("login", "").lower() == owner.lower()]
+
     repository_rows = []
     for repo in repos:
         name = repo.get("full_name")
         if not isinstance(name, str) or "/" not in name:
             continue
-        if scope == "user":
-            repository_rows.append({
-                "full_name": name, "visibility": "private" if repo.get("private") else "public",
-                "archived": bool(repo.get("archived", False)),
-                "status": "NOT_EXPOSED", "error": None,
-                "usage_items": [], "totals": UNKNOWN_TOTALS.copy(),
-            })
-            continue
         data, error = get(token, path_for(scope, owner, year, month, name))
         repo_items = items(data) if not error else []
+        repo_status = error if error else "OK" if repo_items else "NO_USAGE_ROWS"
         repository_rows.append({
-            "full_name": name, "visibility": "private" if repo.get("private") else "public",
+            "id": repo.get("id"),
+            "full_name": name,
+            "owner": owner,
+            "owner_type": repo.get("owner", {}).get("type"),
+            "visibility": ("private" if repo.get("private") else
+                           "internal" if repo.get("visibility") == "internal" else "public"),
             "archived": bool(repo.get("archived", False)),
-            "status": "UNKNOWN" if error else "OK", "error": error,
+            "default_branch": repo.get("default_branch"),
+            "permissions": {
+                "admin": bool((repo.get("permissions") or {}).get("admin")),
+                "maintain": bool((repo.get("permissions") or {}).get("maintain")),
+                "push": bool((repo.get("permissions") or {}).get("push")),
+            },
+            "status": repo_status,
+            "error": error,
             "usage_items": repo_items,
-            "totals": totals(repo_items) if not error else UNKNOWN_TOTALS.copy(),
+            "totals": totals(repo_items) if repo_items else UNKNOWN_TOTALS.copy(),
         })
+
     budget = {"status": "NOT_APPLICABLE", "error": None, "items": []}
     if scope == "organization":
         data, error = get(token, f"/organizations/{owner}/settings/billing/budgets?per_page=100")
-        budget = evaluate_budgets(data, rows if not summary_error else None,
-                                  repository_rows, error)
+        budget = evaluate_budgets(data, rows if rows else None, repository_rows, error)
+
     errors = [summary_error, list_error, budget.get("error")]
-    errors += [r["error"] for r in repository_rows]
+    errors += [r["error"] for r in repository_rows if r.get("error")]
     errors = [e for e in errors if e]
-    if scope == "user":
-        status = "UNKNOWN" if list_error else "PARTIAL"
+    if summary_error and list_error:
+        status = "UNKNOWN"
+    elif errors or not rows:
+        status = "PARTIAL"
     else:
-        status = "UNKNOWN" if summary_error and list_error else "PARTIAL" if errors else "OK"
+        status = "OK"
     return {
         "scope": scope, "owner": owner, "status": status,
         "actions_usage_status": actions_usage_status,
-        "summary_error": summary_error, "usage_items": rows,
-        "totals": totals(rows) if scope == "organization" and not summary_error else UNKNOWN_TOTALS.copy(),
-        "repositories": repository_rows, "repository_list_error": list_error,
+        "summary_error": summary_error,
+        "usage_items": rows,
+        "totals": totals(rows) if rows else UNKNOWN_TOTALS.copy(),
+        "repositories": repository_rows,
+        "repository_list_error": list_error,
         "budget": budget,
     }
 
-
-def collect_all(user_token, org_map, username, organizations):
+def collect_all(user_token, org_map, username, organizations, excluded_organizations=None):
     now = datetime.now(timezone.utc)
     year, month = now.year, now.month
     accounts = [collect("user", username, user_token, year, month)]
     accounts += [collect("organization", org, org_map.get(org), year, month)
                  for org in organizations]
     return {
-        "schema_version": 3, "collected_at_utc": now.isoformat(),
+        "schema_version": 4, "collected_at_utc": now.isoformat(),
         "billing_period": f"{year:04d}-{month:02d}",
         "data_source": "GitHub Billing Usage Summary REST API",
         "billing_unit_model": "INCLUDED_COMPUTE_CURRENCY_AMOUNT",
         "included_compute_balance_status": "NOT_EXPOSED_BY_USAGE_SUMMARY_API",
+        "excluded_organizations": sorted(set(excluded_organizations or EXCLUDED_ORGS)),
         "accounts": accounts,
     }
 
@@ -282,7 +328,7 @@ def render(report, history):
         "# GitHub Actions Usage Dashboard", "",
         f"Billing period: {report['billing_period']}  ",
         f"Updated (UTC): {report['collected_at_utc']}", "",
-        "> Shows Actions usage quantities and net billed amounts. GitHub's included compute allowance is a monetary amount; the user-level billing endpoint reports Copilot usage, not personal Actions usage or remaining included compute balance. No personal Actions balance or percentage is inferred.",
+        "> Shows Actions usage quantities and net billed amounts from both user and organization billing-summary endpoints. An empty Actions response is UNKNOWN, not zero. The remaining included-compute balance is not exposed by this summary; no balance or percentage is inferred.",
         "", "## Account and organization overview", "",
         "| Scope | Owner | Repositories | Status | Actions data | Actions budget | Gross min | Discounted min | Net min | Net amount (USD) |",
         "|---|---|---:|---|---|---:|---:|---:|---:|",
@@ -391,6 +437,7 @@ def main():
         os.getenv("USER_BILLING_TOKEN", "").strip(),
         org_tokens(os.getenv("ORG_BILLING_TOKENS_JSON", "{}")),
         username, org_targets(args.org_targets_file),
+        excluded_org_targets(args.org_targets_file),
     )
     write_report(report, args.report_dir)
     counts = {s: sum(a["status"] == s for a in report["accounts"])

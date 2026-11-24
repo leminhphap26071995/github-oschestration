@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "quota_page_id": "420e0277-62c8-812d-a428-ca8d36008176",
+  "annotation_page_id": "420e0277-62c8-81ff-bf4a-ff659319df78",
+  "freshness_minutes": 30,
+  "near_limit_ratio": 0.8,
+  "heartbeat_hours": 6,
+  "trigger_lookback_hours": 24
+}

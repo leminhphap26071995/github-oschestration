@@ -37,25 +37,31 @@ test("collects exact-SHA check-run annotations and preserves distinct causes", a
     if (parsed.pathname.endsWith("/actions/runs")) {
       assert.equal(parsed.searchParams.get("head_sha"), SHA);
       return jsonResponse({ workflow_runs: [{
-        id: 77, run_attempt: 1, workflow_id: 9, name: "CI",
+        id: 77, run_attempt: 1, workflow_id: 9, check_suite_id: 700, name: "CI",
         path: ".github/workflows/ci.yml", event: "push", status: "completed",
         conclusion: "failure", head_sha: SHA
+      }] });
+    }
+    if (parsed.pathname.endsWith("/actions/runs/77/attempts/1/jobs")) {
+      return jsonResponse({ jobs: [{
+        id: 771, name: "build", status: "completed", conclusion: "failure",
+        runner_id: 0, runner_name: null, labels: [], steps: []
       }] });
     }
     if (parsed.pathname.endsWith("/check-runs")) {
       return jsonResponse({ check_runs: [
         {
-          id: 101, head_sha: SHA, name: "GitHub Actions", app: { slug: "github-actions" },
+          id: 101, head_sha: SHA, check_suite: { id: 700 }, name: "GitHub Actions", app: { slug: "github-actions" },
           status: "completed", conclusion: "failure", output: { annotations_count: 1 }
         },
         {
-          id: 102, head_sha: SHA, name: "GitHub Actions", app: { slug: "github-actions" },
+          id: 102, head_sha: SHA, check_suite: { id: 700 }, name: "GitHub Actions", app: { slug: "github-actions" },
           status: "completed", conclusion: "failure", output: {
             annotations_count: 0, title: "GitHub Actions", summary: "GitHub Actions billing quota exceeded"
           }
         },
         {
-          id: 103, head_sha: SHA, name: "Third-party check", app: { slug: "other-app" },
+          id: 103, head_sha: SHA, check_suite: { id: 700 }, name: "Third-party check", app: { slug: "other-app" },
           status: "completed", conclusion: "failure", output: { annotations_count: 0, summary: "generic failure" }
         }
       ] });
@@ -80,14 +86,19 @@ test("collects exact-SHA check-run annotations and preserves distinct causes", a
     targetsJson: TARGETS, githubToken: "ghs_test_token_12345678901234567890", fetchImpl,
     observedAt: "2026-11-22T12:00:00.000Z"
   });
-  assert.equal(receipts.length, 3);
+  assert.equal(receipts.length, 2);
   assert.equal(receipts[0].classification, "WORKFLOW_YAML_OR_SCHEMA_ERROR");
   assert.equal(receipts[0].annotations_status, "RETRIEVED");
   assert.equal(receipts[0].annotations[0].message.includes("Could not parse as YAML"), true);
   assert.equal(receipts[1].classification, "ACTIONS_BILLING_QUOTA_EXHAUSTED");
-  assert.equal(receipts[2].classification, "UNKNOWN");
+  assert.equal(receipts[0].source.run_id, 77);
+  assert.equal(receipts[0].source.run_attempt, 1);
+  assert.equal(receipts[0].source.runner_sentinel, true);
+  assert.equal(receipts[0].source.empty_steps_trigger, true);
+  assert.equal(receipts[1].source.run_id, 77);
+  assert.equal(receipts.some(item => item.source.repository === "example/private-repo" && item.check_run.id === 103), false);
   assert.equal(receipts.every(item => item.source.head_sha === SHA), true);
-  assert.equal(calls.filter(call => call.url.includes("/annotations?")).length, 3);
+  assert.equal(calls.filter(call => call.url.includes("/annotations?")).length, 2);
 });
 
 test("publishes Notion comments with stable dedupe keys and skips existing receipts", async () => {
@@ -165,9 +176,15 @@ test("collects exact-SHA annotations for same-repository open PR heads when enab
       if (sha === SHA) return jsonResponse({ workflow_runs: [] });
       assert.equal(sha, PR_SHA);
       return jsonResponse({ workflow_runs: [{
-        id: 477, run_attempt: 2, workflow_id: 9, name: "CI",
+        id: 477, run_attempt: 2, workflow_id: 9, check_suite_id: 701, name: "CI",
         path: ".github/workflows/ci.yml", event: "pull_request", status: "completed",
         conclusion: "failure", head_sha: PR_SHA
+      }] });
+    }
+    if (parsed.pathname.endsWith("/actions/runs/477/attempts/2/jobs")) {
+      return jsonResponse({ jobs: [{
+        id: 4772, name: "build", status: "completed", conclusion: "failure",
+        runner_id: 0, runner_name: null, labels: [], steps: []
       }] });
     }
     if (parsed.pathname.endsWith("/check-runs")) {
@@ -175,7 +192,7 @@ test("collects exact-SHA annotations for same-repository open PR heads when enab
       if (sha === SHA) return jsonResponse({ check_runs: [] });
       assert.equal(sha, PR_SHA);
       return jsonResponse({ check_runs: [{
-        id: 4771, head_sha: PR_SHA, name: "CI", app: { slug: "github-actions" },
+        id: 4771, head_sha: PR_SHA, check_suite: { id: 701 }, name: "CI", app: { slug: "github-actions" },
         status: "completed", conclusion: "failure", output: { annotations_count: 1 }
       }] });
     }
@@ -202,4 +219,234 @@ test("collects exact-SHA annotations for same-repository open PR heads when enab
   assert.equal(receipts[0].annotations_status, "RETRIEVED");
   assert.equal(receipts[0].source.pull_request_discovery_pages, 2);
   assert.equal(calls.some(url => new URL(url).pathname.endsWith("/pulls") && new URL(url).searchParams.get("page") === "2"), true);
+});
+
+test("captures successful workflow-run evidence without publishing it as an annotation receipt", async () => {
+  const calls = [];
+  const fetchImpl = async (url, init = {}) => {
+    const parsed = new URL(url);
+    calls.push({ path: parsed.pathname, method: init.method || "GET" });
+    if (parsed.pathname.endsWith("/branches/main")) {
+      return jsonResponse({ commit: { sha: SHA } });
+    }
+    if (parsed.pathname.endsWith("/actions/runs")) {
+      return jsonResponse({ workflow_runs: [{
+        id: 901, run_attempt: 2, workflow_id: 9, check_suite_id: 901, name: "CI",
+        path: ".github/workflows/ci.yml", event: "push", status: "completed",
+        conclusion: "success", head_sha: SHA,
+        created_at: "2026-11-24T16:50:00.000Z",
+        updated_at: "2026-11-24T16:55:00.000Z"
+      }] });
+    }
+    if (parsed.pathname.endsWith("/actions/runs/901/attempts/2/jobs")) {
+      return jsonResponse({ jobs: [{
+        id: 9011, name: "test", status: "completed", conclusion: "success",
+        runner_id: 42, runner_name: "GitHub Actions 42", labels: ["ubuntu-latest"],
+        steps: [{ name: "test", status: "completed", conclusion: "success" }]
+      }] });
+    }
+    if (parsed.pathname.endsWith("/check-runs")) return jsonResponse({ check_runs: [] });
+    if (parsed.pathname.endsWith("/comments")) return jsonResponse({
+      results: [], has_more: false, next_cursor: null
+    });
+    throw new Error("UNEXPECTED_REQUEST " + parsed.pathname);
+  };
+  const receipts = await collectAnnotationReceipts({
+    targetsJson: TARGETS,
+    githubToken: "ghs_test_token_12345678901234567890",
+    fetchImpl,
+    observedAt: "2026-11-24T17:00:00.000Z"
+  });
+  assert.equal(receipts.length, 1);
+  assert.equal(receipts[0].receipt_type, "GITHUB_WORKFLOW_RUN_EVIDENCE");
+  assert.equal(receipts[0].run.id, 901);
+  assert.equal(receipts[0].run.github_hosted_runner_verified, true);
+  const published = await publishAnnotationReceipts({
+    receipts,
+    notionToken: "secret_notion_token",
+    notionPageId: "page-id",
+    fetchImpl
+  });
+  assert.equal(published.published, 0);
+  assert.equal(calls.some(call => call.path === "/comments" && call.method === "POST"), false);
+});
+
+test("recent-run mode scans all branches and correlates annotations to exact run attempt", async () => {
+  const recentTargets = JSON.stringify({
+    schema_version: 1,
+    targets: [{
+      repository: "example/private-repo",
+      scan_recent_runs: true,
+      lookback_days: 7,
+      expected_workflows: []
+    }]
+  });
+  const calls = [];
+  const fetchImpl = async (url, init = {}) => {
+    const parsed = new URL(url);
+    calls.push(parsed.toString());
+    if (parsed.pathname.endsWith("/actions/runs")) {
+      assert.ok(parsed.searchParams.get("created").startsWith(">="));
+      return jsonResponse({ workflow_runs: [{
+        id: 902, run_attempt: 3, workflow_id: 9, check_suite_id: 9020,
+        name: "CI", path: ".github/workflows/ci.yml", event: "push",
+        status: "completed", conclusion: "failure", head_branch: "feature/usage",
+        head_sha: SHA, created_at: "2026-11-24T16:00:00Z",
+        updated_at: "2026-11-24T16:01:00Z"
+      }] });
+    }
+    if (parsed.pathname.endsWith("/actions/runs/902/attempts/3/jobs")) {
+      return jsonResponse({ jobs: [{
+        id: 9022, name: "build", status: "completed", conclusion: "failure",
+        runner_id: 0, runner_name: null, labels: [], steps: []
+      }] });
+    }
+    if (parsed.pathname.endsWith("/check-runs")) {
+      return jsonResponse({ check_runs: [{
+        id: 9021, head_sha: SHA, check_suite: { id: 9020 },
+        name: "GitHub Actions", app: { slug: "github-actions" },
+        status: "completed", conclusion: "failure",
+        output: { annotations_count: 1 }
+      }] });
+    }
+    if (parsed.pathname.endsWith("/check-runs/9021/annotations")) {
+      return jsonResponse([{
+        path: ".github/workflows/ci.yml", annotation_level: "failure",
+        title: "Quota failure", message: "Actions included minutes exhausted"
+      }]);
+    }
+    throw new Error("UNEXPECTED_GITHUB_REQUEST " + parsed.pathname);
+  };
+  const receipts = await collectAnnotationReceipts({
+    targetsJson: recentTargets,
+    githubToken: "ghs_test_token_12345678901234567890",
+    fetchImpl,
+    observedAt: "2026-11-24T17:00:00.000Z"
+  });
+  assert.equal(receipts.length, 1);
+  assert.equal(receipts[0].receipt_type, "GITHUB_CHECK_RUN_ANNOTATION");
+  assert.equal(receipts[0].source.run_id, 902);
+  assert.equal(receipts[0].source.run_attempt, 3);
+  assert.equal(receipts[0].source.run_ref, "feature/usage");
+  assert.equal(receipts[0].source.runner_sentinel, true);
+  assert.equal(receipts[0].source.empty_steps_trigger, true);
+  assert.equal(receipts[0].check_run.id, 9021);
+  assert.equal(receipts[0].classification, "ACTIONS_BILLING_QUOTA_EXHAUSTED");
+  assert.equal(calls.some(url => new URL(url).pathname.endsWith("/branches/")), false);
+});
+
+test("does not publish a check-run annotation when exact run correlation is unavailable", async () => {
+  const recentTargets = JSON.stringify({
+    schema_version: 1,
+    targets: [{
+      repository: "example/private-repo",
+      scan_recent_runs: true,
+      lookback_days: 7,
+      expected_workflows: []
+    }]
+  });
+  const fetchImpl = async url => {
+    const parsed = new URL(url);
+    if (parsed.pathname.endsWith("/actions/runs")) return jsonResponse({ workflow_runs: [{
+      id: 903, run_attempt: 1, check_suite_id: 9030, head_sha: SHA,
+      head_branch: "feature/unmatched", status: "completed", conclusion: "failure"
+    }] });
+    if (parsed.pathname.endsWith("/actions/runs/903/attempts/1/jobs")) {
+      return jsonResponse({ jobs: [{
+        id: 9032, name: "build", status: "completed", conclusion: "failure",
+        runner_id: 0, runner_name: null, labels: [], steps: []
+      }] });
+    }
+    if (parsed.pathname.endsWith("/check-runs/9031/annotations")) return jsonResponse([{
+      path: ".github/workflows/ci.yml", annotation_level: "failure",
+      title: "Unmatched annotation", message: "Quota details are not correlated"
+    }]);
+    if (parsed.pathname.endsWith("/check-runs")) return jsonResponse({ check_runs: [{
+      id: 9031, head_sha: SHA, check_suite: { id: 9999 },
+      name: "GitHub Actions", app: { slug: "github-actions" },
+      output: { annotations_count: 1 }
+    }] });
+    throw new Error("UNEXPECTED_GITHUB_REQUEST " + parsed.pathname);
+  };
+  const receipts = await collectAnnotationReceipts({
+    targetsJson: recentTargets,
+    githubToken: "ghs_test_token_12345678901234567890",
+    fetchImpl,
+    observedAt: "2026-11-24T17:00:00.000Z"
+  });
+  assert.equal(receipts.length, 1);
+  assert.equal(receipts[0].receipt_type, "GITHUB_CHECK_RUN_UNMATCHED");
+  assert.equal(receipts[0].reason, "CHECK_RUN_RUN_CORRELATION_UNRESOLVED");
+  assert.equal(receipts[0].classification, "UNMATCHED_CHECK_RUN_CORRELATION");
+  assert.equal(receipts[0].annotations_status, "RETRIEVED");
+  assert.equal(receipts[0].annotations.length, 1);
+  assert.equal(receipts[0].source.runner_sentinel, null);
+  assert.equal(receipts[0].source.empty_steps_trigger, null);
+});
+
+test("self-hosted success does not prove included GitHub-hosted runner availability", async () => {
+  const fetchImpl = async url => {
+    const parsed = new URL(url);
+    if (parsed.pathname.endsWith("/branches/main")) return jsonResponse({ commit: { sha: SHA } });
+    if (parsed.pathname.endsWith("/actions/runs")) return jsonResponse({ workflow_runs: [{
+      id: 905, run_attempt: 1, check_suite_id: 9050, head_sha: SHA,
+      head_branch: "main", status: "completed", conclusion: "success",
+      updated_at: "2026-11-24T16:59:00.000Z"
+    }] });
+    if (parsed.pathname.endsWith("/actions/runs/905/attempts/1/jobs")) return jsonResponse({ jobs: [{
+      id: 9051, name: "self-hosted-build", status: "completed", conclusion: "success",
+      runner_id: 55, runner_name: "private-runner-01",
+      labels: ["self-hosted", "linux", "x64"],
+      steps: [{ name: "build", status: "completed", conclusion: "success" }]
+    }] });
+    if (parsed.pathname.endsWith("/check-runs")) return jsonResponse({ check_runs: [] });
+    throw new Error("UNEXPECTED_REQUEST " + parsed.pathname);
+  };
+  const receipts = await collectAnnotationReceipts({
+    targetsJson: TARGETS,
+    githubToken: "ghs_test_token_12345678901234567890",
+    fetchImpl,
+    observedAt: "2026-11-24T17:00:00.000Z"
+  });
+  assert.equal(receipts.length, 1);
+  assert.equal(receipts[0].receipt_type, "GITHUB_WORKFLOW_RUN_EVIDENCE");
+  assert.equal(receipts[0].run.github_hosted_runner_verified, false);
+});
+
+test("runner_id zero and empty steps trigger annotation retrieval even with zero reported annotations", async () => {
+  const calls = [];
+  const fetchImpl = async url => {
+    const parsed = new URL(url);
+    calls.push(parsed.pathname);
+    if (parsed.pathname.endsWith("/branches/main")) return jsonResponse({ commit: { sha: SHA } });
+    if (parsed.pathname.endsWith("/actions/runs")) return jsonResponse({ workflow_runs: [{
+      id: 906, run_attempt: 1, check_suite_id: 9060, head_sha: SHA,
+      head_branch: "main", status: "completed", conclusion: "failure",
+      updated_at: "2026-11-24T16:59:00.000Z"
+    }] });
+    if (parsed.pathname.endsWith("/actions/runs/906/attempts/1/jobs")) return jsonResponse({ jobs: [{
+      id: 9062, name: "build", status: "completed", conclusion: "failure",
+      runner_id: 0, runner_name: null, labels: [], steps: []
+    }] });
+    if (parsed.pathname.endsWith("/check-runs")) return jsonResponse({ check_runs: [{
+      id: 9061, head_sha: SHA, check_suite: { id: 9060 },
+      name: "GitHub Actions", app: { slug: "github-actions" },
+      status: "completed", conclusion: "failure", output: { annotations_count: 0 }
+    }] });
+    if (parsed.pathname.endsWith("/check-runs/9061/annotations")) return jsonResponse([]);
+    throw new Error("UNEXPECTED_REQUEST " + parsed.pathname);
+  };
+  const receipts = await collectAnnotationReceipts({
+    targetsJson: TARGETS,
+    githubToken: "ghs_test_token_12345678901234567890",
+    fetchImpl,
+    observedAt: "2026-11-24T17:00:00.000Z"
+  });
+  assert.equal(receipts.length, 1);
+  assert.equal(receipts[0].annotations_status, "RETRIEVED_EMPTY");
+  assert.ok(receipts[0].annotation_lookup_trigger.includes("RUNNER_ID_ZERO_OR_EMPTY_STEPS"));
+  assert.equal(receipts[0].source.runner_sentinel, true);
+  assert.equal(receipts[0].source.empty_steps_trigger, true);
+  assert.notEqual(receipts[0].classification, "ACTIONS_BILLING_QUOTA_EXHAUSTED");
+  assert.ok(calls.some(path => path.endsWith("/check-runs/9061/annotations")));
 });

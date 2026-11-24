@@ -25,8 +25,27 @@ function validateTargets(raw) {
   assert(config && config.schema_version === 1 && Array.isArray(config.targets), "INVALID_TARGETS_SCHEMA");
   for (const target of config.targets) {
     assert(/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(target.repository || ""), "INVALID_TARGET_REPOSITORY");
-    assert(/^[A-Za-z0-9._/-]+$/.test(target.branch || "") && !target.branch.includes(".."), "INVALID_TARGET_BRANCH");
+    const recentMode = target.scan_recent_runs === true;
+    if (!recentMode) {
+      assert(/^[A-Za-z0-9._/-]+$/.test(target.branch || "") && !target.branch.includes(".."), "INVALID_TARGET_BRANCH");
+    }
+    if (recentMode) {
+      const lookback = Number(target.lookback_days ?? 7);
+      assert(Number.isInteger(lookback) && lookback >= 1 && lookback <= 31, "INVALID_RECENT_RUN_LOOKBACK");
+    }
     assert(Array.isArray(target.expected_workflows), "INVALID_EXPECTED_WORKFLOWS");
+    assert(target.scan_recent_runs === undefined || typeof target.scan_recent_runs === "boolean",
+      "INVALID_SCAN_RECENT_RUNS");
+    if (target.availability_freshness_minutes !== undefined) {
+      const freshness = Number(target.availability_freshness_minutes);
+      assert(Number.isInteger(freshness) && freshness >= 1 && freshness <= 120,
+        "INVALID_AVAILABILITY_FRESHNESS");
+    }
+    if (target.trigger_lookback_hours !== undefined) {
+      const triggerLookback = Number(target.trigger_lookback_hours);
+      assert(Number.isInteger(triggerLookback) && triggerLookback >= 1 && triggerLookback <= 168,
+        "INVALID_TRIGGER_LOOKBACK");
+    }
     assert(target.include_open_pull_requests === undefined || typeof target.include_open_pull_requests === "boolean",
       "INVALID_INCLUDE_OPEN_PULL_REQUESTS");
   }
@@ -109,6 +128,67 @@ function annotationRecord(item) {
   };
 }
 
+async function collectRunJobEvidence({ base, repository, run, token, fetchImpl, observedAt, freshnessMinutes, triggerLookbackHours, force = false }) {
+  const updatedAt = Date.parse(run.updated_at || run.created_at || "");
+  const observedTime = Date.parse(observedAt);
+  const recentSuccess = run.status === "completed" && run.conclusion === "success" &&
+    Number.isFinite(updatedAt) && Number.isFinite(observedTime) &&
+    updatedAt <= observedTime + 60_000 && observedTime - updatedAt <= freshnessMinutes * 60_000;
+  const recentFailedRun = run.status === "completed" && run.conclusion &&
+    !["success", "skipped", "neutral"].includes(run.conclusion) &&
+    Number.isFinite(updatedAt) && Number.isFinite(observedTime) &&
+    updatedAt <= observedTime + 60_000 &&
+    observedTime - updatedAt <= triggerLookbackHours * 60 * 60_000;
+  if (!recentSuccess && !recentFailedRun && !force) {
+    return {
+      status: "NOT_REQUIRED", jobs: [], runner_sentinel: null,
+      empty_steps_trigger: null, github_hosted_runner_verified: false,
+    };
+  }
+  const attempt = Number(run.run_attempt || 1);
+  const jobsUrl = new URL(base + "/repos/" + repository + "/actions/runs/" +
+    run.id + "/attempts/" + attempt + "/jobs");
+  jobsUrl.searchParams.set("per_page", "100");
+  try {
+    const page = await paginate(jobsUrl, { token, collection: "jobs", fetchImpl });
+    const jobs = page.items.map(job => ({
+      id: job.id,
+      name: sanitizeEvidence(job.name),
+      status: job.status || null,
+      conclusion: job.conclusion || null,
+      runner_id: job.runner_id ?? null,
+      runner_name: sanitizeEvidence(job.runner_name),
+      labels: Array.isArray(job.labels) ? job.labels.map(label => sanitizeEvidence(label)) : [],
+      steps_count: Array.isArray(job.steps) ? job.steps.length : null,
+    }));
+    const runnerSentinel = jobs.some(job => Number(job.runner_id) === 0);
+    const emptyStepsTrigger = jobs.some(job => job.steps_count === 0);
+    const hostedRunnerVerified = run.conclusion === "success" && jobs.some(job =>
+      job.status === "completed" && job.conclusion === "success" &&
+      Number(job.runner_id) > 0 &&
+      !job.labels.some(label => /self-hosted/i.test(label)) &&
+      job.labels.some(label => /^(ubuntu|windows|macos)-/i.test(label))
+    );
+    return {
+      status: jobs.length ? "OK" : "EMPTY",
+      jobs,
+      runner_sentinel: jobs.length ? runnerSentinel : null,
+      empty_steps_trigger: jobs.length ? emptyStepsTrigger : null,
+      github_hosted_runner_verified: hostedRunnerVerified,
+      page_count: page.pageCount,
+    };
+  } catch (error) {
+    return {
+      status: "API_ERROR",
+      error: sanitizeEvidence(error.message || "JOB_EVIDENCE_UNAVAILABLE"),
+      jobs: [],
+      runner_sentinel: null,
+      empty_steps_trigger: null,
+      github_hosted_runner_verified: false,
+    };
+  }
+}
+
 export async function collectAnnotationReceipts({
   targetsJson,
   githubToken,
@@ -121,37 +201,66 @@ export async function collectAnnotationReceipts({
   const receipts = [];
   for (const target of targets) {
     const base = githubApi.replace(/\/$/, "");
-    const targetRefs = [];
-    const branchUrl = base + "/repos/" + target.repository + "/branches/" + encodeURIComponent(target.branch);
-    const { data: branch } = await requestJson(branchUrl, { token: githubToken, fetchImpl });
-    const branchSha = branch?.commit?.sha;
-    if (!/^[a-f0-9]{40}$/i.test(branchSha || "")) throw new Error("TARGET_HEAD_SHA_UNAVAILABLE");
-    targetRefs.push({
-      branch: target.branch,
-      headSha: branchSha,
-      sourceRefType: "CONFIGURED_BRANCH",
-      pullRequestNumber: null,
-      pullRequestDiscoveryPages: 0,
-    });
+    let targetRefs = [];
+    if (target.scan_recent_runs === true) {
+      const lookbackDays = Number(target.lookback_days ?? 7);
+      const since = new Date(Date.parse(observedAt) - lookbackDays * 24 * 60 * 60_000).toISOString();
+      const recentRunsUrl = new URL(base + "/repos/" + target.repository + "/actions/runs");
+      recentRunsUrl.searchParams.set("created", ">=" + since);
+      recentRunsUrl.searchParams.set("per_page", "100");
+      const recentPage = await paginate(recentRunsUrl, {
+        token: githubToken, collection: "workflow_runs", fetchImpl
+      });
+      const grouped = new Map();
+      for (const run of recentPage.items) {
+        const headSha = run?.head_sha;
+        if (!/^[a-f0-9]{40}$/i.test(headSha || "")) continue;
+        if (!grouped.has(headSha)) {
+          grouped.set(headSha, {
+            branch: run.head_branch || "unknown",
+            headSha,
+            sourceRefType: "RECENT_WORKFLOW_RUN",
+            pullRequestNumber: null,
+            pullRequestDiscoveryPages: 0,
+            runDiscoveryPages: recentPage.pageCount,
+            runs: [],
+          });
+        }
+        grouped.get(headSha).runs.push(run);
+      }
+      targetRefs = [...grouped.values()];
+    } else {
+      const branchUrl = base + "/repos/" + target.repository + "/branches/" + encodeURIComponent(target.branch);
+      const { data: branch } = await requestJson(branchUrl, { token: githubToken, fetchImpl });
+      const branchSha = branch?.commit?.sha;
+      if (!/^[a-f0-9]{40}$/i.test(branchSha || "")) throw new Error("TARGET_HEAD_SHA_UNAVAILABLE");
+      targetRefs.push({
+        branch: target.branch,
+        headSha: branchSha,
+        sourceRefType: "CONFIGURED_BRANCH",
+        pullRequestNumber: null,
+        pullRequestDiscoveryPages: 0,
+      });
 
-    if (target.include_open_pull_requests === true) {
-      const pullsUrl = new URL(base + "/repos/" + target.repository + "/pulls");
-      pullsUrl.searchParams.set("state", "open");
-      pullsUrl.searchParams.set("per_page", "100");
-      const pullPage = await paginate(pullsUrl, { token: githubToken, fetchImpl });
-      for (const pull of pullPage.items) {
-        const pullHead = pull?.head;
-        const headSha = pullHead?.sha;
-        // Only same-repository PR heads are eligible. Fork code is never followed.
-        if (pull.state !== "open" || pullHead?.repo?.full_name !== target.repository ||
-            !/^[a-f0-9]{40}$/i.test(headSha || "") || typeof pullHead.ref !== "string") continue;
-        targetRefs.push({
-          branch: pullHead.ref,
-          headSha,
-          sourceRefType: "OPEN_PULL_REQUEST",
-          pullRequestNumber: pull.number ?? null,
-          pullRequestDiscoveryPages: pullPage.pageCount,
-        });
+      if (target.include_open_pull_requests === true) {
+        const pullsUrl = new URL(base + "/repos/" + target.repository + "/pulls");
+        pullsUrl.searchParams.set("state", "open");
+        pullsUrl.searchParams.set("per_page", "100");
+        const pullPage = await paginate(pullsUrl, { token: githubToken, fetchImpl });
+        for (const pull of pullPage.items) {
+          const pullHead = pull?.head;
+          const headSha = pullHead?.sha;
+          // Only same-repository PR heads are eligible. Fork code is never followed.
+          if (pull.state !== "open" || pullHead?.repo?.full_name !== target.repository ||
+              !/^[a-f0-9]{40}$/i.test(headSha || "") || typeof pullHead.ref !== "string") continue;
+          targetRefs.push({
+            branch: pullHead.ref,
+            headSha,
+            sourceRefType: "OPEN_PULL_REQUEST",
+            pullRequestNumber: pull.number ?? null,
+            pullRequestDiscoveryPages: pullPage.pageCount,
+          });
+        }
       }
     }
 
@@ -160,48 +269,216 @@ export async function collectAnnotationReceipts({
     )).values()];
     for (const targetRef of uniqueRefs) {
     const headSha = targetRef.headSha;
-    const runsUrl = new URL(base + "/repos/" + target.repository + "/actions/runs");
-    runsUrl.searchParams.set("head_sha", headSha);
-    runsUrl.searchParams.set("per_page", "100");
-    const runPage = await paginate(runsUrl, { token: githubToken, collection: "workflow_runs", fetchImpl });
-    const runs = runPage.items.filter(run => run.head_sha === headSha).map(run => ({
-      id: run.id,
-      run_attempt: run.run_attempt ?? null,
-      workflow_id: run.workflow_id ?? null,
-      name: sanitizeEvidence(run.name),
-      path: sanitizeEvidence(run.path),
-      event: run.event ?? null,
-      status: run.status ?? null,
-      conclusion: run.conclusion ?? null,
-      created_at: run.created_at ?? null,
-      updated_at: run.updated_at ?? null,
-      head_sha: run.head_sha,
-    }));
+    let runPage;
+    let rawRuns;
+    if (Array.isArray(targetRef.runs)) {
+      rawRuns = targetRef.runs;
+      runPage = { pageCount: targetRef.runDiscoveryPages || 1 };
+    } else {
+      const runsUrl = new URL(base + "/repos/" + target.repository + "/actions/runs");
+      runsUrl.searchParams.set("head_sha", headSha);
+      runsUrl.searchParams.set("per_page", "100");
+      runPage = await paginate(runsUrl, { token: githubToken, collection: "workflow_runs", fetchImpl });
+      rawRuns = runPage.items;
+    }
+    const runs = [];
+    for (const rawRun of rawRuns.filter(run => run.head_sha === headSha)) {
+      const jobEvidence = await collectRunJobEvidence({
+        base,
+        repository: target.repository,
+        run: rawRun,
+        token: githubToken,
+        fetchImpl,
+        observedAt,
+        freshnessMinutes: Number(target.availability_freshness_minutes ?? 30),
+        triggerLookbackHours: Number(target.trigger_lookback_hours ?? 24),
+      });
+      runs.push({
+        id: rawRun.id,
+        run_attempt: rawRun.run_attempt ?? null,
+        workflow_id: rawRun.workflow_id ?? null,
+        check_suite_id: rawRun.check_suite_id ?? null,
+        head_branch: rawRun.head_branch ?? targetRef.branch,
+        name: sanitizeEvidence(rawRun.name),
+        path: sanitizeEvidence(rawRun.path),
+        event: rawRun.event ?? null,
+        status: rawRun.status ?? null,
+        conclusion: rawRun.conclusion ?? null,
+        created_at: rawRun.created_at ?? null,
+        updated_at: rawRun.updated_at ?? null,
+        head_sha: rawRun.head_sha,
+        jobs: jobEvidence.jobs,
+        job_evidence_status: jobEvidence.status,
+        job_evidence_error: jobEvidence.error || null,
+        runner_sentinel: jobEvidence.runner_sentinel,
+        empty_steps_trigger: jobEvidence.empty_steps_trigger,
+        github_hosted_runner_verified: jobEvidence.github_hosted_runner_verified,
+      });
+    }
 
     const checkRunsUrl = new URL(base + "/repos/" + target.repository + "/commits/" + headSha + "/check-runs");
     checkRunsUrl.searchParams.set("filter", "all");
     checkRunsUrl.searchParams.set("per_page", "100");
     const checkPage = await paginate(checkRunsUrl, { token: githubToken, collection: "check_runs", fetchImpl });
     const checkRuns = checkPage.items.filter(item => item.head_sha === headSha);
+    for (const run of runs) {
+      if (run.status !== "completed" || run.conclusion !== "success") continue;
+      receipts.push({
+        schema_version: 1,
+        receipt_type: "GITHUB_WORKFLOW_RUN_EVIDENCE",
+        observed_at: observedAt,
+        source: {
+          repository: target.repository,
+          branch: run.head_branch || targetRef.branch,
+          source_ref_type: targetRef.sourceRefType,
+          pull_request_number: targetRef.pullRequestNumber,
+          head_sha: run.head_sha,
+          run_id: run.id,
+          run_attempt: run.run_attempt,
+          check_suite_id: run.check_suite_id,
+        },
+        run: {
+          id: run.id,
+          attempt: run.run_attempt,
+          workflow_id: run.workflow_id,
+          check_suite_id: run.check_suite_id,
+          head_branch: run.head_branch,
+          job_evidence_status: run.job_evidence_status,
+          runner_sentinel: run.runner_sentinel,
+          empty_steps_trigger: run.empty_steps_trigger,
+          github_hosted_runner_verified: run.github_hosted_runner_verified,
+          jobs: run.jobs,
+          name: run.name,
+          path: run.path,
+          event: run.event,
+          status: run.status,
+          conclusion: run.conclusion,
+          created_at: run.created_at,
+          updated_at: run.updated_at,
+        },
+        dedupe_key: "gh-run:" + target.repository + ":" + run.id + ":" + run.run_attempt,
+      });
+    }
     for (const checkRun of checkRuns) {
+      if (checkRun.status && checkRun.status !== "completed") continue;
       const annotationCount = Number(checkRun.output?.annotations_count ?? 0);
-      const failed = checkRun.conclusion && !["success", "skipped", "neutral"].includes(checkRun.conclusion);
-      if (annotationCount === 0 && !failed) continue;
+      const outputText = [checkRun.output?.title, checkRun.output?.summary, checkRun.output?.text].filter(Boolean).join("\n");
+      const providerQuota = String(checkRun.app?.slug || "").toLowerCase() === "github-actions" &&
+        checkRun.name === "GitHub Actions" &&
+        /actions.{0,80}(?:billing|minutes|quota|spending limit)|(?:included minutes|spending limit).{0,80}(?:exhausted|reached|exceeded)|payment method.{0,80}(?:required|failed)|billing.{0,80}(?:hard cap|limit reached)/i.test(outputText);
+      const detailsRun = runs.find(run =>
+        checkRun.details_url && String(checkRun.details_url).includes("/actions/runs/" + run.id)
+      );
+      const suiteMatches = runs.filter(run =>
+        run.check_suite_id && checkRun.check_suite?.id &&
+        String(run.check_suite_id) === String(checkRun.check_suite.id)
+      );
+      // A check-suite ID can be shared by rerun attempts. Only use it when unique;
+      // otherwise require the run ID in details_url to preserve exact attempt identity.
+      const correlatedRun = detailsRun || (suiteMatches.length === 1 ? suiteMatches[0] : null);
+      const trustedActionsCheck = String(checkRun.app?.slug || "").toLowerCase() === "github-actions" &&
+        checkRun.name === "GitHub Actions";
+      const runnerTrigger = trustedActionsCheck && (correlatedRun
+        ? correlatedRun.runner_sentinel === true || correlatedRun.empty_steps_trigger === true
+        : runs.some(run => run.runner_sentinel === true || run.empty_steps_trigger === true));
+      const annotationLookupTriggered = annotationCount > 0 || providerQuota || runnerTrigger;
+      if (!annotationLookupTriggered) continue;
+      if (!correlatedRun) {
+        let unmatchedAnnotations = [];
+        let unmatchedStatus = annotationLookupTriggered ? "RETRIEVAL_FAILED" : "NOT_REQUESTED";
+        if (annotationLookupTriggered) {
+          const unmatchedUrl = new URL(base + "/repos/" + target.repository +
+            "/check-runs/" + checkRun.id + "/annotations");
+          unmatchedUrl.searchParams.set("per_page", "100");
+          try {
+            const unmatchedPage = await paginate(unmatchedUrl, {
+              token: githubToken, fetchImpl
+            });
+            unmatchedAnnotations = unmatchedPage.items.map(annotationRecord);
+            unmatchedStatus = unmatchedAnnotations.length ? "RETRIEVED" : "RETRIEVED_EMPTY";
+          } catch {
+            unmatchedStatus = "API_ERROR";
+          }
+        }
+        receipts.push({
+          schema_version: 1,
+          receipt_type: "GITHUB_CHECK_RUN_UNMATCHED",
+          run_correlation_status: "UNMATCHED",
+          classification: "UNMATCHED_CHECK_RUN_CORRELATION",
+          observed_at: observedAt,
+          source: {
+            repository: target.repository,
+            head_sha: headSha,
+            branch: targetRef.branch,
+            runner_sentinel: runs.some(run => run.runner_sentinel === true) ? true :
+              runs.some(run => run.job_evidence_status === "OK") ? false : null,
+            empty_steps_trigger: runs.some(run => run.empty_steps_trigger === true) ? true :
+              runs.some(run => run.job_evidence_status === "OK") ? false : null,
+          },
+          check_run_id: checkRun.id,
+          annotations_reported: annotationCount,
+          annotation_lookup_trigger: [
+            ...(annotationCount > 0 ? ["ANNOTATIONS_COUNT_POSITIVE"] : []),
+            ...(providerQuota ? ["PROVIDER_QUOTA_OUTPUT"] : []),
+            ...(runnerTrigger ? ["RUNNER_ID_ZERO_OR_EMPTY_STEPS"] : []),
+          ],
+          annotations_status: unmatchedStatus,
+          annotations: unmatchedAnnotations,
+          reason: "CHECK_RUN_RUN_CORRELATION_UNRESOLVED",
+          dedupe_key: "gh-checkrun-unmatched:" + target.repository + ":" + headSha + ":" + checkRun.id,
+        });
+        continue;
+      }
+      if (correlatedRun.job_evidence_status === "NOT_REQUIRED") {
+        const jobEvidence = await collectRunJobEvidence({
+          base,
+          repository: target.repository,
+          run: correlatedRun,
+          token: githubToken,
+          fetchImpl,
+          observedAt,
+          freshnessMinutes: Number(target.availability_freshness_minutes ?? 30),
+          triggerLookbackHours: Number(target.trigger_lookback_hours ?? 24),
+          force: true,
+        });
+        Object.assign(correlatedRun, {
+          jobs: jobEvidence.jobs,
+          job_evidence_status: jobEvidence.status,
+          job_evidence_error: jobEvidence.error || null,
+          runner_sentinel: jobEvidence.runner_sentinel,
+          empty_steps_trigger: jobEvidence.empty_steps_trigger,
+          github_hosted_runner_verified: jobEvidence.github_hosted_runner_verified,
+        });
+      }
       const receipt = {
         schema_version: 1,
         receipt_type: "GITHUB_CHECK_RUN_ANNOTATION",
         observed_at: observedAt,
         source: {
           repository: target.repository,
-          branch: targetRef.branch,
+          branch: correlatedRun.head_branch || targetRef.branch,
           source_ref_type: targetRef.sourceRefType,
           pull_request_number: targetRef.pullRequestNumber,
           pull_request_discovery_pages: targetRef.pullRequestDiscoveryPages,
           head_sha: headSha,
+          run_id: correlatedRun.id,
+          run_attempt: correlatedRun.run_attempt,
+          run_ref: correlatedRun.head_branch || targetRef.branch,
+          run_event: correlatedRun.event,
+          run_conclusion: correlatedRun.conclusion,
+          check_suite_id: correlatedRun.check_suite_id,
+          job_evidence_status: correlatedRun.job_evidence_status,
+          runner_sentinel: correlatedRun.runner_sentinel,
+          empty_steps_trigger: correlatedRun.empty_steps_trigger,
           run_discovery_pages: runPage.pageCount,
           check_run_pages: checkPage.pageCount,
           workflow_runs: runs,
         },
+        annotation_lookup_trigger: [
+          ...(annotationCount > 0 ? ["ANNOTATIONS_COUNT_POSITIVE"] : []),
+          ...(providerQuota ? ["PROVIDER_QUOTA_OUTPUT"] : []),
+          ...(runnerTrigger ? ["RUNNER_ID_ZERO_OR_EMPTY_STEPS"] : []),
+        ],
         check_run: {
           id: checkRun.id,
           name: sanitizeEvidence(checkRun.name),
@@ -212,6 +489,11 @@ export async function collectAnnotationReceipts({
           completed_at: checkRun.completed_at ?? null,
           check_suite_id: checkRun.check_suite?.id ?? null,
           annotations_reported: annotationCount,
+          annotation_lookup_trigger: [
+            ...(annotationCount > 0 ? ["ANNOTATIONS_COUNT_POSITIVE"] : []),
+            ...(providerQuota ? ["PROVIDER_QUOTA_OUTPUT"] : []),
+            ...(runnerTrigger ? ["RUNNER_ID_ZERO_OR_EMPTY_STEPS"] : []),
+          ],
           output: {
             title: sanitizeEvidence(checkRun.output?.title),
             summary: sanitizeEvidence(checkRun.output?.summary),
@@ -227,15 +509,16 @@ export async function collectAnnotationReceipts({
         const annotationsUrl = new URL(base + "/repos/" + target.repository + "/check-runs/" + checkRun.id + "/annotations");
         annotationsUrl.searchParams.set("per_page", "100");
         const annotationPage = await paginate(annotationsUrl, { token: githubToken, fetchImpl });
-        receipt.annotations_status = "RETRIEVED";
         receipt.annotations_page_count = annotationPage.pageCount;
         receipt.annotations = annotationPage.items.map(annotationRecord);
+        receipt.annotations_status = receipt.annotations.length ? "RETRIEVED" : "RETRIEVED_EMPTY";
         receipt.classification = classifyCheckRun(checkRun, annotationPage.items);
       } catch (error) {
         receipt.annotations_status = "API_ERROR";
         receipt.annotation_error = { http_status: error.status ?? null, code: sanitizeEvidence(error.message) };
       }
-      receipt.dedupe_key = "gh-checkrun:" + target.repository + ":" + headSha + ":" + checkRun.id;
+      receipt.dedupe_key = "gh-checkrun:" + target.repository + ":" + correlatedRun.id +
+        ":" + correlatedRun.run_attempt + ":" + checkRun.id;
       receipts.push(receipt);
     }
     }
@@ -269,6 +552,7 @@ export async function publishAnnotationReceipts({
   let published = 0;
   let skipped = 0;
   for (const receipt of receipts) {
+    if (receipt.receipt_type && !["GITHUB_CHECK_RUN_ANNOTATION", "GITHUB_CHECK_RUN_UNMATCHED"].includes(receipt.receipt_type)) continue;
     const serialized = JSON.stringify(receipt, null, 2);
     const chunks = chunkText(serialized);
     const groups = [];

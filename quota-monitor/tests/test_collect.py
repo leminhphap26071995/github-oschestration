@@ -57,17 +57,33 @@ class QuotaMonitorTests(unittest.TestCase):
                          [repo["full_name"] for repo in result["repositories"]])
         self.assertEqual("PARTIAL", result["status"])
 
-    def test_user_scope_does_not_infer_actions_usage_from_empty_user_billing_rows(self):
-        with patch.object(module, "get", side_effect=AssertionError("user Actions usage endpoint must not be called")):
+    def test_user_scope_queries_actions_usage_and_repository_usage(self):
+        paths = []
+        usage = {"usageItems": [
+            {"product": "Actions", "sku": "actions_linux", "unitType": "minutes",
+             "grossQuantity": 60, "discountQuantity": 10, "netQuantity": 50,
+             "netAmount": 0.25}
+        ]}
+        def fake_get(token, path):
+            paths.append(path)
+            return usage, None
+        with patch.object(module, "get", side_effect=fake_get):
             with patch.object(module, "pages", return_value=([
-                {"full_name": "alice/private", "owner": {"type": "User", "login": "alice"},
-                 "private": True},
+                {"id": 42, "full_name": "alice/private",
+                 "owner": {"type": "User", "login": "alice"},
+                 "private": True, "default_branch": "main"},
             ], None)):
                 result = module.collect("user", "alice", "token", 2026, 11)
-        self.assertEqual("NOT_EXPOSED_BY_USER_BILLING_API", result["actions_usage_status"])
-        self.assertIsNone(result["totals"]["gross_minutes"])
-        self.assertEqual("NOT_EXPOSED", result["repositories"][0]["status"])
-        self.assertIsNone(result["repositories"][0]["totals"]["net_minutes"])
+        self.assertEqual("OK", result["actions_usage_status"])
+        self.assertEqual(50.0, result["totals"]["net_minutes"])
+        self.assertEqual("OK", result["repositories"][0]["status"])
+        self.assertEqual(50.0, result["repositories"][0]["totals"]["net_minutes"])
+        self.assertTrue(any(path.startswith("/users/alice/settings/billing/usage/summary") for path in paths))
+        self.assertTrue(any("repository=alice%2Fprivate" in path for path in paths))
+
+    def test_empty_usage_rows_are_unknown_not_zero(self):
+        self.assertIsNone(module.totals([])["gross_minutes"])
+        self.assertIsNone(module.totals([])["net_amount"])
 
     def test_missing_tokens_are_unknown_not_zero(self):
         report = module.collect_all("", {}, "alice", ["example-org"])
@@ -88,6 +104,24 @@ class QuotaMonitorTests(unittest.TestCase):
                 "example-org", "example-org", "second-org"
             ]}))
             self.assertEqual(["example-org", "second-org"], module.org_targets(path))
+
+    def test_empty_targets_support_automatic_app_installation_discovery(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "targets.json"
+            path.write_text(json.dumps({
+                "organizations": [],
+                "excluded_organizations": ["huyquanghan-apps"]
+            }))
+            self.assertEqual([], module.org_targets(path))
+
+    def test_excluded_organization_is_never_collected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "targets.json"
+            path.write_text(json.dumps({
+                "organizations": ["leminhphap-improvement", "huyquanghan-apps"],
+                "excluded_organizations": []
+            }))
+            self.assertEqual(["leminhphap-improvement"], module.org_targets(path))
 
     def test_hard_cap_uses_usage_summary_spend(self):
         budgets = {"budgets": [{
@@ -135,7 +169,8 @@ class QuotaMonitorTests(unittest.TestCase):
             }],
         }
         dashboard = module.render(report, [])
-        self.assertIn("not personal Actions usage or remaining included compute balance", dashboard)
+        self.assertIn("empty Actions response is UNKNOWN, not zero", dashboard)
+        self.assertIn("remaining included-compute balance is not exposed", dashboard)
         self.assertIn("UNKNOWN", dashboard)
         self.assertNotIn("0.00", dashboard)
 

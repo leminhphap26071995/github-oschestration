@@ -1,152 +1,103 @@
-# GitHub Actions cost and usage collector
+# GitHub Actions quota and repository-routing monitor
 
-This directory contains the read-only collector and report enrichment used by the existing private monitoring workflow. It reads GitHub billing REST APIs; it does not modify monitored organizations or repositories.
+This repository is the **single central quota-monitor CI**. It discovers the personal account and every eligible organization where the GitHub App is installed, collects Actions usage/budgets at account and repository scope, reads exact provider-owned Actions annotations, and publishes the routing snapshot to Notion.
 
-## Separate signal: per-workflow GitHub REST API rate-limit telemetry
+The workflow runs on a public GitHub-hosted standard runner. Private billing and repository data is sent directly to the private Notion control page. It is never committed to this public repository, printed in logs, or uploaded as an Actions artifact.
 
-The public repository's `.github/workflows/github-api-usage-monitor-smoke.yml` is the focused smoke integration of [hesreallyhim/github-api-usage-monitor](https://github.com/hesreallyhim/github-api-usage-monitor) v2.1.0, pinned to release commit `52198b2c0a112e8647664f4042ae301e718ad7df`. The same pinned action is also integrated into the real `actions-run-diagnostics.yml` workflow-run, annotation-readback, and scheduled private-target jobs.
+## What the monitor verifies
 
-- It monitors the authenticated token's REST API rate-limit buckets during one workflow job and writes a per-job Step Summary.
-- Diagnostics are enabled; the action uploads `state.json` and `poll-log.json` as a run-scoped artifact for inspection.
-- It uses only the job's built-in `GITHUB_TOKEN`, with no additional repository permissions, PAT, App private key, or secret. The smoke workflow makes one controlled authenticated repository-metadata GET after the action's main step so the post hook can demonstrate an observed core-bucket delta.
-- The action supports Linux and macOS runners; this smoke workflow uses Ubuntu.
-- The action's poller queries `GET /rate_limit`; it measures API request-rate-limit usage, not Actions runner minutes, artifact storage billing, or organization spending budgets.
-- The action's polling data is sampled and may include other concurrent jobs sharing the same token's rate-limit pool. It is telemetry, not an exact per-step accounting ledger. Its own documentation also warns that `/rate_limit` may report a 5,000-request authenticated-user bucket while the special `GITHUB_TOKEN` limit is 1,000 requests per repository per hour; the action reports the API response transparently and does not normalize that discrepancy. Treat absolute `remaining` values as raw API-reported bucket data, not the effective GITHUB_TOKEN ceiling.
+GitHub currently documents the user and organization billing usage-summary endpoints as public preview; the monitor treats schema/API changes as collection errors rather than zero usage.
 
-### Candidate decision
+- Personal-account Actions usage through `GET /users/{username}/settings/billing/usage/summary?product=Actions`.
+- Organization Actions usage and budgets through the organization billing summary and budget APIs.
+- Per-repository Actions usage for every discovered repository.
+- All workflow runs across all branches from the last seven days, including exact run-attempt/check-suite correlation; recent successful runs provide availability evidence (freshness window: 30 minutes).
+- Exact provider-owned `GitHub Actions` check-run annotations. If `annotations_count > 0`, the relay reads the annotation receipt. `runner_id=0` and terminal `steps=[]` are recovery triggers, never quota conclusions by themselves.
+- Owner-reported exhaustion stored in Notion. A report remains blocking until a later explicit `CLEARED` owner record is added.
 
-- **Selected for telemetry:** `hesreallyhim/github-api-usage-monitor` because it reports per-bucket usage over the job lifecycle and can retain poll diagnostics for review.
-- **Not adopted:** `Coderrob/github-rate-limit-check`. It provides a one-shot threshold gate rather than usage-over-time telemetry; its current composite action interpolates the token into a shell command argument, and its script uses `curl -s` without `--fail`/HTTP-status validation. That is weaker for a least-privilege, secret-conscious diagnostic path and duplicates only a simple snapshot that the selected monitor already reports.
+An empty usage response is **UNKNOWN**, not zero. A budget that is below its hard cap does **not** prove included Actions minutes remain. The monitor only labels a repository `AVAILABLE_VERIFIED` when a successful workflow run is observed inside the freshness window and no owner/provider/budget exhaustion signal overrides it.
 
-This integration supplements the private billing collector below. It must never be used to classify Actions quota exhaustion or replace billing API evidence.
+## One-time setup — no per-repository configuration
 
-## First-stage workflow credential audit
+### 1. GitHub App (organization inventory)
 
-The separate `.github/workflows/quota-token-permission-audit.yml` workflow verifies the built-in, short-lived `GITHUB_TOKEN` available to a GitHub Actions job. It is deliberately limited to read access:
+Configure one GitHub App with read-only permissions:
 
-- `actions: read` — inspect workflow runs and jobs.
-- `checks: read` — inspect check runs and annotations.
-- `contents: read` — read workflow/source files and receipts.
-- `metadata: read` is implicit; all other permission keys are `none`.
+| Permission | Access |
+|---|---|
+| Administration | Read |
+| Actions | Read |
+| Checks | Read |
+| Contents | Read |
+| Metadata | Read (implicit) |
 
-The workflow prints the declared permission contract and read-only API probe results to the job log and step summary. It never prints the token, uses no PAT or GitHub App private key, and performs no write, billing, cleanup, cancellation, or deletion operation. It is triggered automatically only by changes to its own workflow, script, tests, README, or the conformance workflow on `main`; it has no manual dispatch path.
+Install the App on each organization to monitor and select **All repositories**. The CI discovers installations automatically and enumerates repositories; newly created repositories are included without adding per-repo config. The protected organization `huyquanghan-apps` is excluded in `targets.json` and cannot be added by installation discovery.
 
-Important distinction: GitHub's `X-Accepted-GitHub-Permissions` response header identifies what an endpoint requires, not what the token was granted. `GITHUB_TOKEN` is a GitHub App installation token, so absence of the classic OAuth `X-OAuth-Scopes` header is not evidence of zero permissions. The explicit job-level `permissions` block is the grant contract for this workflow; API probes verify the read paths used by the next quota-monitor stage. Public-repository read success is not a complete token-permission inventory.
+Add these repository Actions secrets to `leminhphap26071995/github-oschestration`:
 
-This first-stage audit does not inspect billing usage or decide whether Actions quota is exhausted. Those are separate later steps.
+- `GITHUB_APP_ID`
+- `GITHUB_APP_PRIVATE_KEY`
 
-## Unified GitHub Actions lifecycle and quota observer
+The App installation permissions must be approved by each organization owner/admin after the permission update.
 
-`.github/workflows/actions-run-diagnostics.yml` is the single automatic observer workflow. It has two entry paths:
+### 2. Personal-account token
 
-1. `workflow_run` on requested and completed events for an explicit allowlist of repository workflows.
-2. A 15-minute schedule that polls explicitly configured private targets from a public-repository runner. The private-target job also listens for the requested event of Workflow Quality Gate from the trusted main branch, then polls that exact source run until it completes successfully before reading private targets. This provides an automatic non-manual probe after workflow configuration changes.
+Create one fine-grained PAT scoped to all repositories owned by the personal account, with read-only permissions:
 
-For workflow-run events, the observer runs on the trusted default branch, validates the source run against the event payload, and fetches the exact source workflow blob at the source SHA as data. It never checks out or executes the triggering branch. On a requested event it polls up to four times at 15-second intervals until a runner/step appears or the source run completes; the completed event then captures terminal evidence.
+- Plan: Read (personal Actions usage summary)
+- Metadata: Read (repository inventory)
+- Actions: Read
+- Checks: Read
+- Contents: Read
 
-The collector retrieves:
-- Exact run and attempt metadata.
-- Attempt-scoped jobs and their raw runner_id/runner_name field states.
-- Job Check Run IDs and all annotation pages.
-- Workflow Check Suite IDs, Check Runs, outputs, and annotations, including the zero-job case.
-- Job logs with bounded retries and Retry-After handling.
-- Exact source workflow actionlint diagnostics and source-file SHA-256.
+Store it as `USER_BILLING_TOKEN`. No organization or per-repository token map is required; the GitHub App handles organization installations.
 
-The separate readback job waits for collection, then retrieves the actual Check Run annotations from the observer's diagnose job. The final artifact contains both the sanitized source diagnostic receipt and the observer annotation readback. Raw job logs are read in memory only; they are not printed or persisted.
+### 3. Notion integration
 
-The scheduled private-target job reads PRIVATE_MONITOR_TOKEN and PRIVATE_TARGETS_JSON only from repository Secrets. The private token is referenced only inside this schedule job, never in the workflow_run observer. The token needs Actions: read, Checks: read, Contents: read, and Metadata: read for every configured target. The target list must use opaque aliases and explicitly define expected workflow paths and trigger expectations:
-- every_push only when the workflow truly runs on every push to the configured branch.
-- schedule with an explicit expected interval for scheduled workflows.
+Create one Notion integration token with:
 
-Path-filtered or conditional triggers are not inferred. For each observed or missing run, the monitor fetches the exact workflow file at the source/branch SHA and runs actionlint plus the reusable workflow-quality-gate action-runtime metadata audit. It can identify malformed YAML/schema and retired/unsupported remote action runtimes. Unavailable action metadata remains UNKNOWN. If no run is observed and neither parser nor runtime audit proves a configuration fault, the result is NO_RUN_OBSERVED with UNKNOWN cause. A missing run is never converted into quota exhaustion.
+- Read content
+- Update content
+- Read comments
+- Insert comments
 
-The private-target report deliberately redacts repository names, workflow paths, branch names, SHAs, run IDs, raw logs, and provider messages before uploading to this public repository. It emits only opaque target/workflow aliases, lifecycle status, classification, and evidence types. Missing credentials produce BLOCKED, not a healthy zero.
+Share the GM-51 quota-control page and GM-50 annotation-receipt page with the integration. Store the token as `NOTION_API_TOKEN`. The two page IDs and freshness policy are non-secret configuration in `notion-targets.json`; do not create one page/config per repository.
 
-The pinned API usage monitor action runs at the beginning of observer jobs:
-- GITHUB_TOKEN telemetry for workflow-run collection, annotation readback, and the public scheduled observer, including the private-target job's public observer token.
-- It does not monitor PRIVATE_MONITOR_TOKEN. A real run showed that the action's pre hook executes with an empty optional token before a step-level condition can protect its main step. That conditional action was removed; the private-target collector now emits a redacted BLOCKED receipt when credentials are unavailable. Private-token API-rate telemetry is not currently a separate signal.
+## Repository discovery and routing
 
-These state/poll-log artifacts measure REST API rate-limit buckets. They do not measure included Actions minutes, runner billing, artifact-storage quota, or organization spending caps.
+`targets.json` intentionally has an empty `organizations` list. `prepare_app_tokens.mjs` discovers all organization installations and mints short-lived installation tokens. An installation with `repository_selection != all` is reported as partial coverage.
 
-### Evidence classification rules
+The Notion page property **Quota Routing Snapshot** is refreshed every monitor run. Full evidence is added as a Notion comment when routing state changes and at least once every six hours.
 
-- ACTIONS_BILLING_QUOTA_EXHAUSTED is accepted only from (a) the output title/summary/text of the workflow-level Check Run whose app_slug is `github-actions` and name is `GitHub Actions`, with explicit Actions billing/spending/included-usage wording, or (b) a fresh, matching billing snapshot with `prevent_further_usage=true` and `HARD_CAP_REACHED`. Job-level annotations and arbitrary step logs are not quota proof because workflow code can emit them.
-- ACTIONS_ADMISSION_BLOCKED requires explicit repository/organization policy evidence.
-- ACTION_RUNTIME_RETIRED_OR_UNSUPPORTED identifies deprecated/unsupported action runtimes and runner compatibility.
-- WORKFLOW_YAML_SYNTAX_ERROR and WORKFLOW_SCHEMA_OR_EXPRESSION_ERROR require parser/provider evidence tied to the exact workflow source or a real parser Check Run annotation.
-- STEP_IMPLEMENTATION_FAILURE and STEP_FAILURE require an executed failing step and its evidence.
-- STATIC_ANALYSIS_WARNING preserves ShellCheck/actionlint/linter findings separately.
-- API_RATE_LIMITED is separate from Actions compute/billing quota.
-- RUNNER_NOT_ASSIGNED_YET, OBSERVATION_WINDOW_IN_PROGRESS, LOG_PUBLICATION_PENDING, and UNKNOWN are lifecycle/evidence states, not quota proof.
+Routing states:
 
-A generic 403/404/429, runner_id=0, empty jobs/steps, BlobNotFound, missing run, or aggregate usage total never proves Actions quota exhaustion. Collector API failures remain separate from source workflow failures.
+| State | Meaning | May a ChatGPT session select it? |
+|---|---|---|
+| `AVAILABLE_VERIFIED` | Recent successful GitHub-hosted runner job within 30 minutes; no stronger exhaustion signal | Yes, after requirement-to-repository mapping |
+| `NEAR_LIMIT` | Configured hard-cap budget reached the 80% alert threshold | Prefer another eligible repository |
+| `QUOTA_EXHAUSTED` | Provider annotation or enforced hard cap proves exhaustion | No |
+| `REPORTED_QUOTA_EXHAUSTED` | Owner-reported; awaiting provider confirmation/owner clearance | No |
+| `UNKNOWN`, `STALE`, `NOT_CONFIGURED` | No current availability proof | No |
+| `PERMISSION_DENIED`, `API_RATE_LIMITED` | Collection incomplete | No |
 
-The public repository's standard GitHub-hosted runners are free independently and do not draw from the private owner's included compute usage pool. This provides an independent compute path for configured private targets, but it is not independent of account suspension or GitHub-wide service outages.
+Quota is a routing constraint, not a repository-selection policy. UPW must first resolve the requirement's authorized repository; it may only choose an alternative when Notion's requirement-to-repository map permits it. Never route private payloads to a public repository merely because its runner is available.
 
-See [GITHUB-ACTIONS-OBSERVABILITY-ARCHITECTURE.md](../docs/GITHUB-ACTIONS-OBSERVABILITY-ARCHITECTURE.md) for the complete evidence and security contract.
+## CI layout
 
-## Official source of truth
+`.github/workflows/github-actions-quota-monitor.yml` is the one central monitor CI. It runs every 15 minutes and contains the repository conformance/quality checks for push and pull-request events. It does not subscribe to `workflow_run`, avoiding the previous observer fan-out.
 
-- Billing usage REST API: https://docs.github.com/en/rest/billing/usage
-- Automating billing usage reports and account-level authorization: https://docs.github.com/en/billing/tutorials/automate-usage-reporting
-- Product and SKU identifiers: https://docs.github.com/en/billing/reference/product-and-sku-names
-- Actions billing, runner rates and storage accounting: https://docs.github.com/en/billing/concepts/product-billing/github-actions
+The redundant `actions-run-diagnostics`, API-usage smoke, token-permission audit, standalone conformance, and standalone workflow-quality workflows are consolidated into this workflow. The independent UPW package-release and explicit workflow-cleanup automations remain separate; they are not quota monitors.
 
-## API endpoints and attribution
+## Local tests
 
-The collector uses GET /organizations/{org}/settings/billing/usage/summary, filtered to product=Actions and the current billing month. It does not call the user-level billing usage endpoint for Actions: GitHub documents user-level billing usage as Copilot usage, not personal Actions usage. For personal accounts, Actions usage and remaining included compute balance are explicitly NOT_EXPOSED_BY_USER_BILLING_API; repository inventory is retained, but usage totals remain UNKNOWN rather than zero.
+```bash
+python -m unittest discover -s quota-monitor/tests -p 'test_*.py' -v
+node --test quota-monitor/tests/*.mjs
+node scripts/workflow-quality-gate.mjs
+```
 
-It also preserves the endpoint's repository-filtered usage data for the repositories returned by the owner-scoped inventory. Repository totals are attributed only when the API query succeeds. A missing token or denied request is UNKNOWN, never zero.
+## Authoritative API references
 
-The enhanced billing usage-report endpoints (.../settings/billing/usage) can return repositoryName, but GitHub documents them as available only on the enhanced billing platform. The current collector uses the summary API; if repository-level attribution is not returned, it does not fabricate it.
-
-The usage summary is public preview and only exposes the previous 24 months. GitHub can change this contract.
-
-## Authorization: personal account plus one GitHub App for organizations
-
-The private CI workflow uses these secrets:
-
-- USER_BILLING_TOKEN: a fine-grained personal token with Metadata: read for personal repository inventory. The collector does not use the user-level billing usage endpoint for Actions because that endpoint reports Copilot usage, not personal Actions usage.
-- GITHUB_APP_ID and GITHUB_APP_PRIVATE_KEY: one GitHub App used to obtain short-lived organization installation tokens.
-
-Configure the GitHub App with organization Administration: read. Metadata: read is the implicit read-only repository metadata permission. Install the App on each organization to monitor and grant access to all repositories if repository-level inventory is required. The App installation access token is minted during each CI run and expires after one hour. No per-org token secret is stored.
-
-GitHub's endpoint-specific reference for the usage summary API explicitly supports fine-grained tokens: Plan: read for user billing and Administration: read for organization billing, including GitHub App installation tokens. The separate enhanced usage-report endpoint is only available on the enhanced billing platform; the automation tutorial's migration section recommends classic PATs for that report endpoint. Do not generalize that note to the summary endpoint used here. The workflow follows the summary endpoint's least-privilege contract and preserves HTTP status plus X-Accepted-OAuth-Scopes on failures.
-
-The workflow's built-in GITHUB_TOKEN is separate: it only writes the dashboard to the private reporting repository and is not used for billing.
-
-## Organization discovery and scale
-
-targets.json is an explicit include list for coverage overrides. At runtime, prepare_app_tokens.mjs discovers all organizations where the GitHub App is installed, merges them with the explicit list, and mints an installation token for each available organization. Newly onboarded organizations require one App installation/authorization, not a new PAT or manually managed token secret. An organization without an App installation is recorded as APP_NOT_INSTALLED.
-
-## Data semantics and limitations
-
-- Organization Actions runner quantities (minutes) and net billed amounts are reported separately by SKU when returned by the API. The included compute allowance is a monetary amount shared with eligible private/internal runner and cloud-sandbox compute/memory usage; minute quantities are not a remaining-balance measure.
-- Artifact/shared storage, cache storage and custom image storage are reported separately by SKU and the unit GitHub returns.
-- grossQuantity, discountQuantity and netQuantity are shown only when returned by the API. The dashboard labels these as gross/discounted/net usage quantities, never as included or remaining minutes.
-- Storage billing accrues over time; current stored bytes and accrued billable storage are different measurements.
-- Organization budgets are configuration; observed spend is compared using the returned Actions netAmount.
-- Missing credentials, unsupported token types, denied billing roles or API errors remain UNKNOWN/PARTIAL.
-
-## Private dashboard
-
-The existing private workflow writes only:
-
-- ops/github-actions-usage/dashboard.md
-- ops/github-actions-usage/usage-latest.json
-- ops/github-actions-usage/usage-history.json
-
-No billing data is written to this public repository or printed in workflow logs. The private workflow runs daily and on scoped configuration changes. It has no workflow_dispatch path.
-
-## Tests
-
-Run:
-  python -m unittest discover -s quota-monitor/tests -p 'test_*.py' -v
-  node --test quota-monitor/tests/test_app_tokens.mjs
-  node --test quota-monitor/tests/test_token_permissions.mjs
-  node --test quota-monitor/tests/test_diagnostics.mjs
-
-
-## Open pull-request annotation coverage
-
-A target may set `include_open_pull_requests: true` in `PRIVATE_TARGETS_JSON`. The Notion annotation relay then enumerates every open pull request in that target repository, follows only PR heads whose `head.repo.full_name` equals the configured private repository, and collects exact-SHA workflow runs, Check Runs and all annotation pages for those heads in addition to the configured branch. Fork PR heads are deliberately excluded. This setting is required for automatic annotation coverage of feature/PR branches such as a private ticket branch; a configured `main` branch alone does not cover them. The scheduled observer still requires the existing read-only private-target token and Notion publication credentials, and its schedule cadence remains the detection interval.
+- [GitHub REST API — billing usage summary](https://docs.github.com/en/rest/billing/usage)
+- [GitHub REST API — billing budgets](https://docs.github.com/en/rest/billing/budgets)
+- [GitHub Apps — installation access tokens](https://docs.github.com/en/apps/creating-github-apps/authenticating-with-a-github-app/generating-an-installation-access-token-for-a-github-app)

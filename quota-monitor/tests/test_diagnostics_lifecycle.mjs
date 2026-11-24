@@ -249,22 +249,20 @@ test("workflow-level quota classification requires an explicit Actions billing m
 });
 
 
-test("every repository workflow is covered by the trusted lifecycle observer and synthetic echo workflows are absent", async () => {
+test("one scheduled quota monitor replaces workflow-run observer fan-out", async () => {
   const directory = ".github/workflows";
   const files = (await readdir(directory)).filter(name => /\.ya?ml$/i.test(name));
-  const observer = await readFile(directory + "/actions-run-diagnostics.yml", "utf8");
-  const block = observer.match(/workflows:\s*\n([\s\S]*?)\n\s+types:/);
-  assert.ok(block, "workflow_run workflow allowlist must exist");
-  const observedNames = [...block[1].matchAll(/^\s*-\s*(.+?)\s*$/gm)]
-    .map(match => match[1].replace(/^["']|["']$/g, ""));
-  for (const file of files) {
-    if (file === "actions-run-diagnostics.yml") continue;
-    const content = await readFile(directory + "/" + file, "utf8");
-    const match = content.match(/^name:\s*(.+)$/m);
-    assert.ok(match, "workflow must declare a stable name: " + file);
-    const name = match[1].trim().replace(/^["']|["']$/g, "");
-    assert.ok(observedNames.includes(name), "lifecycle observer is missing workflow: " + name);
-  }
+  const workflow = await readFile(directory + "/github-actions-quota-monitor.yml", "utf8");
+  assert.match(workflow, /cron:\s*["']?\*\/15 \* \* \* \*["']?/);
+  assert.match(workflow, /monitor:\s*\n\s+if:\s*github\.event_name == 'schedule'/);
+  assert.match(workflow, /quota-monitor\/prepare_app_tokens\.mjs/);
+  assert.match(workflow, /quota-monitor\/collect\.py/);
+  assert.match(workflow, /quota-monitor\/publish-notion\.mjs/);
+  assert.doesNotMatch(workflow, /workflow_run:/);
+  assert.doesNotMatch(workflow, /workflow_dispatch:/);
+  assert.ok(!files.includes("actions-run-diagnostics.yml"));
+  assert.ok(!files.includes("github-api-usage-monitor-smoke.yml"));
+  assert.ok(!files.includes("quota-token-permission-audit.yml"));
   assert.ok(!files.includes("annotation-cli-synthetic-failure.yml"));
   assert.ok(!files.includes("annotation-cli-synthetic-failure-observer.yml"));
   assert.ok(!files.includes("no-runner-annotation-observer.yml"));
@@ -407,25 +405,23 @@ test("static-analysis warnings remain distinct from YAML syntax and step executi
 });
 
 
-test("API usage telemetry is pinned and private credentials are isolated to the scheduled job", async () => {
-  const workflow = await readFile(".github/workflows/actions-run-diagnostics.yml", "utf8");
-  const pinned = "hesreallyhim/github-api-usage-monitor@52198b2c0a112e8647664f4042ae301e718ad7df";
-  assert.ok(workflow.includes(pinned));
-  const privateJob = workflow.split("  private_targets:\n")[1].split("\n  diagnose:\n")[0];
-  const diagnoseJob = workflow.split("  diagnose:\n")[1].split("\n  readback:\n")[0];
-  const readbackJob = workflow.split("  readback:\n")[1];
-  assert.ok(privateJob.includes("PRIVATE_MONITOR_TOKEN: " + "$" + "{{ secrets.PRIVATE_MONITOR_TOKEN }}"));
-  assert.ok(privateJob.includes("PRIVATE_TARGETS_JSON: " + "$" + "{{ secrets.PRIVATE_TARGETS_JSON }}"));
-  assert.ok(privateJob.includes("token: " + "$" + "{{ github.token }}"));
-  assert.ok(privateJob.includes("diagnostics: \"true\""));
-  assert.ok(privateJob.includes("Observe configured private repositories"));
-  assert.ok(!privateJob.includes("Monitor private target token rate-limit usage"));
-  assert.ok(!privateJob.includes("steps.private_token.outputs.configured"));
-  assert.ok(!/uses:\s*hesreallyhim\/github-api-usage-monitor@[a-f0-9]+[\s\S]{0,260}token:\s*\$\{\{\s*secrets\.PRIVATE_MONITOR_TOKEN/.test(privateJob));
-  assert.ok(!diagnoseJob.includes("secrets.PRIVATE_MONITOR_TOKEN"));
-  assert.ok(!readbackJob.includes("secrets.PRIVATE_MONITOR_TOKEN"));
-  assert.ok(diagnoseJob.includes("token: " + "$" + "{{ github.token }}"));
-  assert.ok(readbackJob.includes("token: " + "$" + "{{ github.token }}"));
+test("private billing credentials are isolated to the scheduled monitor and no public artifacts are produced", async () => {
+  const workflow = await readFile(".github/workflows/github-actions-quota-monitor.yml", "utf8");
+  const validateMatch = workflow.match(/^  validate:\r?\n([\s\S]*?)^  monitor:\r?\n/m);
+  const monitorMatch = workflow.match(/^  monitor:\r?\n([\s\S]*)$/m);
+  assert.ok(validateMatch && monitorMatch, "central workflow must expose validate and monitor jobs");
+  const validateJob = validateMatch[1];
+  const monitorJob = monitorMatch[1];
+  assert.ok(monitorJob.includes("GITHUB_APP_ID: " + "$" + "{{ secrets.GITHUB_APP_ID }}"));
+  assert.ok(monitorJob.includes("GITHUB_APP_PRIVATE_KEY: " + "$" + "{{ secrets.GITHUB_APP_PRIVATE_KEY }}"));
+  assert.ok(monitorJob.includes("USER_BILLING_TOKEN: " + "$" + "{{ secrets.USER_BILLING_TOKEN }}"));
+  assert.ok(monitorJob.includes("NOTION_API_TOKEN: " + "$" + "{{ secrets.NOTION_API_TOKEN }}"));
+  assert.ok(!validateJob.includes("secrets."));
+  assert.ok(!workflow.includes("workflow_run:"));
+  assert.ok(!workflow.includes("hesreallyhim/github-api-usage-monitor"));
+  assert.ok(!workflow.includes("upload-artifact"));
+  assert.ok(monitorJob.includes("persist-credentials: false"));
+  assert.ok(monitorJob.includes("permissions:\n      contents: read"));
 });
 
 
