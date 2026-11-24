@@ -4,7 +4,8 @@ import { dirname } from 'node:path';
 
 const API = process.env.GITHUB_API_URL || 'https://api.github.com';
 const VERSION = '2026-03-10';
-const ORG_RE = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$/;\nconst EXCLUDED_ORGS = new Set(['huyquanghan-apps']);
+const ORG_RE = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$/;
+const EXCLUDED_ORGS = new Set(['huyquanghan-apps']);
 
 function b64url(value) {
   return Buffer.from(value).toString('base64url');
