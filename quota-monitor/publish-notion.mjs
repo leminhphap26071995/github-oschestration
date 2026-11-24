@@ -536,6 +536,7 @@ export async function runMonitor({
           lookback_days: 7,
           expected_workflows: [],
           availability_freshness_minutes: config.freshness_minutes ?? DEFAULT_FRESHNESS_MINUTES,
+          trigger_lookback_hours: config.trigger_lookback_hours ?? 24,
         }],
       });
       try {
