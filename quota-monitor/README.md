@@ -6,6 +6,8 @@ The workflow runs on a public GitHub-hosted standard runner. Private billing and
 
 ## What the monitor verifies
 
+GitHub currently documents the user and organization billing usage-summary endpoints as public preview; the monitor treats schema/API changes as collection errors rather than zero usage.
+
 - Personal-account Actions usage through `GET /users/{username}/settings/billing/usage/summary?product=Actions`.
 - Organization Actions usage and budgets through the organization billing summary and budget APIs.
 - Per-repository Actions usage for every discovered repository.
