@@ -109,7 +109,9 @@ test('rejects missing credentials and malformed repository or SHA', async () => 
 test('central monitor validates read-only token permissions without exposing secrets to validation', async () => {
   const workflowUrl = new URL('../../.github/workflows/github-actions-quota-monitor.yml', import.meta.url);
   const workflow = await readFile(workflowUrl, 'utf8');
-  const validateJob = workflow.split('  validate:\\n')[1].split('\n  monitor:\n')[0];
+  const validateMatch = workflow.match(/^  validate:\\r?\\n([\\s\\S]*?)^  monitor:\\r?\\n/m);
+  assert.ok(validateMatch, 'central workflow must expose a validate job');
+  const validateJob = validateMatch[1];
   assert.match(validateJob, /permissions:\s*\n\s+actions:\s*read\s*\n\s+checks:\s*read\s*\n\s+contents:\s*read/m);
   assert.match(validateJob, /GITHUB_TOKEN:\s*\$\{\{\s*github\.token\s*\}\}/);
   assert.match(validateJob, /quota-monitor\/check_token_permissions\.mjs/);
