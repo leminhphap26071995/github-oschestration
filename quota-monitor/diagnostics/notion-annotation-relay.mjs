@@ -402,6 +402,7 @@ export async function collectAnnotationReceipts({
           schema_version: 1,
           receipt_type: "GITHUB_CHECK_RUN_UNMATCHED",
           run_correlation_status: "UNMATCHED",
+          classification: "UNMATCHED_CHECK_RUN_CORRELATION",
           observed_at: observedAt,
           source: {
             repository: target.repository,
