@@ -1,23 +1,35 @@
 {
   "schema_version": 1,
-  "approved": true,
+  "approved": false,
   "requested_by": "repository-owner",
   "consumer": "chatgpt",
   "plugin_id": "plugins_6adcacd0c4988191a4f3d33a5bec0d29",
-  "expected_release_id": "pluginrel_6b055903c42c8191a54d1f62d60a587c",
-  "current_version": "0.1.175",
+  "expected_release_id": "pluginrel_6b055b488d988191a26070ac4bfcff1b",
+  "current_version": "0.1.176",
   "target_version": "0.1.176",
   "source_repository": "leminhphap-improvement/ai-workflow-archtiecture",
   "source_commit_sha": "6b5b3c8d7e6339c7568df687523b5e8c16d7d1f7",
   "expected_default_prompt_count": 48,
   "expected_role_count": 35,
   "expected_role_artifact_count": 140,
-  "delete_paths": [
-    ".codex-plugin/plugin.json"
-  ],
+  "delete_paths": [],
   "chatgpt_native_attempted": true,
   "fallback_reason": "CHATGPT_HOST_CANNOT_PACKAGE_COMPLETE_OVERLAY",
   "chatgpt_native_blocker": "Plugin Creator update_plugin rejected the ChatGPT-host-built root-relative skill overlay archive with INVALID_ARGUMENT despite a successful ZIP integrity check. The live plugin's complete current manifest/payload cannot be materialized into this host's packaging filesystem through the available connector route, so the native host cannot assemble a valid complete archive. Use the existing source-bound GitHub ChatGPT-only package builder as the backup; ChatGPT remains responsible for the live Plugin Creator update and readback.",
-  "request_revision": 10,
-  "build_request_reason": "Owner-authorized 0.1.176: exact-head conformance rerun after making the Notion-first no-runner trigger and no-progress output gate explicit; remove the verified stale Codex sidecar."
+  "request_revision": 11,
+  "build_request_reason": "Published 0.1.176 and read back. Plugin Creator rejects deletion of .codex-plugin/plugin.json because it is generated from retained source; it now mirrors the 0.1.176 root manifest exactly. Do not retry deletion.",
+  "status": "PUBLISHED_WITH_HOST_GENERATED_SIDECAR",
+  "requested_delete_paths": [
+    ".codex-plugin/plugin.json"
+  ],
+  "delete_paths_result": "REJECTED_GENERATED_FROM_RETAINED_SOURCE",
+  "published_release_id": "pluginrel_6b055b488d988191a26070ac4bfcff1b",
+  "published_version": "0.1.176",
+  "published_package_workflow_run_id": 45367006445,
+  "published_artifact_id": 14906244624,
+  "published_handoff_sha256": "b2953d081bde3a568e14383ab0d86bee6d6994cfdef66a2680348e633016e630",
+  "published_archive_sha256": "65ab26d96448b6c19306e747d958e89e14453cda23635f6a6f6d42da00fa5ff9",
+  "live_plugin_mutated": true,
+  "live_readback_status": "VERIFIED",
+  "fresh_runtime_activation_status": "NOT_VERIFIED"
 }
