@@ -9,7 +9,7 @@ The workflow runs on a public GitHub-hosted standard runner. Private billing and
 - Personal-account Actions usage through `GET /users/{username}/settings/billing/usage/summary?product=Actions`.
 - Organization Actions usage and budgets through the organization billing summary and budget APIs.
 - Per-repository Actions usage for every discovered repository.
-- Recent successful workflow-run evidence (freshness window: 30 minutes).
+- All workflow runs across all branches from the last seven days, including exact run-attempt/check-suite correlation; recent successful runs provide availability evidence (freshness window: 30 minutes).
 - Exact provider-owned `GitHub Actions` check-run annotations. If `annotations_count > 0`, the relay reads the annotation receipt. `runner_id=0` and terminal `steps=[]` are recovery triggers, never quota conclusions by themselves.
 - Owner-reported exhaustion stored in Notion. A report remains blocking until a later explicit `CLEARED` owner record is added.
 
