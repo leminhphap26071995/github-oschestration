@@ -493,7 +493,7 @@ export async function runMonitor({
     const token = account.scope === "user" ? userBillingToken : orgTokens[account.owner];
     if (!token) continue;
     for (const repo of account.repositories || []) {
-      if (repo.archived || !repo.default_branch) continue;
+      if (repo.archived) continue;
       const targetsJson = JSON.stringify({
         schema_version: 1,
         targets: [{
