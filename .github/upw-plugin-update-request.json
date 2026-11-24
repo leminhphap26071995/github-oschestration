@@ -4,18 +4,20 @@
   "requested_by": "repository-owner",
   "consumer": "chatgpt",
   "plugin_id": "plugins_6adcacd0c4988191a4f3d33a5bec0d29",
-  "expected_release_id": "pluginrel_6b047030b62c8191b72381e61b32ecce",
-  "current_version": "0.1.174",
-  "target_version": "0.1.175",
+  "expected_release_id": "pluginrel_6b055903c42c8191a54d1f62d60a587c",
+  "current_version": "0.1.175",
+  "target_version": "0.1.176",
   "source_repository": "leminhphap-improvement/ai-workflow-archtiecture",
-  "source_commit_sha": "df6963b5634a802616ce61cb1cab84afa0365800",
+  "source_commit_sha": "6b5b3c8d7e6339c7568df687523b5e8c16d7d1f7",
   "expected_default_prompt_count": 48,
   "expected_role_count": 35,
   "expected_role_artifact_count": 140,
-  "delete_paths": [],
+  "delete_paths": [
+    ".codex-plugin/plugin.json"
+  ],
   "chatgpt_native_attempted": true,
   "fallback_reason": "CHATGPT_HOST_CANNOT_PACKAGE_COMPLETE_OVERLAY",
   "chatgpt_native_blocker": "Plugin Creator update_plugin rejected the ChatGPT-host-built root-relative skill overlay archive with INVALID_ARGUMENT despite a successful ZIP integrity check. The live plugin's complete current manifest/payload cannot be materialized into this host's packaging filesystem through the available connector route, so the native host cannot assemble a valid complete archive. Use the existing source-bound GitHub ChatGPT-only package builder as the backup; ChatGPT remains responsible for the live Plugin Creator update and readback.",
-  "request_revision": 8,
-  "build_request_reason": "Retry after repairing test module indentation; owner-authorized GitHub backup build for 0.1.174."
+  "request_revision": 10,
+  "build_request_reason": "Owner-authorized 0.1.176: exact-head conformance rerun after making the Notion-first no-runner trigger and no-progress output gate explicit; remove the verified stale Codex sidecar."
 }
