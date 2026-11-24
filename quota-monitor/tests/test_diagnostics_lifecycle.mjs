@@ -407,8 +407,8 @@ test("static-analysis warnings remain distinct from YAML syntax and step executi
 
 test("private billing credentials are isolated to the scheduled monitor and no public artifacts are produced", async () => {
   const workflow = await readFile(".github/workflows/github-actions-quota-monitor.yml", "utf8");
-  const validateMatch = workflow.match(/^  validate:\r?\n([\\s\\S]*?)^  monitor:\r?\n/m);
-  const monitorMatch = workflow.match(/^  monitor:\r?\n([\\s\\S]*)$/m);
+  const validateMatch = workflow.match(/^  validate:\r?\n([\s\S]*?)^  monitor:\r?\n/m);
+  const monitorMatch = workflow.match(/^  monitor:\r?\n([\s\S]*)$/m);
   assert.ok(validateMatch && monitorMatch, "central workflow must expose validate and monitor jobs");
   const validateJob = validateMatch[1];
   const monitorJob = monitorMatch[1];
