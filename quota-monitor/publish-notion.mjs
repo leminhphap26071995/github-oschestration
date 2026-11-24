@@ -198,6 +198,10 @@ export function deriveQuotaSnapshot({
     providerQuotaEvidence.push({
       repository,
       head_sha: receipt.source.head_sha,
+      run_id: receipt.source.run_id,
+      run_attempt: receipt.source.run_attempt,
+      run_ref: receipt.source.run_ref,
+      check_suite_id: receipt.source.check_suite_id,
       check_run_id: receipt.check_run.id,
       annotations_reported: receipt.check_run.annotations_reported,
       observed_at: receipt.observed_at,
@@ -494,9 +498,9 @@ export async function runMonitor({
         schema_version: 1,
         targets: [{
           repository: repo.full_name,
-          branch: repo.default_branch,
+          scan_recent_runs: true,
+          lookback_days: 7,
           expected_workflows: [],
-          include_open_pull_requests: true,
         }],
       });
       try {
@@ -506,7 +510,16 @@ export async function runMonitor({
           fetchImpl,
           observedAt: now.toISOString(),
         });
-        receipts.push(...found);
+        for (const receipt of found) {
+          if (receipt.receipt_type === "GITHUB_CHECK_RUN_UNMATCHED") {
+            scanErrors.push({
+              repository: repo.full_name,
+              code: "CHECK_RUN_RUN_CORRELATION_UNRESOLVED",
+            });
+          } else {
+            receipts.push(receipt);
+          }
+        }
       } catch (error) {
         scanErrors.push({
           repository: repo.full_name,
