@@ -100,15 +100,15 @@ jobs:
           node-version: "24"
       - name: Discover organizations with one GitHub App User Access Token
         env:
-          GITHUB_USER_ACCESS_TOKEN: \${{ secrets.GITHUB_USER_ACCESS_TOKEN }}
-          GITHUB_USER_REFRESH_TOKEN: \${{ secrets.GITHUB_USER_REFRESH_TOKEN }}
-          GITHUB_APP_CLIENT_ID: \${{ secrets.GITHUB_APP_CLIENT_ID }}
-          SECRET_ROTATION_TOKEN: \${{ secrets.SECRET_ROTATION_TOKEN }}
-          GITHUB_REPOSITORY: \${{ github.repository }}
-          GITHUB_USERNAME: \${{ github.repository_owner }}
+          GITHUB_USER_ACCESS_TOKEN: ${{ secrets.GITHUB_USER_ACCESS_TOKEN }}
+          GITHUB_USER_REFRESH_TOKEN: ${{ secrets.GITHUB_USER_REFRESH_TOKEN }}
+          GITHUB_APP_CLIENT_ID: ${{ secrets.GITHUB_APP_CLIENT_ID }}
+          SECRET_ROTATION_TOKEN: ${{ secrets.SECRET_ROTATION_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_USERNAME: ${{ github.repository_owner }}
           SOURCE_TARGETS_FILE: quota-monitor/targets.json
-          OUTPUT_TARGETS_FILE: \${{ runner.temp }}/targets-runtime.json
-          DISCOVERY_FILE: \${{ runner.temp }}/quota-monitor/discovery.json
+          OUTPUT_TARGETS_FILE: ${{ runner.temp }}/targets-runtime.json
+          DISCOVERY_FILE: ${{ runner.temp }}/quota-monitor/discovery.json
         run: node quota-monitor/prepare_user_access.mjs
       - name: Collect owner and organization Actions usage
         run: |
