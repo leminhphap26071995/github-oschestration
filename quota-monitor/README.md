@@ -73,7 +73,7 @@ Routing states:
 
 | State | Meaning | May a ChatGPT session select it? |
 |---|---|---|
-| `AVAILABLE_VERIFIED` | Recent successful workflow run within 30 minutes; no stronger exhaustion signal | Yes, after requirement-to-repository mapping |
+| `AVAILABLE_VERIFIED` | Recent successful GitHub-hosted runner job within 30 minutes; no stronger exhaustion signal | Yes, after requirement-to-repository mapping |
 | `NEAR_LIMIT` | Configured hard-cap budget reached the 80% alert threshold | Prefer another eligible repository |
 | `QUOTA_EXHAUSTED` | Provider annotation or enforced hard cap proves exhaustion | No |
 | `REPORTED_QUOTA_EXHAUSTED` | Owner-reported; awaiting provider confirmation/owner clearance | No |
