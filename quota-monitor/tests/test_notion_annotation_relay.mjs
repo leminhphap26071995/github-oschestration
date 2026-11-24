@@ -411,3 +411,41 @@ test("self-hosted success does not prove included GitHub-hosted runner availabil
   assert.equal(receipts[0].receipt_type, "GITHUB_WORKFLOW_RUN_EVIDENCE");
   assert.equal(receipts[0].run.github_hosted_runner_verified, false);
 });
+
+test("runner_id zero and empty steps trigger annotation retrieval even with zero reported annotations", async () => {
+  const calls = [];
+  const fetchImpl = async url => {
+    const parsed = new URL(url);
+    calls.push(parsed.pathname);
+    if (parsed.pathname.endsWith("/branches/main")) return jsonResponse({ commit: { sha: SHA } });
+    if (parsed.pathname.endsWith("/actions/runs")) return jsonResponse({ workflow_runs: [{
+      id: 906, run_attempt: 1, check_suite_id: 9060, head_sha: SHA,
+      head_branch: "main", status: "completed", conclusion: "failure",
+      updated_at: "2026-11-24T16:59:00.000Z"
+    }] });
+    if (parsed.pathname.endsWith("/actions/runs/906/attempts/1/jobs")) return jsonResponse({ jobs: [{
+      id: 9062, name: "build", status: "completed", conclusion: "failure",
+      runner_id: 0, runner_name: null, labels: [], steps: []
+    }] });
+    if (parsed.pathname.endsWith("/check-runs")) return jsonResponse({ check_runs: [{
+      id: 9061, head_sha: SHA, check_suite: { id: 9060 },
+      name: "GitHub Actions", app: { slug: "github-actions" },
+      status: "completed", conclusion: "failure", output: { annotations_count: 0 }
+    }] });
+    if (parsed.pathname.endsWith("/check-runs/9061/annotations")) return jsonResponse([]);
+    throw new Error("UNEXPECTED_REQUEST " + parsed.pathname);
+  };
+  const receipts = await collectAnnotationReceipts({
+    targetsJson: TARGETS,
+    githubToken: "ghs_test_token_12345678901234567890",
+    fetchImpl,
+    observedAt: "2026-11-24T17:00:00.000Z"
+  });
+  assert.equal(receipts.length, 1);
+  assert.equal(receipts[0].annotations_status, "RETRIEVED_EMPTY");
+  assert.ok(receipts[0].annotation_lookup_trigger.includes("RUNNER_ID_ZERO_OR_EMPTY_STEPS"));
+  assert.equal(receipts[0].source.runner_sentinel, true);
+  assert.equal(receipts[0].source.empty_steps_trigger, true);
+  assert.notEqual(receipts[0].classification, "ACTIONS_BILLING_QUOTA_EXHAUSTED");
+  assert.ok(calls.some(path => path.endsWith("/check-runs/9061/annotations")));
+});
