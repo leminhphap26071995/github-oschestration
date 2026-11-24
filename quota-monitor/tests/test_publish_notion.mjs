@@ -259,3 +259,37 @@ test("runMonitor discovers recent runs without per-repository branch configurati
   assert.ok(calls.some(x => x.method === "PATCH" && x.url.endsWith("/v1/pages/quota-page")));
   assert.ok(calls.some(x => x.method === "POST" && x.url.endsWith("/v1/comments")));
 });
+
+test("runner_id zero and empty steps alone never classify quota as exhausted", () => {
+  const snapshot = deriveQuotaSnapshot({
+    report: {
+      billing_period: "2026-11",
+      accounts: [{
+        owner: "example-org", scope: "organization", status: "OK",
+        actions_usage_status: "OK", summary_error: null, repository_list_error: null,
+        budget: { status: "NO_ACTIONS_BUDGET", items: [] },
+        repositories: [{
+          full_name: "example-org/app", status: "OK", default_branch: "main",
+          visibility: "private", archived: false, totals: {}
+        }]
+      }]
+    },
+    receipts: [{
+      receipt_type: "GITHUB_CHECK_RUN_ANNOTATION",
+      classification: "UNKNOWN",
+      observed_at: "2026-11-24T17:00:00.000Z",
+      source: {
+        repository: "example-org/app", head_sha: "d".repeat(40),
+        run_id: 906, run_attempt: 1, runner_sentinel: true, empty_steps_trigger: true
+      },
+      check_run: { id: 9061, app_slug: "github-actions", annotations_reported: 0 },
+      annotation_lookup_trigger: ["RUNNER_ID_ZERO_OR_EMPTY_STEPS"],
+      annotations_status: "RETRIEVED_EMPTY",
+      annotations: []
+    }],
+    now: new Date("2026-11-24T17:05:00.000Z")
+  });
+  assert.equal(snapshot.accounts[0].quota_status, "UNKNOWN");
+  assert.equal(snapshot.accounts[0].repositories[0].quota_status, "UNKNOWN");
+  assert.equal(snapshot.eligible_repository_count, 0);
+});
