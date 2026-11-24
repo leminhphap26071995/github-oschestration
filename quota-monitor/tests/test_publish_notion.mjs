@@ -4,6 +4,7 @@ import {
   parseOwnerReports,
   deriveQuotaSnapshot,
   publishQuotaSnapshot,
+  runMonitor,
 } from "../publish-notion.mjs";
 
 function comment(text, createdAt = "2026-11-24T10:00:00.000Z") {
@@ -167,4 +168,87 @@ test("Notion publisher updates the current property and deduplicates unchanged s
   assert.equal(second.property_updated, true);
   assert.equal(second.comment_published, false);
   assert.equal(calls.length, before + 1);
+});
+
+test("runMonitor discovers recent runs without per-repository branch configuration and publishes to Notion", async () => {
+  const sha = "c".repeat(40);
+  const calls = [];
+  const ownerReportText = "UPW_QUOTA_OWNER_REPORTS_V1
+" +
+    JSON.stringify({ schema_version: 1, reports: [] });
+  const fetchImpl = async (url, init = {}) => {
+    const parsed = new URL(url);
+    const method = init.method || "GET";
+    calls.push({ url: parsed.toString(), method, body: init.body });
+    if (parsed.hostname === "api.notion.com" && parsed.pathname === "/v1/comments" && method === "GET") {
+      if (parsed.searchParams.get("block_id") === "quota-page") {
+        return new Response(JSON.stringify({
+          results: [{
+            created_time: "2026-11-24T16:00:00.000Z",
+            rich_text: [{ plain_text: ownerReportText, text: { content: ownerReportText } }]
+          }],
+          has_more: false, next_cursor: null
+        }), { status: 200 });
+      }
+      return new Response(JSON.stringify({ results: [], has_more: false, next_cursor: null }), { status: 200 });
+    }
+    if (parsed.hostname === "api.github.com" && parsed.pathname.endsWith("/actions/runs")) {
+      assert.ok(parsed.searchParams.get("created").startsWith(">="));
+      return new Response(JSON.stringify({ workflow_runs: [{
+        id: 904, run_attempt: 1, workflow_id: 9, check_suite_id: 9040,
+        name: "CI", path: ".github/workflows/ci.yml", event: "push",
+        status: "completed", conclusion: "success", head_branch: "release/next",
+        head_sha: sha, created_at: "2026-11-24T16:55:00.000Z",
+        updated_at: "2026-11-24T16:56:00.000Z"
+      }] }), { status: 200 });
+    }
+    if (parsed.hostname === "api.github.com" && parsed.pathname.endsWith("/check-runs")) {
+      return new Response(JSON.stringify({ check_runs: [] }), { status: 200 });
+    }
+    if (parsed.hostname === "api.notion.com" && parsed.pathname === "/v1/pages/quota-page" && method === "PATCH") {
+      return new Response(JSON.stringify({ id: "quota-page" }), { status: 200 });
+    }
+    if (parsed.hostname === "api.notion.com" && parsed.pathname === "/v1/comments" && method === "POST") {
+      return new Response(JSON.stringify({ id: "snapshot-comment" }), { status: 200 });
+    }
+    throw new Error("UNEXPECTED_REQUEST " + method + " " + parsed.pathname);
+  };
+  const result = await runMonitor({
+    report: {
+      billing_period: "2026-11",
+      excluded_organizations: ["huyquanghan-apps"],
+      accounts: [{
+        owner: "example-org", scope: "organization", status: "OK",
+        actions_usage_status: "OK", summary_error: null, repository_list_error: null,
+        totals: { gross_minutes: 10, discounted_minutes: 0, net_minutes: 10, net_amount: 0.1 },
+        budget: { status: "NO_ACTIONS_BUDGET", items: [] },
+        repositories: [{
+          full_name: "example-org/new-repo", status: "OK", default_branch: "main",
+          visibility: "private", archived: false,
+          totals: { gross_minutes: 10, discounted_minutes: 0, net_minutes: 10, net_amount: 0.1 }
+        }]
+      }]
+    },
+    discovery: { status: "OK", organization_count: 1, token_count: 1,
+      installation_coverage: [{ organization: "example-org", repository_selection: "all" }],
+      installation_errors: [] },
+    config: {
+      quota_page_id: "quota-page", annotation_page_id: "annotation-page",
+      freshness_minutes: 30, near_limit_ratio: 0.8, heartbeat_hours: 6
+    },
+    orgTokens: { "example-org": "installation-token" },
+    notionToken: "notion-token",
+    fetchImpl,
+    now: new Date("2026-11-24T17:00:00.000Z")
+  });
+  assert.equal(result.status, "PUBLISHED");
+  assert.equal(result.run_evidence_count, 1);
+  assert.equal(result.snapshot.eligible_repository_count, 1);
+  assert.equal(result.snapshot.eligible_repositories[0].repository, "example-org/new-repo");
+  const runsCall = calls.find(x => x.url.includes("/actions/runs"));
+  assert.ok(runsCall);
+  assert.equal(new URL(runsCall.url).searchParams.has("head_sha"), false);
+  assert.equal(calls.some(x => x.url.includes("/branches/")), false);
+  assert.ok(calls.some(x => x.method === "PATCH" && x.url.endsWith("/v1/pages/quota-page")));
+  assert.ok(calls.some(x => x.method === "POST" && x.url.endsWith("/v1/comments")));
 });
