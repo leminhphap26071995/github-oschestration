@@ -471,6 +471,11 @@ export async function collectAnnotationReceipts({
           completed_at: checkRun.completed_at ?? null,
           check_suite_id: checkRun.check_suite?.id ?? null,
           annotations_reported: annotationCount,
+          annotation_lookup_trigger: [
+            ...(annotationCount > 0 ? ["ANNOTATIONS_COUNT_POSITIVE"] : []),
+            ...(providerQuota ? ["PROVIDER_QUOTA_OUTPUT"] : []),
+            ...(runnerTrigger ? ["RUNNER_ID_ZERO_OR_EMPTY_STEPS"] : []),
+          ],
           output: {
             title: sanitizeEvidence(checkRun.output?.title),
             summary: sanitizeEvidence(checkRun.output?.summary),
@@ -486,9 +491,9 @@ export async function collectAnnotationReceipts({
         const annotationsUrl = new URL(base + "/repos/" + target.repository + "/check-runs/" + checkRun.id + "/annotations");
         annotationsUrl.searchParams.set("per_page", "100");
         const annotationPage = await paginate(annotationsUrl, { token: githubToken, fetchImpl });
-        receipt.annotations_status = "RETRIEVED";
         receipt.annotations_page_count = annotationPage.pageCount;
         receipt.annotations = annotationPage.items.map(annotationRecord);
+        receipt.annotations_status = receipt.annotations.length ? "RETRIEVED" : "RETRIEVED_EMPTY";
         receipt.classification = classifyCheckRun(checkRun, annotationPage.items);
       } catch (error) {
         receipt.annotations_status = "API_ERROR";
