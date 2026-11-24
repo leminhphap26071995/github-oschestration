@@ -80,14 +80,14 @@ test("collects exact-SHA check-run annotations and preserves distinct causes", a
     targetsJson: TARGETS, githubToken: "ghs_test_token_12345678901234567890", fetchImpl,
     observedAt: "2026-11-22T12:00:00.000Z"
   });
-  assert.equal(receipts.length, 3);
+  assert.equal(receipts.length, 2);
   assert.equal(receipts[0].classification, "WORKFLOW_YAML_OR_SCHEMA_ERROR");
   assert.equal(receipts[0].annotations_status, "RETRIEVED");
   assert.equal(receipts[0].annotations[0].message.includes("Could not parse as YAML"), true);
   assert.equal(receipts[1].classification, "ACTIONS_BILLING_QUOTA_EXHAUSTED");
-  assert.equal(receipts[2].classification, "UNKNOWN");
+  assert.equal(receipts.some(item => item.source.repository === "example/private-repo" && item.check_run.id === 103), false);
   assert.equal(receipts.every(item => item.source.head_sha === SHA), true);
-  assert.equal(calls.filter(call => call.url.includes("/annotations?")).length, 3);
+  assert.equal(calls.filter(call => call.url.includes("/annotations?")).length, 2);
 });
 
 test("publishes Notion comments with stable dedupe keys and skips existing receipts", async () => {
@@ -202,4 +202,46 @@ test("collects exact-SHA annotations for same-repository open PR heads when enab
   assert.equal(receipts[0].annotations_status, "RETRIEVED");
   assert.equal(receipts[0].source.pull_request_discovery_pages, 2);
   assert.equal(calls.some(url => new URL(url).pathname.endsWith("/pulls") && new URL(url).searchParams.get("page") === "2"), true);
+});
+
+test("captures successful workflow-run evidence without publishing it as an annotation receipt", async () => {
+  const calls = [];
+  const fetchImpl = async (url, init = {}) => {
+    const parsed = new URL(url);
+    calls.push({ path: parsed.pathname, method: init.method || "GET" });
+    if (parsed.pathname.endsWith("/branches/main")) {
+      return jsonResponse({ commit: { sha: SHA } });
+    }
+    if (parsed.pathname.endsWith("/actions/runs")) {
+      return jsonResponse({ workflow_runs: [{
+        id: 901, run_attempt: 2, workflow_id: 9, name: "CI",
+        path: ".github/workflows/ci.yml", event: "push", status: "completed",
+        conclusion: "success", head_sha: SHA,
+        created_at: "2026-11-24T16:50:00.000Z",
+        updated_at: "2026-11-24T16:55:00.000Z"
+      }] });
+    }
+    if (parsed.pathname.endsWith("/check-runs")) return jsonResponse({ check_runs: [] });
+    if (parsed.pathname.endsWith("/comments")) return jsonResponse({
+      results: [], has_more: false, next_cursor: null
+    });
+    throw new Error("UNEXPECTED_REQUEST " + parsed.pathname);
+  };
+  const receipts = await collectAnnotationReceipts({
+    targetsJson: TARGETS,
+    githubToken: "ghs_test_token_12345678901234567890",
+    fetchImpl,
+    observedAt: "2026-11-24T17:00:00.000Z"
+  });
+  assert.equal(receipts.length, 1);
+  assert.equal(receipts[0].receipt_type, "GITHUB_WORKFLOW_RUN_EVIDENCE");
+  assert.equal(receipts[0].run.id, 901);
+  const published = await publishAnnotationReceipts({
+    receipts,
+    notionToken: "secret_notion_token",
+    notionPageId: "page-id",
+    fetchImpl
+  });
+  assert.equal(published.published, 0);
+  assert.equal(calls.some(call => call.path === "/comments" && call.method === "POST"), false);
 });
