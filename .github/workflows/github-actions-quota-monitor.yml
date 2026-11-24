@@ -1,0 +1,126 @@
+name: GitHub Actions Quota and Repository Routing Monitor
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/**"
+      - "quota-monitor/**"
+      - "scripts/**"
+      - "tests/**"
+      - "README.md"
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/**"
+      - "quota-monitor/**"
+      - "scripts/**"
+      - "tests/**"
+      - "README.md"
+permissions: {}
+concurrency:
+  group: github-actions-quota-monitor-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  validate:
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      actions: read
+      checks: read
+      contents: read
+    steps:
+      - name: Checkout exact source
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - name: Validate repository workspace
+        run: python scripts/validate_workspace.py --root .
+      - name: Validate cleanup script syntax
+        run: bash -n .github/scripts/workflow-cleanup.sh
+      - name: Run Python conformance tests
+        run: |
+          python -m unittest discover -s tests -p 'test_*.py' -v
+          python -m unittest discover -s quota-monitor/tests -p 'test_*.py' -v
+      - name: Run Node.js conformance tests
+        run: node --test quota-monitor/tests/*.mjs tests/*.mjs
+      - name: Audit repository workflow-token permissions
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_SHA: ${{ github.sha }}
+        run: node quota-monitor/check_token_permissions.mjs
+      - name: Install pinned actionlint
+        run: |
+          go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.7
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+      - name: Validate workflow YAML and GitHub Actions semantics
+        run: actionlint -oneline
+      - name: Inspect referenced action runtime metadata
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/workflow-quality-gate.mjs
+      - name: Verify central monitor workflow is enabled
+        if: github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          state="$(gh api "repos/${{ github.repository }}/actions/workflows/github-actions-quota-monitor.yml" --jq .state)"
+          test "$state" = "active"
+  monitor:
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout monitor source
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - name: Discover organization installations and mint short-lived tokens
+        env:
+          GITHUB_APP_ID: ${{ secrets.GITHUB_APP_ID }}
+          GITHUB_APP_PRIVATE_KEY: ${{ secrets.GITHUB_APP_PRIVATE_KEY }}
+          USER_BILLING_TOKEN: ${{ secrets.USER_BILLING_TOKEN }}
+        run: |
+          node quota-monitor/prepare_app_tokens.mjs \
+            --targets-file quota-monitor/targets.json \
+            --output-targets-file "$RUNNER_TEMP/targets-runtime.json" \
+            --discovery-file "$RUNNER_TEMP/quota-monitor/discovery.json"
+      - name: Collect personal, organization and repository Actions usage
+        env:
+          GITHUB_USERNAME: leminhphap26071995
+        run: |
+          python quota-monitor/collect.py \
+            --owner "$GITHUB_USERNAME" \
+            --report-dir "$RUNNER_TEMP/quota-report" \
+            --org-targets-file "$RUNNER_TEMP/targets-runtime.json"
+      - name: Publish quota state and exact annotation receipts to Notion
+        env:
+          NOTION_API_TOKEN: ${{ secrets.NOTION_API_TOKEN }}
+        run: |
+          node quota-monitor/publish-notion.mjs \
+            --report "$RUNNER_TEMP/quota-report/usage-latest.json" \
+            --discovery "$RUNNER_TEMP/quota-monitor/discovery.json" \
+            --config quota-monitor/notion-targets.json
