@@ -218,89 +218,45 @@ def evaluate_budgets(data, account_rows, repositories, error=None):
 
 def collect(scope, owner, token, year, month):
     if not token:
-        return {
-            "scope": scope, "owner": owner, "status": "UNKNOWN",
-            "actions_usage_status": "NOT_CONFIGURED",
-            "summary_error": "BILLING_TOKEN_NOT_CONFIGURED",
-            "usage_items": [], "totals": UNKNOWN_TOTALS.copy(),
-            "repositories": [], "repository_list_error": "BILLING_TOKEN_NOT_CONFIGURED",
-            "budget": {"status": "UNKNOWN" if scope == "organization" else "NOT_APPLICABLE",
-                       "error": "BILLING_TOKEN_NOT_CONFIGURED" if scope == "organization" else None,
-                       "items": []},
-        }
-
-    # Both user and organization usage-summary endpoints accept product=Actions
-    # and an optional repository filter. Empty rows remain UNKNOWN, never zero.
-    summary, summary_error = get(token, path_for(scope, owner, year, month))
-    rows = items(summary) if not summary_error else []
-    actions_usage_status = (
-        summary_error if summary_error else "OK" if rows else "NO_USAGE_ROWS"
-    )
-
-    if scope == "user":
-        repos, list_error = pages(
-            token, "/user/repos?visibility=all&affiliation=owner&sort=full_name"
-        )
-        repos = [r for r in repos if r.get("owner", {}).get("type") == "User"
-                 and r.get("owner", {}).get("login", "").lower() == owner.lower()]
+        return {"scope":scope,"owner":owner,"status":"UNKNOWN","actions_usage_status":"NOT_CONFIGURED",
+                "summary_error":"BILLING_TOKEN_NOT_CONFIGURED","usage_items":[],"totals":UNKNOWN_TOTALS.copy(),
+                "repositories":[],"repository_list_error":"BILLING_TOKEN_NOT_CONFIGURED",
+                "budget":{"status":"UNKNOWN" if scope=="organization" else "NOT_APPLICABLE",
+                          "error":"BILLING_TOKEN_NOT_CONFIGURED" if scope=="organization" else None,"items":[]}}
+    summary,summary_error=get(token,path_for(scope,owner,year,month));rows=items(summary) if not summary_error else []
+    actions_usage_status=summary_error if summary_error else "OK" if rows else "NO_USAGE_ROWS"
+    if scope=="user":
+        repos,list_error=pages(token,"/user/repos?visibility=all&affiliation=owner&sort=full_name")
+        repos=[r for r in repos if r.get("owner",{}).get("type")=="User" and r.get("owner",{}).get("login","").lower()==owner.lower()]
+        budget_data,budget_error=None,None;budget={"status":"NOT_APPLICABLE","error":None,"items":[]};budgeted_repository_entities=set()
     else:
-        repos, list_error = pages(
-            token, f"/orgs/{owner}/repos?type=all&sort=full_name"
-        )
-        repos = [r for r in repos if r.get("owner", {}).get("login", "").lower() == owner.lower()]
-
-    repository_rows = []
+        repos,list_error=pages(token,f"/orgs/{owner}/repos?type=all&sort=full_name")
+        repos=[r for r in repos if r.get("owner",{}).get("login","").lower()==owner.lower()]
+        budget_data,budget_error=get(token,f"/organizations/{owner}/settings/billing/budgets?per_page=100")
+        budget_values=budget_data.get("budgets",[]) if isinstance(budget_data,dict) else budget_data if isinstance(budget_data,list) else []
+        budgeted_repository_entities={str(b.get("budget_entity_name","")).strip().lower() for b in budget_values
+          if isinstance(b,dict) and budget_matches(b) and str(b.get("budget_scope","")).lower()=="repository" and str(b.get("budget_entity_name","")).strip()}
+    repository_rows=[]
     for repo in repos:
-        name = repo.get("full_name")
-        if not isinstance(name, str) or "/" not in name:
-            continue
-        data, error = get(token, path_for(scope, owner, year, month, name))
-        repo_items = items(data) if not error else []
-        repo_status = error if error else "OK" if repo_items else "NO_USAGE_ROWS"
-        repository_rows.append({
-            "id": repo.get("id"),
-            "full_name": name,
-            "owner": owner,
-            "owner_type": repo.get("owner", {}).get("type"),
-            "visibility": ("private" if repo.get("private") else
-                           "internal" if repo.get("visibility") == "internal" else "public"),
-            "archived": bool(repo.get("archived", False)),
-            "default_branch": repo.get("default_branch"),
-            "permissions": {
-                "admin": bool((repo.get("permissions") or {}).get("admin")),
-                "maintain": bool((repo.get("permissions") or {}).get("maintain")),
-                "push": bool((repo.get("permissions") or {}).get("push")),
-            },
-            "status": repo_status,
-            "error": error,
-            "usage_items": repo_items,
-            "totals": totals(repo_items) if repo_items else UNKNOWN_TOTALS.copy(),
-        })
-
-    budget = {"status": "NOT_APPLICABLE", "error": None, "items": []}
-    if scope == "organization":
-        data, error = get(token, f"/organizations/{owner}/settings/billing/budgets?per_page=100")
-        budget = evaluate_budgets(data, rows if rows else None, repository_rows, error)
-
-    errors = [summary_error, list_error, budget.get("error")]
-    errors += [r["error"] for r in repository_rows if r.get("error")]
-    errors = [e for e in errors if e]
-    if summary_error and list_error:
-        status = "UNKNOWN"
-    elif errors or not rows:
-        status = "PARTIAL"
-    else:
-        status = "OK"
-    return {
-        "scope": scope, "owner": owner, "status": status,
-        "actions_usage_status": actions_usage_status,
-        "summary_error": summary_error,
-        "usage_items": rows,
-        "totals": totals(rows) if rows else UNKNOWN_TOTALS.copy(),
-        "repositories": repository_rows,
-        "repository_list_error": list_error,
-        "budget": budget,
-    }
+        name=repo.get("full_name")
+        if not isinstance(name,str) or "/" not in name:continue
+        repo_entities={name.lower(),name.split("/",1)[-1].lower()}
+        should_collect=scope=="organization" and bool(repo_entities & budgeted_repository_entities)
+        if should_collect:
+            data,error=get(token,path_for(scope,owner,year,month,name));repo_items=items(data) if not error else []
+            repo_status=error if error else "OK" if repo_items else "NO_USAGE_ROWS"
+        else:repo_items,error,repo_status=[],None,"NOT_COLLECTED_BY_DESIGN"
+        repository_rows.append({"id":repo.get("id"),"full_name":name,"owner":owner,"owner_type":repo.get("owner",{}).get("type"),
+          "visibility":"private" if repo.get("private") else "internal" if repo.get("visibility")=="internal" else "public",
+          "archived":bool(repo.get("archived",False)),"default_branch":repo.get("default_branch"),
+          "permissions":{"admin":bool((repo.get("permissions") or {}).get("admin")),"maintain":bool((repo.get("permissions") or {}).get("maintain")),"push":bool((repo.get("permissions") or {}).get("push"))},
+          "status":repo_status,"error":error,"usage_items":repo_items,"totals":totals(repo_items) if repo_items else UNKNOWN_TOTALS.copy()})
+    if scope=="organization":budget=evaluate_budgets(budget_data,rows if rows else None,repository_rows,budget_error)
+    errors=[summary_error,list_error,budget.get("error")]+[r["error"] for r in repository_rows if r.get("error")];errors=[e for e in errors if e]
+    status="UNKNOWN" if summary_error and list_error else "PARTIAL" if errors or not rows else "OK"
+    return {"scope":scope,"owner":owner,"status":status,"actions_usage_status":actions_usage_status,"summary_error":summary_error,
+      "usage_items":rows,"totals":totals(rows) if rows else UNKNOWN_TOTALS.copy(),"repositories":repository_rows,
+      "repository_list_error":list_error,"budget":budget}
 
 def collect_all(user_token, org_map, username, organizations, excluded_organizations=None):
     now = datetime.now(timezone.utc)
@@ -309,7 +265,7 @@ def collect_all(user_token, org_map, username, organizations, excluded_organizat
     accounts += [collect("organization", org, org_map.get(org), year, month)
                  for org in organizations]
     return {
-        "schema_version": 4, "collected_at_utc": now.isoformat(),
+        "schema_version": 5, "usage_collection_mode": "OWNER_SUMMARY_PLUS_REPOSITORY_BUDGETS_ONLY", "collected_at_utc": now.isoformat(),
         "billing_period": f"{year:04d}-{month:02d}",
         "data_source": "GitHub Billing Usage Summary REST API",
         "billing_unit_model": "INCLUDED_COMPUTE_CURRENCY_AMOUNT",
@@ -328,7 +284,7 @@ def render(report, history):
         "# GitHub Actions Usage Dashboard", "",
         f"Billing period: {report['billing_period']}  ",
         f"Updated (UTC): {report['collected_at_utc']}", "",
-        "> Shows Actions usage quantities and net billed amounts from both user and organization billing-summary endpoints. An empty Actions response is UNKNOWN, not zero. The remaining included-compute balance is not exposed by this summary; no balance or percentage is inferred.",
+        "> Shows owner-level Actions usage and repository usage only where an Actions repository budget exists. Repositories marked NOT_COLLECTED_BY_DESIGN are not zero. An empty Actions response is UNKNOWN, not zero. The remaining included-compute balance is not exposed by this summary; no balance or percentage is inferred.",
         "", "## Account and organization overview", "",
         "| Scope | Owner | Repositories | Status | Actions data | Actions budget | Gross min | Discounted min | Net min | Net amount (USD) |",
         "|---|---|---:|---|---|---:|---:|---:|---:|",

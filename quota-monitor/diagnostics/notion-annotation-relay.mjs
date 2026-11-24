@@ -8,6 +8,8 @@ const NOTION_VERSION = "2022-06-28";
 function assert(condition, code) {
   if (!condition) throw new Error(code);
 }
+const STANDARD_GITHUB_HOSTED_LABELS=new Set(["ubuntu-latest","ubuntu-24.04","ubuntu-22.04","ubuntu-24.04-arm","ubuntu-22.04-arm","windows-latest","windows-2025","windows-2022","macos-latest","macos-15","macos-14","macos-13"]);
+export function isStandardGitHubHostedRunner(job){const labels=Array.isArray(job?.labels)?job.labels.map(x=>String(x).trim().toLowerCase()):[];return Number(job?.runner_id)>0&&!labels.some(x=>x==="self-hosted"||x.includes("self-hosted"))&&labels.some(x=>STANDARD_GITHUB_HOSTED_LABELS.has(x));}
 
 export function sanitizeEvidence(value) {
   return String(value ?? "")
@@ -143,6 +145,7 @@ async function collectRunJobEvidence({ base, repository, run, token, fetchImpl, 
     return {
       status: "NOT_REQUIRED", jobs: [], runner_sentinel: null,
       empty_steps_trigger: null, github_hosted_runner_verified: false,
+      github_hosted_standard_runner_verified: false,
     };
   }
   const attempt = Number(run.run_attempt || 1);
@@ -163,18 +166,17 @@ async function collectRunJobEvidence({ base, repository, run, token, fetchImpl, 
     }));
     const runnerSentinel = jobs.some(job => Number(job.runner_id) === 0);
     const emptyStepsTrigger = jobs.some(job => job.steps_count === 0);
-    const hostedRunnerVerified = run.conclusion === "success" && jobs.some(job =>
+    const standardRunnerVerified = run.conclusion === "success" && jobs.some(job =>
       job.status === "completed" && job.conclusion === "success" &&
-      Number(job.runner_id) > 0 &&
-      !job.labels.some(label => /self-hosted/i.test(label)) &&
-      job.labels.some(label => /^(ubuntu|windows|macos)-/i.test(label))
+      isStandardGitHubHostedRunner(job)
     );
     return {
       status: jobs.length ? "OK" : "EMPTY",
       jobs,
       runner_sentinel: jobs.length ? runnerSentinel : null,
       empty_steps_trigger: jobs.length ? emptyStepsTrigger : null,
-      github_hosted_runner_verified: hostedRunnerVerified,
+      github_hosted_runner_verified: standardRunnerVerified,
+      github_hosted_standard_runner_verified: standardRunnerVerified,
       page_count: page.pageCount,
     };
   } catch (error) {
@@ -185,6 +187,7 @@ async function collectRunJobEvidence({ base, repository, run, token, fetchImpl, 
       runner_sentinel: null,
       empty_steps_trigger: null,
       github_hosted_runner_verified: false,
+      github_hosted_standard_runner_verified: false,
     };
   }
 }

@@ -10,7 +10,7 @@ import {
 
 const NOTION_API = "https://api.notion.com/v1";
 const NOTION_VERSION = "2022-06-28";
-const DEFAULT_FRESHNESS_MINUTES = 30;
+const DEFAULT_FRESHNESS_MINUTES = 60;
 const DEFAULT_NEAR_LIMIT_RATIO = 0.8;
 const DEFAULT_HEARTBEAT_HOURS = 6;
 
@@ -135,19 +135,7 @@ function nearLimitBudget(items, ratio, scope, entity = null) {
   }) || null;
 }
 
-function errorState(account, repo = null) {
-  const errors = [
-    repo?.error,
-    account?.summary_error,
-    account?.repository_list_error,
-    account?.budget?.error,
-  ].filter(Boolean);
-  if (errors.includes("API_RATE_LIMITED")) return "API_RATE_LIMITED";
-  if (errors.includes("PERMISSION_DENIED")) return "PERMISSION_DENIED";
-  if (errors.includes("BILLING_TOKEN_NOT_CONFIGURED")) return "NOT_CONFIGURED";
-  if (errors.includes("NOT_FOUND")) return "NOT_EXPOSED";
-  return null;
-}
+function errorState(account,repo=null){const errors=[repo?.error,account?.summary_error,account?.repository_list_error,account?.budget?.error].filter(Boolean).map(String);if(errors.some(x=>x==="API_RATE_LIMITED"||x==="HTTP_429"))return"API_RATE_LIMITED";if(errors.some(x=>x==="PERMISSION_DENIED"||x==="HTTP_403"))return"PERMISSION_DENIED";if(errors.some(x=>x==="BILLING_TOKEN_NOT_CONFIGURED"||x==="GITHUB_USER_ACCESS_TOKEN_NOT_CONFIGURED"))return"NOT_CONFIGURED";if(errors.includes("NOT_FOUND"))return"NOT_EXPOSED";if(errors.length)return"UNKNOWN";return null;}
 
 function recentSuccessForRepo(receipts, repository, now, freshnessMs) {
   const candidates = receipts.filter(receipt =>
@@ -155,7 +143,7 @@ function recentSuccessForRepo(receipts, repository, now, freshnessMs) {
     String(receipt.source?.repository || "").toLowerCase() === repository.toLowerCase() &&
     receipt.run?.conclusion === "success" &&
     receipt.run?.status === "completed" &&
-    receipt.run?.github_hosted_runner_verified === true
+    receipt.run?.github_hosted_standard_runner_verified === true
   );
   const valid = candidates.map(receipt => ({
     run_id: receipt.run.id,
@@ -229,15 +217,11 @@ export function deriveQuotaSnapshot({
     const ownerProviderExhausted = providerQuotaOwners.has(ownerKey);
     const ownerReportedExhausted = ownerReport?.state === "REPORTED_QUOTA_EXHAUSTED";
     const ownerError = errorState(account);
-    const installation = (discovery.installation_coverage || []).find(item =>
-      String(item.organization || "").toLowerCase() === ownerKey
-    );
-    const installationError = (discovery.installation_errors || []).find(item =>
-      String(item.organization || "").toLowerCase() === ownerKey
-    );
-    const inventoryStatus = account.repository_list_error ||
-      installationError?.error ||
-      (account.scope === "user" || installation?.repository_selection === "all" ? "VERIFIED" : "UNKNOWN");
+    const membership=(discovery.organization_coverage||[]).find(item=>String(item.organization||"").toLowerCase()===ownerKey);
+    const membershipError=(discovery.organization_errors||[]).find(item=>String(item.organization||"").toLowerCase()===ownerKey);
+    const installation=(discovery.installation_coverage||[]).find(item=>String(item.organization||"").toLowerCase()===ownerKey);
+    const installationError=(discovery.installation_errors||[]).find(item=>String(item.organization||"").toLowerCase()===ownerKey);
+    const inventoryStatus=membership?.access_status==="NO_ACCESS"?"NO_ACCESS":account.repository_list_error||membershipError?.error||installationError?.error||(account.scope==="user"||membership?.state==="active"||installation?.repository_selection==="all"?"VERIFIED":"UNKNOWN");
     let ownerQuotaStatus = "UNKNOWN";
     if (ownerProviderExhausted || orgHardCap) ownerQuotaStatus = "QUOTA_EXHAUSTED";
     else if (ownerReportedExhausted) ownerQuotaStatus = "REPORTED_QUOTA_EXHAUSTED";
@@ -253,20 +237,16 @@ export function deriveQuotaSnapshot({
         nearLimitBudget(items, nearLimitRatio, "repository", fullName.split("/").at(-1));
       const repoError = errorState(account, repo);
       const lastSuccess = recentSuccessForRepo(receipts, fullName, now, freshnessMs);
-      let quotaStatus = "UNKNOWN";
-      if (ownerProviderExhausted || orgHardCap || providerQuotaRepos.has(repoKey) || repoBudget) {
-        quotaStatus = "QUOTA_EXHAUSTED";
-      } else if (ownerReportedExhausted) {
-        quotaStatus = "REPORTED_QUOTA_EXHAUSTED";
-      } else if (repoNear || orgNearLimit) {
-        quotaStatus = "NEAR_LIMIT";
-      } else if (lastSuccess) {
-        quotaStatus = "AVAILABLE_VERIFIED";
-      } else if (repoError) {
-        quotaStatus = repoError;
-      } else if (ownerError) {
-        quotaStatus = ownerError;
-      }
+      const publicStandardRunner=repo.visibility==="public"&&!repo.archived&&Boolean(lastSuccess);
+      let quotaStatus="UNKNOWN";
+      if(providerQuotaRepos.has(repoKey)||repoBudget)quotaStatus="QUOTA_EXHAUSTED";
+      else if(publicStandardRunner)quotaStatus="FREE_TIER_AVAILABLE";
+      else if(ownerProviderExhausted||orgHardCap)quotaStatus="QUOTA_EXHAUSTED";
+      else if(ownerReportedExhausted)quotaStatus="REPORTED_QUOTA_EXHAUSTED";
+      else if(repoNear||orgNearLimit)quotaStatus="NEAR_LIMIT";
+      else if(repoError)quotaStatus=repoError;
+      else if(ownerError)quotaStatus=ownerError;
+      else if(lastSuccess)quotaStatus="AVAILABLE_VERIFIED";
       return {
         full_name: fullName,
         visibility: repo.visibility || "unknown",
@@ -283,16 +263,9 @@ export function deriveQuotaSnapshot({
           prevent_further_usage: (repoBudget || repoNear).prevent_further_usage,
           status: (repoBudget || repoNear).status,
         } : null,
-        quota_evidence: repoBudget ? "REPOSITORY_HARD_CAP_REACHED" :
-          providerQuotaRepos.has(repoKey) ? "PROVIDER_ANNOTATION" :
-          ownerProviderExhausted ? "OWNER_PROVIDER_ANNOTATION" :
-          ownerReportedExhausted ? "OWNER_REPORT" :
-          repoNear ? "REPOSITORY_BUDGET_NEAR_LIMIT" :
-          orgHardCap ? "ORGANIZATION_HARD_CAP_REACHED" :
-          orgNearLimit ? "ORGANIZATION_BUDGET_NEAR_LIMIT" :
-          lastSuccess ? "RECENT_GITHUB_HOSTED_SUCCESSFUL_WORKFLOW_RUN" :
-          repoError || ownerError || "NO_RECENT_AVAILABILITY_EVIDENCE",
-        last_successful_run: lastSuccess,
+        cost_class:publicStandardRunner?"FREE_PUBLIC_STANDARD_RUNNER":lastSuccess?"INCLUDED_COMPUTE_STANDARD_RUNNER":"UNKNOWN_OR_BILLABLE",
+        quota_evidence:repoBudget?"REPOSITORY_HARD_CAP_REACHED":providerQuotaRepos.has(repoKey)?"PROVIDER_ANNOTATION":publicStandardRunner?"PUBLIC_STANDARD_RUNNER_FREE":ownerProviderExhausted?"OWNER_PROVIDER_ANNOTATION":ownerReportedExhausted?"OWNER_REPORT":repoNear?"REPOSITORY_BUDGET_NEAR_LIMIT":orgHardCap?"ORGANIZATION_HARD_CAP_REACHED":orgNearLimit?"ORGANIZATION_BUDGET_NEAR_LIMIT":lastSuccess?"RECENT_GITHUB_HOSTED_STANDARD_SUCCESSFUL_WORKFLOW_RUN":repoError||ownerError||"NO_RECENT_AVAILABILITY_EVIDENCE",
+        last_successful_run:lastSuccess,
       };
     });
 
@@ -342,47 +315,26 @@ export function deriveQuotaSnapshot({
     statusCounts[repo.quota_status] = (statusCounts[repo.quota_status] || 0) + 1;
   }
   const eligible = allRepos.filter(repo =>
-    repo.quota_status === "AVAILABLE_VERIFIED" && !repo.archived
+    ["FREE_TIER_AVAILABLE", "AVAILABLE_VERIFIED"].includes(repo.quota_status) && !repo.archived
   );
   const blockedOwners = accounts.filter(account =>
     ["QUOTA_EXHAUSTED", "REPORTED_QUOTA_EXHAUSTED"].includes(account.quota_status)
   ).map(account => ({ owner: account.owner, status: account.quota_status }));
 
   return {
-    schema_version: 1,
+    schema_version: 2,
     observed_at_utc: now.toISOString(),
     billing_period: report.billing_period || "UNKNOWN",
     freshness_minutes: freshnessMinutes,
     near_limit_ratio: nearLimitRatio,
-    routing_policy: {
-      eligible_statuses: ["AVAILABLE_VERIFIED"],
-      blocked_statuses: ["QUOTA_EXHAUSTED", "REPORTED_QUOTA_EXHAUSTED"],
-      unknown_is_eligible: false,
-      stale_is_eligible: false,
-      hard_cap_not_reached_proves_availability: false,
-      availability_evidence_window_minutes: freshnessMinutes,
-      requirement_repository_mapping_precedes_quota_selection: true,
-    },
+    routing_policy:{priority:"FREE_TIER_FIRST",eligible_statuses:["FREE_TIER_AVAILABLE","AVAILABLE_VERIFIED"],blocked_statuses:["QUOTA_EXHAUSTED","REPORTED_QUOTA_EXHAUSTED","NO_ACCESS","PERMISSION_DENIED","API_RATE_LIMITED","NOT_CONFIGURED","UNKNOWN","STALE"],public_standard_runners:"FREE_UNLIMITED",private_internal_standard_runners:"INCLUDED_COMPUTE",larger_runners:"BILLABLE_NOT_FREE",self_hosted_runners:"COST_UNKNOWN_NOT_AUTOMATICALLY_ELIGIBLE",no_per_organization_installation_required:true,unknown_is_eligible:false,stale_is_eligible:false,hard_cap_not_reached_proves_availability:false,availability_evidence_window_minutes:freshnessMinutes,requirement_repository_mapping_precedes_quota_selection:true},
     excluded_organizations: report.excluded_organizations || [],
-    discovery: {
-      status: discovery.status || "UNKNOWN",
-      discovered_installations: discovery.discovered_installations ?? null,
-      excluded_installations: discovery.excluded_installations ?? null,
-      organization_count: discovery.organization_count ?? null,
-      token_count: discovery.token_count ?? null,
-      installation_coverage: discovery.installation_coverage || [],
-      installation_errors: discovery.installation_errors || [],
-    },
+    discovery:{status:discovery.status||"UNKNOWN",method:discovery.method||null,user_login:discovery.user_login||null,organization_count:discovery.organization_count??null,token_count:discovery.token_count??null,unique_token_count:discovery.unique_token_count??null,installations_required:discovery.installations_required??false,token_refresh_status:discovery.token_refresh_status||null,organization_coverage:discovery.organization_coverage||[],organization_errors:discovery.organization_errors||[],excluded_organizations:discovery.excluded_organizations||[]},
     owner_reports: Object.values(ownerReports),
     accounts,
     repository_status_counts: statusCounts,
     eligible_repository_count: eligible.length,
-    eligible_repositories: eligible.map(repo => ({
-      repository: repo.full_name,
-      owner: repo.owner,
-      visibility: repo.visibility,
-      last_successful_run: repo.last_successful_run,
-    })),
+    eligible_repositories:eligible.map(repo=>({repository:repo.full_name,owner:repo.owner,visibility:repo.visibility,cost_class:repo.cost_class,quota_status:repo.quota_status,last_successful_run:repo.last_successful_run})),
     blocked_owners: blockedOwners,
     provider_quota_evidence: providerQuotaEvidence,
     annotation_scan_error_count: scanErrors.length,
@@ -412,7 +364,7 @@ export function buildQuotaSummary(snapshot) {
     "repositories=[" + repoStates + "]",
     "eligible=" + snapshot.eligible_repository_count,
     "excluded=[" + (snapshot.excluded_organizations || []).join(",") + "]",
-    "policy=only AVAILABLE_VERIFIED is eligible; UNKNOWN/STALE/NOT_CONFIGURED are ineligible",
+    "policy=FREE_TIER_FIRST; FREE_TIER_AVAILABLE and AVAILABLE_VERIFIED are eligible; UNKNOWN/STALE/NO_ACCESS/NOT_CONFIGURED are ineligible",
     "freshness_minutes=" + snapshot.freshness_minutes,
   ].join(" | ");
 }
@@ -428,6 +380,8 @@ function snapshotDigest(snapshot) {
       repositories: account.repositories.map(repo => ({
         full_name: repo.full_name,
         archived: repo.archived,
+        visibility: repo.visibility,
+        cost_class: repo.cost_class,
         quota_status: repo.quota_status,
         evidence: repo.quota_evidence,
       })).sort((a, b) => a.full_name.localeCompare(b.full_name)),
@@ -455,11 +409,11 @@ export async function publishQuotaSnapshot({
   }
   const comments = existingComments || await listPageComments(quotaPageId, notionToken, fetchImpl);
   const digest = snapshotDigest(snapshot);
-  const marker = "UPW_QUOTA_SNAPSHOT_V1 digest=" + digest;
+  const marker = "UPW_QUOTA_SNAPSHOT_V2 digest=" + digest;
   const previous = [...comments].reverse().find(comment =>
-    commentText(comment).includes("UPW_QUOTA_SNAPSHOT_V1 digest="));
+    commentText(comment).includes("UPW_QUOTA_SNAPSHOT_V2 digest="));
   const previousText = previous ? commentText(previous) : "";
-  const previousDigest = previousText.match(/UPW_QUOTA_SNAPSHOT_V1 digest=([a-f0-9]{64})/)?.[1] || null;
+  const previousDigest = previousText.match(/UPW_QUOTA_SNAPSHOT_V2 digest=([a-f0-9]{64})/)?.[1] || null;
   const previousAt = Date.parse(previous?.created_time || "");
   const heartbeatDue = !Number.isFinite(previousAt) ||
     now.getTime() - previousAt >= heartbeatHours * 60 * 60_000;
@@ -483,7 +437,7 @@ export async function publishQuotaSnapshot({
       marker,
       "Observed at: " + snapshot.observed_at_utc,
       "Billing period: " + snapshot.billing_period,
-      "Only AVAILABLE_VERIFIED repositories are eligible. UNKNOWN, STALE, NOT_CONFIGURED, PERMISSION_DENIED and API_RATE_LIMITED are not eligible.",
+      "FREE_TIER_FIRST: FREE_TIER_AVAILABLE and AVAILABLE_VERIFIED are eligible. UNKNOWN, STALE, NOT_CONFIGURED, NO_ACCESS, PERMISSION_DENIED and API_RATE_LIMITED are not eligible.",
       JSON.stringify(snapshot, null, 2),
     ].join("\n");
     await notionRequest("/comments", {
@@ -535,7 +489,7 @@ export async function runMonitor({
         targets: [{
           repository: repo.full_name,
           scan_recent_runs: true,
-          lookback_days: 7,
+          lookback_days: 1,
           expected_workflows: [],
           availability_freshness_minutes: config.freshness_minutes ?? DEFAULT_FRESHNESS_MINUTES,
           trigger_lookback_hours: config.trigger_lookback_hours ?? 24,
