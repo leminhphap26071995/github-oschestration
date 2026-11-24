@@ -57,29 +57,45 @@ class QuotaMonitorTests(unittest.TestCase):
                          [repo["full_name"] for repo in result["repositories"]])
         self.assertEqual("PARTIAL", result["status"])
 
-    def test_user_scope_queries_actions_usage_and_repository_usage(self):
-        paths = []
-        usage = {"usageItems": [
-            {"product": "Actions", "sku": "actions_linux", "unitType": "minutes",
-             "grossQuantity": 60, "discountQuantity": 10, "netQuantity": 50,
-             "netAmount": 0.25}
-        ]}
-        def fake_get(token, path):
+    def test_user_scope_does_not_query_every_repository(self):
+        paths=[]
+        usage={"usageItems":[{"product":"Actions","sku":"actions_linux","unitType":"minutes","grossQuantity":60,"discountQuantity":10,"netQuantity":50,"netAmount":0.25}]}
+        def fake_get(token,path):paths.append(path);return usage,None
+        with patch.object(module,"get",side_effect=fake_get):
+            with patch.object(module,"pages",return_value=([{"id":42,"full_name":"alice/private","owner":{"type":"User","login":"alice"},"private":True,"default_branch":"main"}],None)):
+                result=module.collect("user","alice","token",2026,11)
+        self.assertEqual("OK",result["actions_usage_status"]);self.assertEqual(50.0,result["totals"]["net_minutes"])
+        self.assertEqual("NOT_COLLECTED_BY_DESIGN",result["repositories"][0]["status"]);self.assertIsNone(result["repositories"][0]["totals"]["net_minutes"])
+        self.assertEqual(1,len(paths));self.assertFalse(any("repository=" in p for p in paths))
+
+    def test_org_scope_queries_only_repositories_with_actions_repository_budgets(self):
+        paths=[]
+        account_usage={"usageItems":[{"product":"Actions","sku":"actions_linux","unitType":"minutes","grossQuantity":100,"discountQuantity":0,"netQuantity":100,"netAmount":0.5}]}
+        repository_usage={"usageItems":[{"product":"Actions","sku":"actions_linux","unitType":"minutes","grossQuantity":20,"discountQuantity":0,"netQuantity":20,"netAmount":0.1}]}
+        budgets={"budgets":[{"budget_product_skus":["actions"],"budget_scope":"repository","budget_entity_name":"example-org/budgeted","budget_amount":10,"prevent_further_usage":True}]}
+        def fake_get(token,path):
             paths.append(path)
-            return usage, None
-        with patch.object(module, "get", side_effect=fake_get):
-            with patch.object(module, "pages", return_value=([
-                {"id": 42, "full_name": "alice/private",
-                 "owner": {"type": "User", "login": "alice"},
-                 "private": True, "default_branch": "main"},
-            ], None)):
-                result = module.collect("user", "alice", "token", 2026, 11)
-        self.assertEqual("OK", result["actions_usage_status"])
-        self.assertEqual(50.0, result["totals"]["net_minutes"])
-        self.assertEqual("OK", result["repositories"][0]["status"])
-        self.assertEqual(50.0, result["repositories"][0]["totals"]["net_minutes"])
-        self.assertTrue(any(path.startswith("/users/alice/settings/billing/usage/summary") for path in paths))
-        self.assertTrue(any("repository=alice%2Fprivate" in path for path in paths))
+            if path.startswith("/organizations/example-org/settings/billing/usage/summary"):return account_usage,None
+            if path.startswith("/organizations/example-org/settings/billing/budgets"):return budgets,None
+            if "repository=example-org%2Fbudgeted" in path:return repository_usage,None
+            raise AssertionError("Unexpected billing query: "+path)
+        with patch.object(module,"get",side_effect=fake_get):
+            with patch.object(module,"pages",return_value=([
+                {"id":1,"full_name":"example-org/budgeted","owner":{"type":"Organization","login":"example-org"},"private":True,"default_branch":"main"},
+                {"id":2,"full_name":"example-org/no-budget","owner":{"type":"Organization","login":"example-org"},"private":True,"default_branch":"main"},
+            ],None)):
+                result=module.collect("organization","example-org","uat",2026,11)
+        self.assertEqual("OK",result["repositories"][0]["status"]);self.assertEqual("NOT_COLLECTED_BY_DESIGN",result["repositories"][1]["status"])
+        self.assertEqual(0.1,result["budget"]["items"][0]["observed_net_amount"]);self.assertEqual(3,len(paths))
+        self.assertEqual(1,sum("repository=" in p for p in paths))
+
+    def test_collect_all_reuses_one_user_access_token_for_every_authorized_org(self):
+        seen=[]
+        def fake_collect(scope,owner,token,year,month):
+            seen.append((scope,owner,token));return {"scope":scope,"owner":owner,"status":"OK","repositories":[]}
+        with patch.object(module,"collect",side_effect=fake_collect):
+            module.collect_all("shared-uat",{"alpha-org":"shared-uat","beta-org":"shared-uat"},"alice",["alpha-org","beta-org"],[])
+        self.assertEqual([("user","alice","shared-uat"),("organization","alpha-org","shared-uat"),("organization","beta-org","shared-uat")],seen)
 
     def test_empty_usage_rows_are_unknown_not_zero(self):
         self.assertIsNone(module.totals([])["gross_minutes"])
@@ -105,7 +121,7 @@ class QuotaMonitorTests(unittest.TestCase):
             ]}))
             self.assertEqual(["example-org", "second-org"], module.org_targets(path))
 
-    def test_empty_targets_support_automatic_app_installation_discovery(self):
+    def test_empty_targets_support_automatic_user_access_discovery(self):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "targets.json"
             path.write_text(json.dumps({

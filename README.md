@@ -46,3 +46,8 @@ GitHub billing usage-summary APIs are public preview and may change. They expose
 - [Execution environment and quota governance](docs/EXECUTION-ENVIRONMENT-AND-QUOTA-GOVERNANCE.md)
 - [Notion-first repository and role control plane](docs/NOTION-FIRST-REPO-ROLE-CONTROL-PLANE.md)
 - [Integrated workflow quality gate](docs/WORKFLOW-QUALITY-GATE.md)
+
+
+## FREE_TIER_FIRST_CENTRAL_QUOTA_MONITOR
+
+The central Actions quota monitor is free-tier-first: one public-repository workflow, one shared GitHub App User Access Token, no per-organization App installations, and fail-closed Notion routing. See quota-monitor/FREE_TIER_FIRST.md and quota-monitor/README.md.

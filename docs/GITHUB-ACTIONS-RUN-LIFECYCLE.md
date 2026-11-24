@@ -2,76 +2,70 @@
 
 ## 1. Before triggering Actions
 
-1. Resolve the project/ticket and requirement-to-repository/access mapping from the Notion context registry.
-2. Read the current GM-51 Quota Routing Snapshot and latest owner report.
+1. Resolve project/ticket and requirement-to-repository/access mapping from the Notion context registry.
+2. Read the current Quota Routing Snapshot and latest owner report.
 3. Require a snapshot no older than 60 minutes.
-4. Trigger Actions only on an authorized mapped repository whose owner and repository state are AVAILABLE_VERIFIED.
-5. Treat NEAR_LIMIT as fallback-only. QUOTA_EXHAUSTED and REPORTED_QUOTA_EXHAUSTED block every repository under that owner. UNKNOWN, STALE, NOT_CONFIGURED, PERMISSION_DENIED, API_RATE_LIMITED and NOT_DISCOVERED fail closed.
+4. Prefer FREE_TIER_AVAILABLE (public + exact standard runner) before AVAILABLE_VERIFIED (private/internal included compute).
+5. Trigger Actions only on an authorized mapped repository whose quota/cost state is eligible.
+6. NEAR_LIMIT is fallback-only. QUOTA_EXHAUSTED and REPORTED_QUOTA_EXHAUSTED block private/internal included-compute use. UNKNOWN, STALE, NOT_CONFIGURED, NO_ACCESS, PERMISSION_DENIED and API_RATE_LIMITED fail closed.
 
-Do not probe quota with a speculative push, rerun, manual dispatch or per-repository workflow.
+Do not probe quota with speculative pushes, reruns, manual dispatches or per-repository workflows.
 
 ## 2. Preserve exact run identity
 
-Keep these identifiers distinct:
+Keep repository, branch/ref, head SHA, workflow run ID, run attempt, job ID, Check Run ID and runner ID distinct. A run ID is not a job ID; a job ID is not a Check Run ID. runner_id is assignment evidence, not a billing classification.
 
-- repository;
-- branch/ref;
-- head SHA;
-- workflow run ID;
-- run attempt;
-- job ID;
-- Check Run ID;
-- runner ID.
+## 3. Model the asynchronous provider lifecycle
 
-A run ID is not a job ID. A job ID is not a Check Run ID. runner_id is evidence about runner assignment, not a billing classification.
+GitHub Actions is asynchronous. Do not collapse admission, runner provisioning, job startup, execution, log publication and terminal observation into one state.
 
-## 3. Terminal failure: read Notion first
+- RUNNER_WARMUP_PENDING: workflow run admitted; a runner has not yet been assigned or is still provisioning.
+- JOB_STARTUP_PENDING: runner assigned; the job has not started executing steps.
+- LOG_PUBLICATION_PENDING: execution ended but the provider has not yet published complete logs or annotations.
+- OBSERVATION_WINDOW_EXPIRED: the observer's time window elapsed without decisive terminal evidence. This is not a quota diagnosis.
+- Retry-After: honor the provider's retry delay on rate limits; do not spin, dispatch duplicates or classify a 429 as quota exhaustion.
 
-For every terminal failed run, ChatGPT must query the configured Notion annotation-relay destination (GM-50) before concluding that annotation evidence is unavailable.
+Keep exact run attempt and Check Run correlation throughout each transition. Missing runner metadata, empty steps, no jobs, blank logs or BlobNotFound are not root-cause classifications.
 
-The lookup must correlate the exact repository, ref, SHA, run ID, attempt and Check Run ID, and paginate all relevant Notion comments.
+## 4. Terminal failure: read Notion first
 
-Immediate annotation-recovery triggers include:
-- provider-owned GitHub Actions Check Run with runner_id=0;
-- terminal steps=[];
-- annotations_count greater than zero;
-- explicit provider quota output.
+For every terminal failed run, query the configured Notion annotation-relay destination (GM-50) before concluding that annotation evidence is unavailable. Correlate the exact repository, ref, SHA, run ID, attempt and Check Run ID; paginate all relevant Notion comments.
 
-runner_id=0 and steps=[] trigger the annotation lookup even when annotations_count is zero. They are not blockers, root causes or quota evidence.
+Immediate annotation-recovery triggers include provider Check Run runner_id=0, terminal steps=[], annotations_count greater than zero, or explicit provider quota output. runner_id=0 and steps=[] trigger annotation lookup even when annotations_count is zero. They are not blockers or quota evidence.
 
-The central monitor retrieves provider Check Run annotations and publishes the receipt to Notion. ChatGPT consumes the Notion receipt; it must not terminate diagnosis because a direct connector endpoint is blocked.
+The central monitor retrieves provider Check Run annotations and publishes receipts to Notion. ChatGPT consumes the Notion receipt; it must not terminate diagnosis because a direct connector endpoint is blocked.
 
-## 4. Missing receipt and transport errors
+## 5. Missing receipt and transport errors
 
-If no receipt matches the exact run identity, record:
+If no receipt matches the exact run identity, record NOTION_RELAY_RECEIPT_NOT_FOUND_FOR_EXACT_RUN. This means the relay receipt was not found; it does not mean there are no annotations or that quota is exhausted.
 
-NOTION_RELAY_RECEIPT_NOT_FOUND_FOR_EXACT_RUN
+API_METHOD_BLOCKED is transport-only. Continue with the configured Notion relay, observer coverage and authorization checks. Do not infer annotation content. If a Check Run cannot be correlated to a workflow run, preserve its body as UNMATCHED_CHECK_RUN_CORRELATION and do not promote it to exact-run or quota evidence.
 
-This means the expected relay receipt was not found. It does not mean there are no annotations, that quota is exhausted, or that the runner is unavailable.
+## 6. Classification and availability
 
-API_METHOD_BLOCKED is transport-only. It is not a terminal diagnosis. Continue with the configured Notion relay, observer coverage and authorization checks. Do not infer annotation content.
-
-If a Check Run cannot be correlated to a workflow run, preserve its annotation body as UNMATCHED_CHECK_RUN_CORRELATION. Do not promote it to an exact-run or quota conclusion.
-
-## 5. Classification rules
-
-- QUOTA_EXHAUSTED: explicit provider-owned Actions billing/payment/spending-cap annotation or enforced hard cap.
-- REPORTED_QUOTA_EXHAUSTED: explicit owner report; blocks the owner's repositories until CLEARED.
+- QUOTA_EXHAUSTED: explicit provider-owned Actions billing/payment/spending-cap annotation or enforced applicable hard cap.
+- REPORTED_QUOTA_EXHAUSTED: explicit owner report; blocks private/internal included-compute use until cleared.
 - RUNNER_UNAVAILABLE: explicit provider evidence of runner capacity/assignment failure.
-- PERMISSION_DENIED: explicit authorization evidence.
+- PERMISSION_DENIED / NO_ACCESS: explicit authorization boundary.
+- API_RATE_LIMITED: provider throttling; honor Retry-After and retry later.
 - UNKNOWN: no reliable cause after authorized evidence routes.
 - NOTION_RELAY_RECEIPT_NOT_FOUND_FOR_EXACT_RUN: exact receipt absent; annotation body remains unread.
 
-Never classify quota from runner_id=0, empty steps, no jobs, missing logs, BlobNotFound, generic 403/404/429 or a connector error.
-
-## 6. Availability proof
-
-AVAILABLE_VERIFIED requires a successful GitHub-hosted runner job observed within 30 minutes and a fresh GM-51 snapshot. Self-hosted jobs, historical green runs and budgets below a hard cap do not establish included-runner availability.
-
-A recent success is evidence at the observation time, not a guarantee of future capacity. The monitor fails closed when evidence is missing or stale.
+FREE_TIER_AVAILABLE requires a fresh successful run on an exact standard GitHub-hosted runner in a public repository. AVAILABLE_VERIFIED requires fresh successful standard-runner evidence for private/internal repositories with billing collection and owner state clear. A self-hosted job, larger runner, historical green run or budget below its cap does not establish included-runner availability.
 
 ## 7. Continue work without breaking the loop
 
-A missing receipt or quota restriction does not end independent AI-owned work. Continue source inspection, design, tests that do not trigger the blocked billing owner, Notion reconciliation and other authorized non-triggering tasks. Do not send progress narration or hand off while feasible AI-owned work remains.
+A missing receipt or quota restriction does not end independent AI-owned work. Continue source inspection, design, tests that do not trigger the blocked billing owner, Notion reconciliation and other authorized tasks. Only ask the owner for exclusive credential/permission setup, private access or final real-world acceptance.
 
-Only ask the owner for an exclusive action such as one-time credential/permission setup, private access or final real-world acceptance.
+
+## 2026-11-24 correction — no-runner state triggers notion annotation recovery
+
+This is the controlling Notion-first recovery rule. The raw attempt-scoped job field runner_id: 0, terminal job steps: [], or Check Run annotations_count > 0 triggers annotation recovery. These are routing signals only, not root-cause classifications, quota evidence, or terminal blockers.
+
+Preserve exact identity fields run_attempt and check_run_id, together with repository, ref, head SHA, workflow run ID and attempt. Preserve the source values runner_id: 0, steps: [], annotations_count > 0, empty jobs, runner_id=0 and steps=[].
+
+Immediately trigger and query the configured Notion relay; paginate all relevant discussions/comments and correlate the receipt against the exact run identity. Interpret only the matching receipt's annotation body. Only an explicit provider-owned Actions billing/payment/spending-cap message or an enforced applicable hard cap proves QUOTA_EXHAUSTED.
+
+If the exact receipt is absent, record NOTION_RELAY_RECEIPT_NOT_FOUND_FOR_EXACT_RUN. This means the receipt was not found; it does not mean annotations are absent. API_METHOD_BLOCKED is transport-only, does not close the diagnostic branch, and must route to the Notion relay before any terminal classification.
+
+Do not classify runner_id: 0, steps: [], empty jobs, missing logs, blank runner metadata or BlobNotFound as quota exhaustion or as a reason to stop. Preserve PRESENT/NULL/MISSING distinctly. Honor Retry-After on API rate limits and continue other independent AI-owned work.

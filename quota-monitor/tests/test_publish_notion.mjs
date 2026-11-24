@@ -66,6 +66,7 @@ test("owner report blocks every repository and UNKNOWN never becomes available",
     run: {
       id: 101, attempt: 1, path: ".github/workflows/ci.yml", event: "push",
       status: "completed", conclusion: "success", github_hosted_runner_verified: true,
+      github_hosted_standard_runner_verified: true,
       updated_at: "2026-11-24T17:00:00.000Z"
     }
   }];
