@@ -265,17 +265,23 @@ export async function collectAnnotationReceipts({
       });
     }
     for (const checkRun of checkRuns) {
+      if (checkRun.status && checkRun.status !== "completed") continue;
       const annotationCount = Number(checkRun.output?.annotations_count ?? 0);
       const outputText = [checkRun.output?.title, checkRun.output?.summary, checkRun.output?.text].filter(Boolean).join("\n");
       const providerQuota = String(checkRun.app?.slug || "").toLowerCase() === "github-actions" &&
         checkRun.name === "GitHub Actions" &&
         /actions.{0,80}(?:billing|minutes|quota|spending limit)|(?:included minutes|spending limit).{0,80}(?:exhausted|reached|exceeded)|payment method.{0,80}(?:required|failed)|billing.{0,80}(?:hard cap|limit reached)/i.test(outputText);
       if (annotationCount === 0 && !providerQuota) continue;
-      const correlatedRun = runs.find(run =>
-        (run.check_suite_id && checkRun.check_suite?.id &&
-          String(run.check_suite_id) === String(checkRun.check_suite.id)) ||
-        (checkRun.details_url && String(checkRun.details_url).includes("/actions/runs/" + run.id))
+      const detailsRun = runs.find(run =>
+        checkRun.details_url && String(checkRun.details_url).includes("/actions/runs/" + run.id)
       );
+      const suiteMatches = runs.filter(run =>
+        run.check_suite_id && checkRun.check_suite?.id &&
+        String(run.check_suite_id) === String(checkRun.check_suite.id)
+      );
+      // A check-suite ID can be shared by rerun attempts. Only use it when unique;
+      // otherwise require the run ID in details_url to preserve exact attempt identity.
+      const correlatedRun = detailsRun || (suiteMatches.length === 1 ? suiteMatches[0] : null);
       if (!correlatedRun) {
         receipts.push({
           schema_version: 1,
