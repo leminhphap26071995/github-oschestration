@@ -376,9 +376,11 @@ export async function collectAnnotationReceipts({
       // A check-suite ID can be shared by rerun attempts. Only use it when unique;
       // otherwise require the run ID in details_url to preserve exact attempt identity.
       const correlatedRun = detailsRun || (suiteMatches.length === 1 ? suiteMatches[0] : null);
-      const runnerTrigger = correlatedRun
+      const trustedActionsCheck = String(checkRun.app?.slug || "").toLowerCase() === "github-actions" &&
+        checkRun.name === "GitHub Actions";
+      const runnerTrigger = trustedActionsCheck && (correlatedRun
         ? correlatedRun.runner_sentinel === true || correlatedRun.empty_steps_trigger === true
-        : runs.some(run => run.runner_sentinel === true || run.empty_steps_trigger === true);
+        : runs.some(run => run.runner_sentinel === true || run.empty_steps_trigger === true));
       const annotationLookupTriggered = annotationCount > 0 || providerQuota || runnerTrigger;
       if (!annotationLookupTriggered) continue;
       if (!correlatedRun) {
@@ -472,6 +474,11 @@ export async function collectAnnotationReceipts({
           check_run_pages: checkPage.pageCount,
           workflow_runs: runs,
         },
+        annotation_lookup_trigger: [
+          ...(annotationCount > 0 ? ["ANNOTATIONS_COUNT_POSITIVE"] : []),
+          ...(providerQuota ? ["PROVIDER_QUOTA_OUTPUT"] : []),
+          ...(runnerTrigger ? ["RUNNER_ID_ZERO_OR_EMPTY_STEPS"] : []),
+        ],
         check_run: {
           id: checkRun.id,
           name: sanitizeEvidence(checkRun.name),
