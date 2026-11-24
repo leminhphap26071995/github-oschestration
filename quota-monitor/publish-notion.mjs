@@ -154,7 +154,8 @@ function recentSuccessForRepo(receipts, repository, now, freshnessMs) {
     receipt.receipt_type === "GITHUB_WORKFLOW_RUN_EVIDENCE" &&
     String(receipt.source?.repository || "").toLowerCase() === repository.toLowerCase() &&
     receipt.run?.conclusion === "success" &&
-    receipt.run?.status === "completed"
+    receipt.run?.status === "completed" &&
+    receipt.run?.github_hosted_runner_verified === true
   );
   const valid = candidates.map(receipt => ({
     run_id: receipt.run.id,
@@ -202,6 +203,9 @@ export function deriveQuotaSnapshot({
       run_attempt: receipt.source.run_attempt,
       run_ref: receipt.source.run_ref,
       check_suite_id: receipt.source.check_suite_id,
+      runner_sentinel: receipt.source.runner_sentinel,
+      empty_steps_trigger: receipt.source.empty_steps_trigger,
+      job_evidence_status: receipt.source.job_evidence_status,
       check_run_id: receipt.check_run.id,
       annotations_reported: receipt.check_run.annotations_reported,
       observed_at: receipt.observed_at,
@@ -384,6 +388,10 @@ export function deriveQuotaSnapshot({
     annotation_scan_errors: scanErrors.map(item => ({
       repository: item.repository,
       code: sanitizeEvidence(item.code),
+      check_run_id: item.check_run_id ?? null,
+      annotations_reported: item.annotations_reported ?? null,
+      runner_sentinel: item.runner_sentinel ?? false,
+      empty_steps_trigger: item.empty_steps_trigger ?? false,
     })),
   };
 }
@@ -527,6 +535,7 @@ export async function runMonitor({
           scan_recent_runs: true,
           lookback_days: 7,
           expected_workflows: [],
+          availability_freshness_minutes: config.freshness_minutes ?? DEFAULT_FRESHNESS_MINUTES,
         }],
       });
       try {
@@ -541,7 +550,12 @@ export async function runMonitor({
             scanErrors.push({
               repository: repo.full_name,
               code: "CHECK_RUN_RUN_CORRELATION_UNRESOLVED",
+              check_run_id: receipt.check_run_id,
+              annotations_reported: receipt.annotations_reported,
+              runner_sentinel: receipt.source?.runner_sentinel,
+              empty_steps_trigger: receipt.source?.empty_steps_trigger,
             });
+            receipts.push(receipt);
           } else {
             receipts.push(receipt);
           }
