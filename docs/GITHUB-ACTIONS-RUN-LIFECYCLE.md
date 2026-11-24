@@ -56,3 +56,22 @@ FREE_TIER_AVAILABLE requires a fresh successful run on an exact standard GitHub-
 ## 7. Continue work without breaking the loop
 
 A missing receipt or quota restriction does not end independent AI-owned work. Continue source inspection, design, tests that do not trigger the blocked billing owner, Notion reconciliation and other authorized tasks. Only ask the owner for exclusive credential/permission setup, private access or final real-world acceptance.
+
+
+## 2026-11-24 correction — no-runner state triggers notion annotation recovery
+
+This exact section is the controlling recovery rule. A raw attempt-scoped job with runner_id: 0, a terminal failed job with steps: [], or a Check Run with annotations_count > 0 triggers immediate Notion-first annotation recovery. These are routing signals, not root-cause classifications, quota evidence, or terminal blockers.
+
+The following representations are deliberately preserved for exact-source conformance:
+- runner_id: 0
+- steps: []
+- annotations_count > 0
+- empty jobs
+- runner_id=0
+- steps=[]
+
+Immediately correlate the exact repository, ref, head SHA, workflow run ID, attempt and Check Run ID. Query the configured Notion annotation-relay destination and paginate all discussions/comments. Interpret only the exact matching receipt's annotation body. Only an explicit provider-owned Actions billing/payment/spending-cap message or an enforced applicable hard cap proves QUOTA_EXHAUSTED.
+
+If the exact receipt is absent, record NOTION_RELAY_RECEIPT_NOT_FOUND_FOR_EXACT_RUN. This means the receipt was not found; it does not mean annotations are absent. API_METHOD_BLOCKED is transport-only and must route to the Notion relay; it is never the terminal diagnosis while the relay path remains unexamined or repairable.
+
+Do not classify runner_id: 0, steps: [], empty jobs, missing logs, blank runner metadata or BlobNotFound as quota exhaustion or as a reason to stop. Preserve PRESENT/NULL/MISSING distinctly. Honor Retry-After on API rate limits and continue other independent AI-owned work.
