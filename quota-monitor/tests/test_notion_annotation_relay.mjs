@@ -87,6 +87,8 @@ test("collects exact-SHA check-run annotations and preserves distinct causes", a
   assert.equal(receipts[1].classification, "ACTIONS_BILLING_QUOTA_EXHAUSTED");
   assert.equal(receipts[0].source.run_id, 77);
   assert.equal(receipts[0].source.run_attempt, 1);
+  assert.equal(receipts[0].source.runner_sentinel, true);
+  assert.equal(receipts[0].source.empty_steps_trigger, true);
   assert.equal(receipts[1].source.run_id, 77);
   assert.equal(receipts.some(item => item.source.repository === "example/private-repo" && item.check_run.id === 103), false);
   assert.equal(receipts.every(item => item.source.head_sha === SHA), true);
@@ -224,6 +226,13 @@ test("captures successful workflow-run evidence without publishing it as an anno
         updated_at: "2026-11-24T16:55:00.000Z"
       }] });
     }
+    if (parsed.pathname.endsWith("/actions/runs/901/attempts/2/jobs")) {
+      return jsonResponse({ jobs: [{
+        id: 9011, name: "test", status: "completed", conclusion: "success",
+        runner_id: 42, runner_name: "GitHub Actions 42", labels: ["ubuntu-latest"],
+        steps: [{ name: "test", status: "completed", conclusion: "success" }]
+      }] });
+    }
     if (parsed.pathname.endsWith("/check-runs")) return jsonResponse({ check_runs: [] });
     if (parsed.pathname.endsWith("/comments")) return jsonResponse({
       results: [], has_more: false, next_cursor: null
@@ -239,6 +248,7 @@ test("captures successful workflow-run evidence without publishing it as an anno
   assert.equal(receipts.length, 1);
   assert.equal(receipts[0].receipt_type, "GITHUB_WORKFLOW_RUN_EVIDENCE");
   assert.equal(receipts[0].run.id, 901);
+  assert.equal(receipts[0].run.github_hosted_runner_verified, true);
   const published = await publishAnnotationReceipts({
     receipts,
     notionToken: "secret_notion_token",
@@ -273,6 +283,12 @@ test("recent-run mode scans all branches and correlates annotations to exact run
         updated_at: "2026-11-24T16:01:00Z"
       }] });
     }
+    if (parsed.pathname.endsWith("/actions/runs/902/attempts/3/jobs")) {
+      return jsonResponse({ jobs: [{
+        id: 9022, name: "build", status: "completed", conclusion: "failure",
+        runner_id: 0, runner_name: null, labels: [], steps: []
+      }] });
+    }
     if (parsed.pathname.endsWith("/check-runs")) {
       return jsonResponse({ check_runs: [{
         id: 9021, head_sha: SHA, check_suite: { id: 9020 },
@@ -300,6 +316,8 @@ test("recent-run mode scans all branches and correlates annotations to exact run
   assert.equal(receipts[0].source.run_id, 902);
   assert.equal(receipts[0].source.run_attempt, 3);
   assert.equal(receipts[0].source.run_ref, "feature/usage");
+  assert.equal(receipts[0].source.runner_sentinel, true);
+  assert.equal(receipts[0].source.empty_steps_trigger, true);
   assert.equal(receipts[0].check_run.id, 9021);
   assert.equal(receipts[0].classification, "ACTIONS_BILLING_QUOTA_EXHAUSTED");
   assert.equal(calls.some(url => new URL(url).pathname.endsWith("/branches/")), false);
@@ -321,6 +339,12 @@ test("does not publish a check-run annotation when exact run correlation is unav
       id: 903, run_attempt: 1, check_suite_id: 9030, head_sha: SHA,
       head_branch: "feature/unmatched", status: "completed", conclusion: "failure"
     }] });
+    if (parsed.pathname.endsWith("/actions/runs/903/attempts/1/jobs")) {
+      return jsonResponse({ jobs: [{
+        id: 9032, name: "build", status: "completed", conclusion: "failure",
+        runner_id: 0, runner_name: null, labels: [], steps: []
+      }] });
+    }
     if (parsed.pathname.endsWith("/check-runs")) return jsonResponse({ check_runs: [{
       id: 9031, head_sha: SHA, check_suite: { id: 9999 },
       name: "GitHub Actions", app: { slug: "github-actions" },
@@ -337,4 +361,8 @@ test("does not publish a check-run annotation when exact run correlation is unav
   assert.equal(receipts.length, 1);
   assert.equal(receipts[0].receipt_type, "GITHUB_CHECK_RUN_UNMATCHED");
   assert.equal(receipts[0].reason, "CHECK_RUN_RUN_CORRELATION_UNRESOLVED");
+  assert.equal(receipts[0].annotations_status, "RETRIEVED");
+  assert.equal(receipts[0].annotations.length, 1);
+  assert.equal(receipts[0].source.runner_sentinel, true);
+  assert.equal(receipts[0].source.empty_steps_trigger, true);
 });
