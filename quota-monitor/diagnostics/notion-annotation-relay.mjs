@@ -25,8 +25,17 @@ function validateTargets(raw) {
   assert(config && config.schema_version === 1 && Array.isArray(config.targets), "INVALID_TARGETS_SCHEMA");
   for (const target of config.targets) {
     assert(/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(target.repository || ""), "INVALID_TARGET_REPOSITORY");
-    assert(/^[A-Za-z0-9._/-]+$/.test(target.branch || "") && !target.branch.includes(".."), "INVALID_TARGET_BRANCH");
+    const recentMode = target.scan_recent_runs === true;
+    if (!recentMode) {
+      assert(/^[A-Za-z0-9._/-]+$/.test(target.branch || "") && !target.branch.includes(".."), "INVALID_TARGET_BRANCH");
+    }
+    if (recentMode) {
+      const lookback = Number(target.lookback_days ?? 7);
+      assert(Number.isInteger(lookback) && lookback >= 1 && lookback <= 31, "INVALID_RECENT_RUN_LOOKBACK");
+    }
     assert(Array.isArray(target.expected_workflows), "INVALID_EXPECTED_WORKFLOWS");
+    assert(target.scan_recent_runs === undefined || typeof target.scan_recent_runs === "boolean",
+      "INVALID_SCAN_RECENT_RUNS");
     assert(target.include_open_pull_requests === undefined || typeof target.include_open_pull_requests === "boolean",
       "INVALID_INCLUDE_OPEN_PULL_REQUESTS");
   }
@@ -121,37 +130,66 @@ export async function collectAnnotationReceipts({
   const receipts = [];
   for (const target of targets) {
     const base = githubApi.replace(/\/$/, "");
-    const targetRefs = [];
-    const branchUrl = base + "/repos/" + target.repository + "/branches/" + encodeURIComponent(target.branch);
-    const { data: branch } = await requestJson(branchUrl, { token: githubToken, fetchImpl });
-    const branchSha = branch?.commit?.sha;
-    if (!/^[a-f0-9]{40}$/i.test(branchSha || "")) throw new Error("TARGET_HEAD_SHA_UNAVAILABLE");
-    targetRefs.push({
-      branch: target.branch,
-      headSha: branchSha,
-      sourceRefType: "CONFIGURED_BRANCH",
-      pullRequestNumber: null,
-      pullRequestDiscoveryPages: 0,
-    });
+    let targetRefs = [];
+    if (target.scan_recent_runs === true) {
+      const lookbackDays = Number(target.lookback_days ?? 7);
+      const since = new Date(Date.parse(observedAt) - lookbackDays * 24 * 60 * 60_000).toISOString();
+      const recentRunsUrl = new URL(base + "/repos/" + target.repository + "/actions/runs");
+      recentRunsUrl.searchParams.set("created", ">=" + since);
+      recentRunsUrl.searchParams.set("per_page", "100");
+      const recentPage = await paginate(recentRunsUrl, {
+        token: githubToken, collection: "workflow_runs", fetchImpl
+      });
+      const grouped = new Map();
+      for (const run of recentPage.items) {
+        const headSha = run?.head_sha;
+        if (!/^[a-f0-9]{40}$/i.test(headSha || "")) continue;
+        if (!grouped.has(headSha)) {
+          grouped.set(headSha, {
+            branch: run.head_branch || "unknown",
+            headSha,
+            sourceRefType: "RECENT_WORKFLOW_RUN",
+            pullRequestNumber: null,
+            pullRequestDiscoveryPages: 0,
+            runDiscoveryPages: recentPage.pageCount,
+            runs: [],
+          });
+        }
+        grouped.get(headSha).runs.push(run);
+      }
+      targetRefs = [...grouped.values()];
+    } else {
+      const branchUrl = base + "/repos/" + target.repository + "/branches/" + encodeURIComponent(target.branch);
+      const { data: branch } = await requestJson(branchUrl, { token: githubToken, fetchImpl });
+      const branchSha = branch?.commit?.sha;
+      if (!/^[a-f0-9]{40}$/i.test(branchSha || "")) throw new Error("TARGET_HEAD_SHA_UNAVAILABLE");
+      targetRefs.push({
+        branch: target.branch,
+        headSha: branchSha,
+        sourceRefType: "CONFIGURED_BRANCH",
+        pullRequestNumber: null,
+        pullRequestDiscoveryPages: 0,
+      });
 
-    if (target.include_open_pull_requests === true) {
-      const pullsUrl = new URL(base + "/repos/" + target.repository + "/pulls");
-      pullsUrl.searchParams.set("state", "open");
-      pullsUrl.searchParams.set("per_page", "100");
-      const pullPage = await paginate(pullsUrl, { token: githubToken, fetchImpl });
-      for (const pull of pullPage.items) {
-        const pullHead = pull?.head;
-        const headSha = pullHead?.sha;
-        // Only same-repository PR heads are eligible. Fork code is never followed.
-        if (pull.state !== "open" || pullHead?.repo?.full_name !== target.repository ||
-            !/^[a-f0-9]{40}$/i.test(headSha || "") || typeof pullHead.ref !== "string") continue;
-        targetRefs.push({
-          branch: pullHead.ref,
-          headSha,
-          sourceRefType: "OPEN_PULL_REQUEST",
-          pullRequestNumber: pull.number ?? null,
-          pullRequestDiscoveryPages: pullPage.pageCount,
-        });
+      if (target.include_open_pull_requests === true) {
+        const pullsUrl = new URL(base + "/repos/" + target.repository + "/pulls");
+        pullsUrl.searchParams.set("state", "open");
+        pullsUrl.searchParams.set("per_page", "100");
+        const pullPage = await paginate(pullsUrl, { token: githubToken, fetchImpl });
+        for (const pull of pullPage.items) {
+          const pullHead = pull?.head;
+          const headSha = pullHead?.sha;
+          // Only same-repository PR heads are eligible. Fork code is never followed.
+          if (pull.state !== "open" || pullHead?.repo?.full_name !== target.repository ||
+              !/^[a-f0-9]{40}$/i.test(headSha || "") || typeof pullHead.ref !== "string") continue;
+          targetRefs.push({
+            branch: pullHead.ref,
+            headSha,
+            sourceRefType: "OPEN_PULL_REQUEST",
+            pullRequestNumber: pull.number ?? null,
+            pullRequestDiscoveryPages: pullPage.pageCount,
+          });
+        }
       }
     }
 
@@ -160,14 +198,24 @@ export async function collectAnnotationReceipts({
     )).values()];
     for (const targetRef of uniqueRefs) {
     const headSha = targetRef.headSha;
-    const runsUrl = new URL(base + "/repos/" + target.repository + "/actions/runs");
-    runsUrl.searchParams.set("head_sha", headSha);
-    runsUrl.searchParams.set("per_page", "100");
-    const runPage = await paginate(runsUrl, { token: githubToken, collection: "workflow_runs", fetchImpl });
-    const runs = runPage.items.filter(run => run.head_sha === headSha).map(run => ({
+    let runPage;
+    let rawRuns;
+    if (Array.isArray(targetRef.runs)) {
+      rawRuns = targetRef.runs;
+      runPage = { pageCount: targetRef.runDiscoveryPages || 1 };
+    } else {
+      const runsUrl = new URL(base + "/repos/" + target.repository + "/actions/runs");
+      runsUrl.searchParams.set("head_sha", headSha);
+      runsUrl.searchParams.set("per_page", "100");
+      runPage = await paginate(runsUrl, { token: githubToken, collection: "workflow_runs", fetchImpl });
+      rawRuns = runPage.items;
+    }
+    const runs = rawRuns.filter(run => run.head_sha === headSha).map(run => ({
       id: run.id,
       run_attempt: run.run_attempt ?? null,
       workflow_id: run.workflow_id ?? null,
+      check_suite_id: run.check_suite_id ?? null,
+      head_branch: run.head_branch ?? targetRef.branch,
       name: sanitizeEvidence(run.name),
       path: sanitizeEvidence(run.path),
       event: run.event ?? null,
@@ -195,11 +243,16 @@ export async function collectAnnotationReceipts({
           source_ref_type: targetRef.sourceRefType,
           pull_request_number: targetRef.pullRequestNumber,
           head_sha: run.head_sha,
+          run_id: run.id,
+          run_attempt: run.run_attempt,
+          check_suite_id: run.check_suite_id,
         },
         run: {
           id: run.id,
           attempt: run.run_attempt,
           workflow_id: run.workflow_id,
+          check_suite_id: run.check_suite_id,
+          head_branch: run.head_branch,
           name: run.name,
           path: run.path,
           event: run.event,
@@ -218,17 +271,40 @@ export async function collectAnnotationReceipts({
         checkRun.name === "GitHub Actions" &&
         /actions.{0,80}(?:billing|minutes|quota|spending limit)|(?:included minutes|spending limit).{0,80}(?:exhausted|reached|exceeded)|payment method.{0,80}(?:required|failed)|billing.{0,80}(?:hard cap|limit reached)/i.test(outputText);
       if (annotationCount === 0 && !providerQuota) continue;
+      const correlatedRun = runs.find(run =>
+        (run.check_suite_id && checkRun.check_suite?.id &&
+          String(run.check_suite_id) === String(checkRun.check_suite.id)) ||
+        (checkRun.details_url && String(checkRun.details_url).includes("/actions/runs/" + run.id))
+      );
+      if (!correlatedRun) {
+        receipts.push({
+          schema_version: 1,
+          receipt_type: "GITHUB_CHECK_RUN_UNMATCHED",
+          observed_at: observedAt,
+          source: { repository: target.repository, head_sha: headSha, branch: targetRef.branch },
+          check_run_id: checkRun.id,
+          annotations_reported: annotationCount,
+          reason: "CHECK_RUN_RUN_CORRELATION_UNRESOLVED",
+        });
+        continue;
+      }
       const receipt = {
         schema_version: 1,
         receipt_type: "GITHUB_CHECK_RUN_ANNOTATION",
         observed_at: observedAt,
         source: {
           repository: target.repository,
-          branch: targetRef.branch,
+          branch: correlatedRun.head_branch || targetRef.branch,
           source_ref_type: targetRef.sourceRefType,
           pull_request_number: targetRef.pullRequestNumber,
           pull_request_discovery_pages: targetRef.pullRequestDiscoveryPages,
           head_sha: headSha,
+          run_id: correlatedRun.id,
+          run_attempt: correlatedRun.run_attempt,
+          run_ref: correlatedRun.head_branch || targetRef.branch,
+          run_event: correlatedRun.event,
+          run_conclusion: correlatedRun.conclusion,
+          check_suite_id: correlatedRun.check_suite_id,
           run_discovery_pages: runPage.pageCount,
           check_run_pages: checkPage.pageCount,
           workflow_runs: runs,
@@ -266,7 +342,8 @@ export async function collectAnnotationReceipts({
         receipt.annotations_status = "API_ERROR";
         receipt.annotation_error = { http_status: error.status ?? null, code: sanitizeEvidence(error.message) };
       }
-      receipt.dedupe_key = "gh-checkrun:" + target.repository + ":" + headSha + ":" + checkRun.id;
+      receipt.dedupe_key = "gh-checkrun:" + target.repository + ":" + correlatedRun.id +
+        ":" + correlatedRun.run_attempt + ":" + checkRun.id;
       receipts.push(receipt);
     }
     }
