@@ -106,14 +106,14 @@ test('rejects missing credentials and malformed repository or SHA', async () => 
   );
 });
 
-test('workflow requests only read permissions, uses the ephemeral token, and has no manual trigger', async () => {
-  const workflowUrl = new URL('../../.github/workflows/quota-token-permission-audit.yml', import.meta.url);
+test('central monitor validates read-only token permissions without exposing secrets to validation', async () => {
+  const workflowUrl = new URL('../../.github/workflows/github-actions-quota-monitor.yml', import.meta.url);
   const workflow = await readFile(workflowUrl, 'utf8');
-  assert.match(workflow, /permissions:\s*\n\s+actions:\s*read\s*\n\s+checks:\s*read\s*\n\s+contents:\s*read/m);
-  assert.match(workflow, /GITHUB_TOKEN:\s*\$\{\{\s*github\.token\s*\}\}/);
-  assert.match(workflow, /actions-run-diagnostics\.yml/);
-  assert.match(workflow, /quota-monitor\/diagnostics\/\*\*/);
-  assert.match(workflow, /test_diagnostics\.mjs/);
+  const validateJob = workflow.split('  validate:\\n')[1].split('\\n  monitor:\\n')[0];
+  assert.match(validateJob, /permissions:\s*\n\s+actions:\s*read\s*\n\s+checks:\s*read\s*\n\s+contents:\s*read/m);
+  assert.match(validateJob, /GITHUB_TOKEN:\s*\$\{\{\s*github\.token\s*\}\}/);
+  assert.match(validateJob, /quota-monitor\/check_token_permissions\.mjs/);
+  assert.match(workflow, /quota-monitor\/publish-notion\.mjs/);
   assert.doesNotMatch(workflow, /workflow_dispatch/);
-  assert.doesNotMatch(workflow, /secrets\.(?!GITHUB_TOKEN)/);
+  assert.doesNotMatch(validateJob, /secrets\./);
 });
