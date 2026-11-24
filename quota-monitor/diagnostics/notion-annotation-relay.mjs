@@ -151,7 +151,8 @@ async function collectRunJobEvidence({ base, repository, run, token, fetchImpl, 
     const hostedRunnerVerified = run.conclusion === "success" && jobs.some(job =>
       job.status === "completed" && job.conclusion === "success" &&
       Number(job.runner_id) > 0 &&
-      job.labels.some(label => /^(ubuntu|windows|macos)-/i.test(label) && !/self-hosted/i.test(label))
+      !job.labels.some(label => /self-hosted/i.test(label)) &&
+      job.labels.some(label => /^(ubuntu|windows|macos)-/i.test(label))
     );
     return {
       status: jobs.length ? "OK" : "EMPTY",
