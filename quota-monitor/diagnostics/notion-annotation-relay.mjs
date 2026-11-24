@@ -239,7 +239,7 @@ export async function collectAnnotationReceipts({
         observed_at: observedAt,
         source: {
           repository: target.repository,
-          branch: targetRef.branch,
+          branch: run.head_branch || targetRef.branch,
           source_ref_type: targetRef.sourceRefType,
           pull_request_number: targetRef.pullRequestNumber,
           head_sha: run.head_sha,
