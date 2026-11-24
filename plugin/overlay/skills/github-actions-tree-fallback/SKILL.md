@@ -48,3 +48,35 @@ Use connected GitHub REST routes for exact commit/tree and tree-selected blobs. 
 ## Identifier semantics and failure-cause branch
 
 A run URL `/actions/runs/{N}` provides `run_id=N`; it is not a runner URL. A job details URL `/actions/runs/{run_id}/job/{job_id}` provides the job ID. A check-run ID is separately typed, even if its numeric value matches job_id. Do not infer a runner_id from any of these URLs. Preserve the full execution-provenance chain for execution claims. For failure classification, after Git Tree/blob/receipt and exact run/check-run binding, inspect the annotation first; a decisive billing annotation ends quota diagnosis before runner/job/step retrieval. If not decisive, continue the full chain. A blocked annotation endpoint is API_METHOD_BLOCKED, not an absent annotation.
+
+
+## 2026-11-24 correction — no-runner state triggers Notion annotation recovery
+
+This section is the controlling failure-recovery rule and supersedes any older wording that treats a no-runner/empty-step observation or a blocked GitHub annotation endpoint as a terminal blocker.
+
+### Trigger semantics — NOT a root-cause classification
+
+For an exact repository/ref/SHA/run-attempt, any of these observations triggers immediate annotation recovery:
+- A raw attempt-scoped job contains the numeric value `runner_id: 0` (not a missing or null field).
+- A terminal failed run has an exact job payload with `steps: []`.
+- The exact-SHA Check Run reports `annotations_count > 0`.
+
+These are workflow-routing signals only. `runner_id=0`, `steps=[]`, no jobs, blank runner metadata, missing logs and `BlobNotFound` are not a cause, quota diagnosis, or user-facing blocker. Preserve PRESENT/NULL/MISSING; never coerce missing fields to zero or an empty list. If the run is still active, continue observing its lifecycle; do not call startup metadata a terminal failure.
+
+### Mandatory Notion relay path — immediately after the trigger
+
+1. Parse `run_id` from the exact `/actions/runs/{N}` URL; verify repository, workflow path, event, ref, head SHA and `run_attempt`. Keep `job_id`, `check_run_id` and `runner_id` distinct.
+2. Resolve the configured Notion annotation-relay destination from the current ticket/observer configuration (currently the GM-50 relay page; never guess a page ID). Query its discussions and paginate until every page/comment is read.
+3. Correlate the receipt against **all** identity fields available: repository, branch/ref, exact head SHA, workflow run ID, attempt, Check Run ID and workflow identity. Verify receipt schema, annotation pagination/completeness and whether the annotation belongs to the source Check Run or a separate observer Check Run.
+4. Interpret only the matching receipt's actual annotation body. An explicit provider-owned Actions billing/payment/spending-cap message is sufficient for `QUOTA_EXHAUSTED`; other messages must be classified by their actual content. Annotation count alone is not message-level evidence.
+5. If no exact receipt exists, record `NOTION_RELAY_RECEIPT_NOT_FOUND_FOR_EXACT_RUN`. This means the relay evidence has not arrived or does not cover that ref/run; it does **not** mean annotations are absent and does not close the diagnostic branch.
+
+### Missing-receipt recovery remains AI-owned work
+
+When the exact receipt is missing, continue investigating and repairing the relay path before reporting any blocker: observer workflow trigger coverage (`workflow_run` filters and schedule), configured target repository/ref/branch, exact-SHA run discovery, Check Run pagination, private-target credentials/secrets presence, Notion API authorization/page sharing, publication errors, and receipt deduplication. Use the configured independent observer; do not assume a main-only observer covers PR branches. A scheduled poll covers only the refs actually configured in its private target inventory. Keep secrets out of chat. Provisioning an owner's private secret or granting account/page access is owner-exclusive only if no authorized AI route can perform it; continue every other AI-owned criterion around that boundary.
+
+A GitHub connector rejection such as `API_METHOD_BLOCKED` is only a transport result. It must route to the Notion relay immediately; it is never the terminal diagnosis while the Notion route or relay implementation/configuration remains unexamined. Do not publish generic `UNKNOWN / API_METHOD_BLOCKED` before this recovery. Only after the Notion relay and materially distinct authorized routes have been checked, and relay/configuration repair work is exhausted or genuinely owner-exclusive, may the causal result remain `UNKNOWN` with the exact missing evidence named.
+
+### Owner-facing output gate
+
+`AI_OWNER && AI_WORK_REMAINING => NO_USER_HANDOFF && NOT_DONE`. Do not send progress reports, phase summaries, interim blockers, partial results or permission-to-continue questions while any authorized AI-owned work remains runnable. Treat missing evidence as an engineering task, not as a reason to interrupt the owner. Final output is allowed only after all feasible AI-owned requirements, verification, repair/retest and readback are complete; a genuine host termination must preserve the exact recovery cursor without being described as completion.
