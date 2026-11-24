@@ -379,6 +379,6 @@ test("does not publish a check-run annotation when exact run correlation is unav
   assert.equal(receipts[0].reason, "CHECK_RUN_RUN_CORRELATION_UNRESOLVED");
   assert.equal(receipts[0].annotations_status, "RETRIEVED");
   assert.equal(receipts[0].annotations.length, 1);
-  assert.equal(receipts[0].source.runner_sentinel, true);
-  assert.equal(receipts[0].source.empty_steps_trigger, true);
+  assert.equal(receipts[0].source.runner_sentinel, null);
+  assert.equal(receipts[0].source.empty_steps_trigger, null);
 });
