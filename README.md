@@ -1,48 +1,48 @@
-# Unified AI Workflow Architecture — GitHub Orchestration
+# GitHub Orchestration
 
-Portable, content-neutral orchestration across projects, domains and hosts, cloned from the canonical ai-workflow-archtiecture source at commit 15c7dcf0613b18b7d376e70224cbec16e0bf2626.
+A public-safe automation repository. The single canonical GitHub Actions quota monitor lives here and publishes repository-routing evidence to Notion.
 
-The reusable architecture, schemas, tests, domain packs and UPW plugin overlay are retained. Source-project .ai-workflow checkpoints are intentionally not copied; this repository starts with an empty project context index.
+## Central Actions quota monitor
 
-## Core contracts
+Workflow: .github/workflows/github-actions-quota-monitor.yml  
+Implementation and one-time setup: quota-monitor/README.md
 
-- Final Goal: docs/FINAL-GOAL.md
-- AI Architecture Workflow: AI-ARCHITECTURE-WORKFLOW.md
-- Professional Capability Architecture: docs/PROFESSIONAL-CAPABILITY-ARCHITECTURE.md
-- Context Isolation and Project Switching: docs/CONTEXT-ISOLATION-AND-PROJECT-SWITCHING.md
-- GitHub Actions Run Lifecycle: docs/GITHUB-ACTIONS-RUN-LIFECYCLE.md
-- Unified Failure and Quota Observability: docs/GITHUB-ACTIONS-OBSERVABILITY-ARCHITECTURE.md
-- Execution Environment and Quota Governance: docs/EXECUTION-ENVIRONMENT-AND-QUOTA-GOVERNANCE.md
-- UPW Plugin Release Packaging: docs/PLUGIN-RELEASE-PACKAGING.md
+The monitor runs every 15 minutes and:
 
-## GitHub Actions quota dashboard
+- Discovers repositories in every organization where the GitHub App is installed with all-repository access.
+- Discovers repositories owned by the personal GitHub account through one user billing token.
+- Collects Actions usage-summary and budget data at account, organization and repository scope where the API exposes it.
+- Scans recent workflow runs across all branches, correlates exact run attempts and Check Runs, and retrieves provider annotations.
+- Publishes exact or explicitly unmatched annotation receipts to the GM-50 Notion page and a routing snapshot to the GM-51 Notion page.
+- Makes no per-repository configuration necessary. New repositories are discovered automatically; a new organization requires one App installation.
 
-quota-monitor/ contains the read-only billing collector and tests. The scheduled workflow and dashboard live in an existing private account repository, not in this public source repository. No additional report repository is required.
+The quota snapshot is the routing control plane. Only a fresh AVAILABLE_VERIFIED repository may trigger Actions. That state requires a successful GitHub-hosted runner job within 30 minutes and no stronger owner, provider or hard-cap block. Self-hosted runs and historical green runs do not prove included-runner availability.
 
-The private billing collector remains a separate account-level data source. It is not an independent observer of its own runner admission and its billing credentials must be explicitly configured. The public repository also runs a scheduled, read-only observer for explicitly configured private targets using repository Secrets. Public standard runners do not consume included private-repository Actions minutes; private target names, SHAs, run IDs and raw logs are redacted from public artifacts.
+runner_id=0 and terminal steps=[] are annotation-recovery triggers, including when annotations_count is zero on the provider-owned GitHub Actions check. They are never quota classifications. A missing Notion receipt is NOTION_RELAY_RECEIPT_NOT_FOUND_FOR_EXACT_RUN; API_METHOD_BLOCKED is transport-only.
 
-The integrated observer combines real workflow_run lifecycle events, exact source-workflow parsing, attempt-scoped jobs, Check Suite/Check Run annotations, bounded job-log retrieval, annotation readback, and the pinned GitHub API usage monitor. For configured private targets, a separate read-only relay queries check runs and their annotations directly from the GitHub REST API, then publishes the exact-SHA receipt as a private Notion page comment. ChatGPT reads that receipt through the connected Notion source; it does not need the GitHub connector's annotations endpoint. Raw private annotations are never included in this repository's public artifacts or logs. Configure Actions Secrets NOTION_API_TOKEN and NOTION_PAGE_ID; the Notion integration must be shared with the target page and have comment read/write capability. API rate-limit telemetry is separate from Actions compute/billing quota. Missing private credentials or missing provider evidence remains BLOCKED/UNKNOWN, never zero or an inferred quota failure.
+## Workflow inventory
 
-See quota-monitor/README.md for collector contracts and docs/GITHUB-ACTIONS-OBSERVABILITY-ARCHITECTURE.md for the end-to-end evidence model.
+| Workflow | Responsibility |
+|---|---|
+| github-actions-quota-monitor.yml | The only quota CI; scheduled collection plus validation on push and pull request |
+| update-upw-plugin.yml | UPW plugin packaging and release automation |
+| workflow-cleanup.yml | Explicit workflow cleanup automation |
 
-## CI/CD
+The former separate diagnostics, conformance, workflow-quality, token-permission-audit and API-usage-smoke workflows have been consolidated into the central monitor's validation job. The duplicate private scheduled collector has been retired.
 
-- conformance.yml: structural validation and regression tests.
-- workflow-quality-gate.yml: real workflow parser and action-runtime checks.
-- actions-run-diagnostics.yml: lifecycle observer, annotation readback, API usage telemetry and scheduled private-target polling.
-- package-upw-plugin.yml: validates and packages the versioned UPW plugin overlay as an artifact.
-- The private account billing collector remains external; this public repository never stores private billing snapshots or credentials.
+## Setup
 
-All workflows in this repository use automatic triggers only; no workflow_dispatch is included. Standard GitHub-hosted runners are used because this repository is public.
+Configure the four central secrets and the one-time GitHub App / Notion permissions described in [quota-monitor/README.md](quota-monitor/README.md). Do not add per-repository secrets, target files or scheduled workflows.
 
-## Context model
+## API and evidence limitations
 
-The root .ai-workflow/CURRENT.json is an index only. Project and ticket checkpoints are created in their own context when work begins. Never select context by latest modification time.
+GitHub billing usage-summary APIs are public preview and may change. They expose usage and budget evidence, not a remaining included-compute balance. The monitor never derives a remaining-minutes percentage from usage totals. Missing, stale, permission-denied, rate-limited or otherwise unknown evidence fails closed; it is not interpreted as zero usage or available quota.
 
+## Architecture and operating contracts
 
-## Notion-first repository and role continuity
-
-See [docs/NOTION-FIRST-REPO-ROLE-CONTROL-PLANE.md](docs/NOTION-FIRST-REPO-ROLE-CONTROL-PLANE.md). The sanitized decision module and regression tests are included under `scripts/repository_control_plane.py` and `tests/test_repository_control_plane.py`; the existing automatic conformance workflow executes them on push and pull request.
-
-
-The existing context resolver now composes with the repository/role control plane through `scripts.context_switching.route_message_with_repository_control()`. The host supplies Notion requirements/access and GitHub inventory; the wrapper preserves the existing session transition/readback rules before selecting a task-scoped execution repository.
+- [Quota monitor implementation and setup](quota-monitor/README.md)
+- [Actions observability architecture](docs/GITHUB-ACTIONS-OBSERVABILITY-ARCHITECTURE.md)
+- [Actions run lifecycle and annotation recovery](docs/GITHUB-ACTIONS-RUN-LIFECYCLE.md)
+- [Execution environment and quota governance](docs/EXECUTION-ENVIRONMENT-AND-QUOTA-GOVERNANCE.md)
+- [Notion-first repository and role control plane](docs/NOTION-FIRST-REPO-ROLE-CONTROL-PLANE.md)
+- [Integrated workflow quality gate](docs/WORKFLOW-QUALITY-GATE.md)

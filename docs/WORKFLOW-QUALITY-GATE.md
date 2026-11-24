@@ -1,83 +1,51 @@
-# Workflow Quality Gate and Annotation-First Diagnostics
+# Integrated Workflow Quality Gate and Notion-First Diagnostics
 
-## Required execution chain
+## Execution boundary
 
-Preflight Validation → Real Failure Detection → Annotation & Log Retrieval → Root Cause Classification → Evidence Receipt
+The quality gate is a validation job inside .github/workflows/github-actions-quota-monitor.yml. It is not a separate scheduled workflow and does not use workflow_run fan-out.
 
-This is a reusable engineering gate, not a text-based error emitter.
+The validation job runs on pull requests and pushes. The scheduled monitor job is separate within the same workflow and is the only quota collector.
 
-## 1. Preflight Validation
+## Validation chain
 
-- actionlint parses every workflow YAML file and validates GitHub Actions structure, expressions, keys, action inputs and common semantic mistakes.
-- The runtime inventory resolves each referenced action's action.yml / action.yaml metadata and reads runs.using.
-- Node.js 16 and Node.js 20 action runtimes are retired on GitHub-hosted runners; Node.js 24 is the supported JavaScript action runtime for this policy.
-- Unavailable action metadata is UNKNOWN, not a pass. The gate fails closed rather than claiming runtime compatibility.
-- Problem Matcher converts actual actionlint diagnostics into GitHub Check Run annotations.
+1. Python regression suite, including repository-control-plane and quota collector tests.
+2. Node regression suite, including token discovery, annotation relay, Notion publishing, quota-state derivation and workflow lifecycle tests.
+3. Token-permission contract audit.
+4. actionlint over every workflow YAML file.
+5. Workflow/action quality gate: referenced action metadata and runtime compatibility, immutable action revisions, trigger/permission contract and absence of retired duplicate quota workflows.
 
-## 2. Real Failure Detection
+Unavailable metadata or incomplete evidence is UNKNOWN and fails the validation gate; it is never reported as a pass.
 
-A test fixture must contain a real malformed YAML or invalid workflow structure. Never emit a prewritten ::error:: string to simulate a parser or framework defect.
+## Failure and no-runner semantics
 
-For a workflow file that GitHub cannot parse, GitHub can create a failed workflow run before any job is created. In that state the source run may have:
-- jobs.total_count = 0;
-- no job object, so runner_id and steps are absent rather than numeric zero / empty array;
-- no job console log; the run-log endpoint may return 404.
+A terminal failed Actions run with runner_id=0 or terminal steps=[] triggers the Notion annotation-recovery path. For a provider-owned GitHub Actions Check Run, this trigger applies even when annotations_count is zero.
 
-Do not convert missing fields into 0 or [].
+The central monitor:
+- scans recent runs across all branches;
+- preserves exact repository/ref/SHA/run ID/attempt/Check Run correlation;
+- reads job evidence for recent failures and recent successful runs;
+- retrieves annotations when the annotation count, provider quota output or no-runner trigger requires it;
+- publishes exact receipts to GM-50;
+- publishes unmatched annotations as UNMATCHED_CHECK_RUN_CORRELATION rather than pretending the run was correlated.
 
-## 3. Annotation and log retrieval
+runner_id=0, empty steps, no jobs, missing logs, BlobNotFound and connector errors are not quota evidence. Only explicit provider-owned Actions billing/payment/spending-cap evidence or an enforced hard cap can classify QUOTA_EXHAUSTED. Owner-reported exhaustion remains REPORTED_QUOTA_EXHAUSTED.
 
-### Normal job-backed failure
-1. Lock repository, source SHA, run ID and attempt.
-2. Retrieve exact-attempt jobs.
-3. For every job, retrieve its Check Run annotations by check_run_id.
-4. Retrieve logs by job_id after the job is terminal; retain transient log publication failures as separate evidence.
-5. Do not assume annotations and logs are interchangeable.
+## Notion readback
 
-### No-job / no-runner failure
-The malformed source workflow itself may not expose a job Check Run or annotation endpoint. Use an independent, trusted observer workflow that:
-1. checks out the exact defective SHA;
-2. runs actionlint against the actual committed workflow file;
-3. lets the Problem Matcher turn the real parser diagnostic into an annotation on the observer's Check Run;
-4. completes before the collector reads that Check Run.
+ChatGPT sessions read the Notion receipt before diagnosing a terminal failed run. The exact identity includes repository, ref, SHA, run ID, attempt and Check Run ID.
 
-The No-Runner Annotation Readback collector is triggered by the observer's workflow_run completion. It uses gh api with actions:read, checks:read, and contents:write to retrieve the exact annotation body. This does not depend on the source run's console logs.
+If no exact receipt exists, use NOTION_RELAY_RECEIPT_NOT_FOUND_FOR_EXACT_RUN. API_METHOD_BLOCKED is transport-only; it cannot terminate recovery before the configured Notion route and observer coverage have been checked.
 
-Important provenance distinction: in this case the annotation belongs to the independent observer Check Run, not the original zero-job source run. The receipt links both runs and the exact source SHA. Never claim GitHub exposed a source-run annotation if only the observer annotation exists.
+## Regression coverage
 
-## 4. Root cause classification
+The suite verifies:
+- exact run/attempt/check-suite correlation and pagination;
+- open same-repository PR head discovery and fork exclusion;
+- annotation retrieval when runner_id=0 or steps=[] even if annotations_count is zero;
+- no quota inference from runner sentinel or empty steps alone;
+- self-hosted success does not prove included GitHub-hosted availability;
+- exact and unmatched receipt publication;
+- Notion snapshot publication, owner-report precedence and stale/unknown fail-closed routing;
+- actionlint and immutable action metadata checks.
 
-- WORKFLOW_YAML_SYNTAX_ERROR: actual YAML parser diagnostic.
-- WORKFLOW_SCHEMA_OR_EXPRESSION_ERROR: GitHub workflow semantic / expression diagnostic.
-- ACTION_RUNTIME_RETIRED: action metadata identifies a retired runtime such as node16/node20.
-- RUNNER_UNAVAILABLE: provider explicitly identifies runner capacity or assignment failure.
-- PERMISSION_DENIED: provider explicitly identifies authorization failure.
-- QUOTA_EXHAUSTED: only explicit Actions minutes, spending limit, billing or payment evidence.
-- EXECUTION_EVIDENCE_MISSING / UNKNOWN: no reliable cause after authorized evidence routes.
-
-runner_id = 0, empty steps, no jobs, missing logs, BlobNotFound, or a connector 404 never prove quota exhaustion.
-
-## 5. Evidence Receipt and ChatGPT readback
-
-GitHub Actions artifact downloads are ZIP archives. For direct ChatGPT repository reading, publish a plain Markdown receipt and raw JSON through the repository Contents API:
-- CHATGPT-ANNOTATION-RECEIPT.md;
-- exact annotation JSON;
-- observer job / Check Run metadata;
-- source run and jobs metadata;
-- log retrieval status.
-
-ChatGPT reads the .md and .json files through the GitHub connector. No ZIP extraction or source console log is required. The Markdown receipt is a normal repository file, not a compressed artifact.
-
-Every receipt binds repository, branch, source SHA, source run/attempt, observer run, observer check-run ID, exact messages, job/runner/step field states, log retrieval result, classification and retrieval timestamp.
-
-## Test acceptance
-
-The no-runner E2E test passes only when:
-1. GitHub creates a failed run from an actually malformed workflow file.
-2. The exact source run has no job records and no retrievable logs.
-3. The independent observer diagnoses the same committed file using actionlint.
-4. GitHub creates a Check Run annotation from the actual actionlint diagnostic.
-5. The collector retrieves the annotation message via the Check Runs API.
-6. The collector publishes plain Markdown and raw JSON to the same repository branch.
-7. ChatGPT reads the Markdown and confirms the actual annotation message, source SHA, source run and observer check-run IDs.
-8. No quota conclusion is inferred from the missing runner/log state.
+The central workflow is the only quota CI. UPW release and workflow-cleanup automation remain separate responsibilities.
