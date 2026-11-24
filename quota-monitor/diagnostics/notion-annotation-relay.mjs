@@ -36,6 +36,16 @@ function validateTargets(raw) {
     assert(Array.isArray(target.expected_workflows), "INVALID_EXPECTED_WORKFLOWS");
     assert(target.scan_recent_runs === undefined || typeof target.scan_recent_runs === "boolean",
       "INVALID_SCAN_RECENT_RUNS");
+    if (target.availability_freshness_minutes !== undefined) {
+      const freshness = Number(target.availability_freshness_minutes);
+      assert(Number.isInteger(freshness) && freshness >= 1 && freshness <= 120,
+        "INVALID_AVAILABILITY_FRESHNESS");
+    }
+    if (target.trigger_lookback_hours !== undefined) {
+      const triggerLookback = Number(target.trigger_lookback_hours);
+      assert(Number.isInteger(triggerLookback) && triggerLookback >= 1 && triggerLookback <= 168,
+        "INVALID_TRIGGER_LOOKBACK");
+    }
     assert(target.include_open_pull_requests === undefined || typeof target.include_open_pull_requests === "boolean",
       "INVALID_INCLUDE_OPEN_PULL_REQUESTS");
   }
