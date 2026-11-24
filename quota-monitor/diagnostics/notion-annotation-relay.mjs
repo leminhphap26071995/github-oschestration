@@ -183,10 +183,41 @@ export async function collectAnnotationReceipts({
     checkRunsUrl.searchParams.set("per_page", "100");
     const checkPage = await paginate(checkRunsUrl, { token: githubToken, collection: "check_runs", fetchImpl });
     const checkRuns = checkPage.items.filter(item => item.head_sha === headSha);
+    for (const run of runs) {
+      if (run.status !== "completed" || run.conclusion !== "success") continue;
+      receipts.push({
+        schema_version: 1,
+        receipt_type: "GITHUB_WORKFLOW_RUN_EVIDENCE",
+        observed_at: observedAt,
+        source: {
+          repository: target.repository,
+          branch: targetRef.branch,
+          source_ref_type: targetRef.sourceRefType,
+          pull_request_number: targetRef.pullRequestNumber,
+          head_sha: run.head_sha,
+        },
+        run: {
+          id: run.id,
+          attempt: run.run_attempt,
+          workflow_id: run.workflow_id,
+          name: run.name,
+          path: run.path,
+          event: run.event,
+          status: run.status,
+          conclusion: run.conclusion,
+          created_at: run.created_at,
+          updated_at: run.updated_at,
+        },
+        dedupe_key: "gh-run:" + target.repository + ":" + run.id + ":" + run.run_attempt,
+      });
+    }
     for (const checkRun of checkRuns) {
       const annotationCount = Number(checkRun.output?.annotations_count ?? 0);
-      const failed = checkRun.conclusion && !["success", "skipped", "neutral"].includes(checkRun.conclusion);
-      if (annotationCount === 0 && !failed) continue;
+      const outputText = [checkRun.output?.title, checkRun.output?.summary, checkRun.output?.text].filter(Boolean).join("\n");
+      const providerQuota = String(checkRun.app?.slug || "").toLowerCase() === "github-actions" &&
+        checkRun.name === "GitHub Actions" &&
+        /actions.{0,80}(?:billing|minutes|quota|spending limit)|(?:included minutes|spending limit).{0,80}(?:exhausted|reached|exceeded)|payment method.{0,80}(?:required|failed)|billing.{0,80}(?:hard cap|limit reached)/i.test(outputText);
+      if (annotationCount === 0 && !providerQuota) continue;
       const receipt = {
         schema_version: 1,
         receipt_type: "GITHUB_CHECK_RUN_ANNOTATION",
@@ -269,6 +300,7 @@ export async function publishAnnotationReceipts({
   let published = 0;
   let skipped = 0;
   for (const receipt of receipts) {
+    if (receipt.receipt_type && receipt.receipt_type !== "GITHUB_CHECK_RUN_ANNOTATION") continue;
     const serialized = JSON.stringify(receipt, null, 2);
     const chunks = chunkText(serialized);
     const groups = [];
