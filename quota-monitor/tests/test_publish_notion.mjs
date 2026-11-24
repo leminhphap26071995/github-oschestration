@@ -173,8 +173,7 @@ test("Notion publisher updates the current property and deduplicates unchanged s
 test("runMonitor discovers recent runs without per-repository branch configuration and publishes to Notion", async () => {
   const sha = "c".repeat(40);
   const calls = [];
-  const ownerReportText = "UPW_QUOTA_OWNER_REPORTS_V1
-" +
+  const ownerReportText = "UPW_QUOTA_OWNER_REPORTS_V1\n" +
     JSON.stringify({ schema_version: 1, reports: [] });
   const fetchImpl = async (url, init = {}) => {
     const parsed = new URL(url);
