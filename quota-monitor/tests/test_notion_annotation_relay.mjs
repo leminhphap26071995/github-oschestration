@@ -42,6 +42,12 @@ test("collects exact-SHA check-run annotations and preserves distinct causes", a
         conclusion: "failure", head_sha: SHA
       }] });
     }
+    if (parsed.pathname.endsWith("/actions/runs/77/attempts/1/jobs")) {
+      return jsonResponse({ jobs: [{
+        id: 771, name: "build", status: "completed", conclusion: "failure",
+        runner_id: 0, runner_name: null, labels: [], steps: []
+      }] });
+    }
     if (parsed.pathname.endsWith("/check-runs")) {
       return jsonResponse({ check_runs: [
         {
@@ -173,6 +179,12 @@ test("collects exact-SHA annotations for same-repository open PR heads when enab
         id: 477, run_attempt: 2, workflow_id: 9, check_suite_id: 701, name: "CI",
         path: ".github/workflows/ci.yml", event: "pull_request", status: "completed",
         conclusion: "failure", head_sha: PR_SHA
+      }] });
+    }
+    if (parsed.pathname.endsWith("/actions/runs/477/attempts/2/jobs")) {
+      return jsonResponse({ jobs: [{
+        id: 4772, name: "build", status: "completed", conclusion: "failure",
+        runner_id: 0, runner_name: null, labels: [], steps: []
       }] });
     }
     if (parsed.pathname.endsWith("/check-runs")) {
@@ -345,6 +357,10 @@ test("does not publish a check-run annotation when exact run correlation is unav
         runner_id: 0, runner_name: null, labels: [], steps: []
       }] });
     }
+    if (parsed.pathname.endsWith("/check-runs/9031/annotations")) return jsonResponse([{
+      path: ".github/workflows/ci.yml", annotation_level: "failure",
+      title: "Unmatched annotation", message: "Quota details are not correlated"
+    }]);
     if (parsed.pathname.endsWith("/check-runs")) return jsonResponse({ check_runs: [{
       id: 9031, head_sha: SHA, check_suite: { id: 9999 },
       name: "GitHub Actions", app: { slug: "github-actions" },
