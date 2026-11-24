@@ -4,7 +4,7 @@ import { dirname } from 'node:path';
 
 const API = process.env.GITHUB_API_URL || 'https://api.github.com';
 const VERSION = '2026-03-10';
-const ORG_RE = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$/;
+const ORG_RE = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$/;\nconst EXCLUDED_ORGS = new Set(['huyquanghan-apps']);
 
 function b64url(value) {
   return Buffer.from(value).toString('base64url');
@@ -55,10 +55,14 @@ async function listInstallations(jwt) {
 export async function prepare({ targetsFile, outputTargetsFile, discoveryFile, githubEnv,
   appId, privateKey, userBillingToken }) {
   const config = JSON.parse(await readFile(targetsFile, 'utf8'));
-  const configured = config?.organizations;
-  if (!Array.isArray(configured) || configured.some(org => typeof org !== 'string' || !ORG_RE.test(org))) {
+  const configured = config?.organizations ?? [];
+  const excludedValues = config?.excluded_organizations ?? [];
+  if (!Array.isArray(configured) || configured.some(org => typeof org !== 'string' || !ORG_RE.test(org)) ||
+      !Array.isArray(excludedValues) || excludedValues.some(org => typeof org !== 'string' || !ORG_RE.test(org))) {
     throw new Error('INVALID_ORGANIZATION_TARGETS');
   }
+  const excluded = new Set([...EXCLUDED_ORGS, ...excludedValues.map(org => org.toLowerCase())]);
+  const eligibleConfigured = [...new Set(configured.filter(org => !excluded.has(org.toLowerCase())))];
 
   let installations = [];
   let discoveryError = null;
@@ -75,14 +79,17 @@ export async function prepare({ targetsFile, outputTargetsFile, discoveryFile, g
   const orgInstallations = installations.filter(item =>
     item?.account?.type === 'Organization' &&
     typeof item.account.login === 'string' && ORG_RE.test(item.account.login));
-  const installationByOrg = new Map(orgInstallations.map(item => [item.account.login.toLowerCase(), item]));
-  const orgs = [...configured];
-  for (const item of orgInstallations) {
+  const excludedInstallations = orgInstallations.filter(item => excluded.has(item.account.login.toLowerCase()));
+  const eligibleInstallations = orgInstallations.filter(item => !excluded.has(item.account.login.toLowerCase()));
+  const installationByOrg = new Map(eligibleInstallations.map(item => [item.account.login.toLowerCase(), item]));
+  const orgs = [...eligibleConfigured];
+  for (const item of eligibleInstallations) {
     if (!orgs.some(org => org.toLowerCase() === item.account.login.toLowerCase())) orgs.push(item.account.login);
   }
 
   const tokenMap = {};
   const installationErrors = [];
+  const installationCoverage = [];
   if (appId && privateKey && !discoveryError) {
     const jwt = createAppJwt(appId, privateKey);
     for (const org of orgs) {
@@ -91,10 +98,24 @@ export async function prepare({ targetsFile, outputTargetsFile, discoveryFile, g
         installationErrors.push({ organization: org, error: 'APP_NOT_INSTALLED' });
         continue;
       }
+      const selection = installation.repository_selection || 'unknown';
+      installationCoverage.push({
+        organization: org,
+        installation_id: installation.id,
+        repository_selection: selection,
+      });
+      if (selection !== 'all') {
+        installationErrors.push({ organization: org, error: 'APP_REPOSITORY_SELECTION_LIMITED' });
+      }
       try {
         const token = await apiRequest(
           '/app/installations/' + installation.id + '/access_tokens', jwt, 'POST',
-          { permissions: { administration: 'read' } },
+          { permissions: {
+            administration: 'read',
+            actions: 'read',
+            checks: 'read',
+            contents: 'read',
+          } },
         );
         if (typeof token.token !== 'string' || !token.token) throw new Error('INSTALLATION_TOKEN_MISSING');
         process.stdout.write('::add-mask::' + token.token + String.fromCharCode(10));
@@ -105,17 +126,29 @@ export async function prepare({ targetsFile, outputTargetsFile, discoveryFile, g
     }
   }
 
-  await writeFile(outputTargetsFile, JSON.stringify({ schema_version: 2, organizations: orgs }, null, 2) + '\n');
+  await writeFile(outputTargetsFile, JSON.stringify({
+    schema_version: 3,
+    organizations: orgs,
+    excluded_organizations: [...excluded].sort(),
+  }, null, 2) + '\n');
   await mkdir(dirname(discoveryFile), { recursive: true });
   const discovery = {
     method: 'GitHub App GET /app/installations + POST /app/installations/{id}/access_tokens',
-    permission_set: { administration: 'read', metadata: 'read (implicit)' },
+    permission_set: {
+      administration: 'read',
+      actions: 'read',
+      checks: 'read',
+      contents: 'read',
+      metadata: 'read (implicit)',
+    },
     status: discoveryError || installationErrors.length ? 'PARTIAL' : 'OK',
     error: discoveryError,
-    configured_count: configured.length,
-    discovered_installations: orgInstallations.length,
+    configured_count: eligibleConfigured.length,
+    discovered_installations: eligibleInstallations.length,
+    excluded_installations: excludedInstallations.length,
     organization_count: orgs.length,
     token_count: Object.keys(tokenMap).length,
+    installation_coverage: installationCoverage,
     installation_errors: installationErrors,
   };
   await writeFile(discoveryFile, JSON.stringify(discovery, null, 2) + '\n');
