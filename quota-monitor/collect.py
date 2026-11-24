@@ -129,6 +129,16 @@ def org_tokens(raw):
     return result
 
 
+def excluded_org_targets(path):
+    data = json.loads(Path(path).read_text(encoding="utf-8"))
+    values = data.get("excluded_organizations", []) if isinstance(data, dict) else []
+    if not isinstance(values, list) or any(
+        not isinstance(org, str) or not ORG_RE.fullmatch(org) for org in values
+    ):
+        raise ValueError("Invalid excluded organization login in targets file")
+    return sorted({org.lower() for org in values} | EXCLUDED_ORGS)
+
+
 def org_targets(path):
     data = json.loads(Path(path).read_text(encoding="utf-8"))
     values = data.get("organizations") if isinstance(data, dict) else None
@@ -136,12 +146,7 @@ def org_targets(path):
         values = []
     if not isinstance(values, list):
         raise ValueError("targets file organizations must be an array")
-    excluded = data.get("excluded_organizations", [])
-    if not isinstance(excluded, list) or any(
-        not isinstance(org, str) or not ORG_RE.fullmatch(org) for org in excluded
-    ):
-        raise ValueError("Invalid excluded organization login in targets file")
-    excluded_set = {org.lower() for org in excluded} | EXCLUDED_ORGS
+    excluded_set = set(excluded_org_targets(path))
     result = []
     for org in values:
         if not isinstance(org, str) or not ORG_RE.fullmatch(org):
@@ -297,7 +302,7 @@ def collect(scope, owner, token, year, month):
         "budget": budget,
     }
 
-def collect_all(user_token, org_map, username, organizations):
+def collect_all(user_token, org_map, username, organizations, excluded_organizations=None):
     now = datetime.now(timezone.utc)
     year, month = now.year, now.month
     accounts = [collect("user", username, user_token, year, month)]
@@ -309,7 +314,7 @@ def collect_all(user_token, org_map, username, organizations):
         "data_source": "GitHub Billing Usage Summary REST API",
         "billing_unit_model": "INCLUDED_COMPUTE_CURRENCY_AMOUNT",
         "included_compute_balance_status": "NOT_EXPOSED_BY_USAGE_SUMMARY_API",
-        "excluded_organizations": sorted(EXCLUDED_ORGS),
+        "excluded_organizations": sorted(set(excluded_organizations or EXCLUDED_ORGS)),
         "accounts": accounts,
     }
 
@@ -323,7 +328,7 @@ def render(report, history):
         "# GitHub Actions Usage Dashboard", "",
         f"Billing period: {report['billing_period']}  ",
         f"Updated (UTC): {report['collected_at_utc']}", "",
-        "> Shows Actions usage quantities and net billed amounts. GitHub's included compute allowance is a monetary amount; the user-level billing endpoint reports Copilot usage, not personal Actions usage or remaining included compute balance. No personal Actions balance or percentage is inferred.",
+        "> Shows Actions usage quantities and net billed amounts from both user and organization billing-summary endpoints. An empty Actions response is UNKNOWN, not zero. The remaining included-compute balance is not exposed by this summary; no balance or percentage is inferred.",
         "", "## Account and organization overview", "",
         "| Scope | Owner | Repositories | Status | Actions data | Actions budget | Gross min | Discounted min | Net min | Net amount (USD) |",
         "|---|---|---:|---|---|---:|---:|---:|---:|",
@@ -432,6 +437,7 @@ def main():
         os.getenv("USER_BILLING_TOKEN", "").strip(),
         org_tokens(os.getenv("ORG_BILLING_TOKENS_JSON", "{}")),
         username, org_targets(args.org_targets_file),
+        excluded_org_targets(args.org_targets_file),
     )
     write_report(report, args.report_dir)
     counts = {s: sum(a["status"] == s for a in report["accounts"])
