@@ -3,29 +3,40 @@
   "consumer": "chatgpt",
   "plugin_id": "plugins_6adcacd0c4988191a4f3d33a5bec0d29",
   "plugin_name": "unified-project-workflow",
-  "version": "0.1.175",
-  "release_id": "pluginrel_6b055903c42c8191a54d1f62d60a587c",
+  "version": "0.1.176",
+  "release_id": "pluginrel_6b055b488d988191a26070ac4bfcff1b",
   "plugin_url": "https://chatgpt.com/plugins/plugins_6adcacd0c4988191a4f3d33a5bec0d29",
   "publication_status": "VERIFIED",
   "published_via": "Plugin Creator",
-  "previous_release_id": "pluginrel_6b047030b62c8191b72381e61b32ecce",
+  "previous_release_id": "pluginrel_6b055903c42c8191a54d1f62d60a587c",
   "source": {
     "repository": "leminhphap-improvement/ai-workflow-archtiecture",
-    "commit_sha": "df6963b5634a802616ce61cb1cab84afa0365800"
+    "commit_sha": "6b5b3c8d7e6339c7568df687523b5e8c16d7d1f7"
   },
   "package": {
     "repository": "leminhphap26071995/github-oschestration",
-    "commit_sha": "3078790577360970ee991c563fd7a6ebf9d70136",
-    "workflow_run_id": 45365562051,
-    "artifact_id": 14905294811,
-    "handoff_artifact_sha256": "bd93c220a571d5fd06ad5c0fc05064cfc26c538c6826c3e0dceddb788b72ef3b",
-    "plugin_archive_sha256": "1415b70287e75f9521f261ffde400da7118cffa5839896f6577f373917c57b5d",
-    "plugin_archive_file_count": 203
+    "commit_sha": "f0d400212c6f8a1f8357108a27bc992ca923585a",
+    "workflow_run_id": 45367006445,
+    "artifact_id": 14906244624,
+    "handoff_artifact_sha256": "b2953d081bde3a568e14383ab0d86bee6d6994cfdef66a2680348e633016e630",
+    "plugin_archive_sha256": "65ab26d96448b6c19306e747d958e89e14453cda23635f6a6f6d42da00fa5ff9",
+    "plugin_archive_file_count": 203,
+    "delete_paths_requested": [
+      ".codex-plugin/plugin.json"
+    ]
   },
   "readback": {
     "verified": true,
-    "manifest_version": "0.1.175",
+    "manifest_version": "0.1.176",
     "default_prompt_count": 48,
+    "actions_prompt_contains": [
+      "runner_id=0",
+      "steps=[]",
+      "Notion annotation relay",
+      "NOTION_RELAY_RECEIPT_NOT_FOUND_FOR_EXACT_RUN",
+      "API_METHOD_BLOCKED is transport-only"
+    ],
+    "owner_reporting_gate_verified": true,
     "files": [
       "references/github-actions-run-lifecycle.md",
       "skills/always-on-guard/SKILL.md",
@@ -33,13 +44,13 @@
       "skills/github-actions-run-lifecycle/SKILL.md",
       "skills/github-actions-tree-fallback/SKILL.md"
     ],
-    "checks": [
-      "runner_id: 0",
-      "steps: []",
-      "NOTION_RELAY_RECEIPT_NOT_FOUND_FOR_EXACT_RUN",
-      "NO_FINAL_OUTPUT",
-      "NO_USER_HANDOFF"
-    ]
+    "host_generated_sidecar": {
+      "path": ".codex-plugin/plugin.json",
+      "status": "HOST_GENERATED_FROM_RETAINED_SOURCE",
+      "version": "0.1.176",
+      "prompts_identical_to_root": true,
+      "deletion_attempt": "REJECTED_GENERATED_FROM_RETAINED_SOURCE"
+    }
   },
   "fresh_runtime_activation_status": "NOT_VERIFIED",
   "live_plugin_mutated": true
